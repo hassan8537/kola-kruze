@@ -55,11 +55,29 @@ app.use(`/api/${process.env.API_VERSION}`, [
 
 const PORT = process.env.PORT || 3000;
 
+const server =
+  process.env.NODE_ENV === "production"
+    ? () => {
+        const options = {
+          key: fs.readFileSync(
+            "/etc/letsencrypt/live/host2.appsstaging.com/privkey.pem"
+          ),
+          cert: fs.readFileSync(
+            "/etc/letsencrypt/live/host2.appsstaging.com/cert.pem"
+          ),
+          ca: fs.readFileSync(
+            "/etc/letsencrypt/live/host2.appsstaging.com/chain.pem"
+          )
+        };
+        require("https").createServer(options, app);
+      }
+    : require("http").createServer(app);
+
 connectToDatabase()
   .then(() => {
     console.log("Database connected successfully.");
 
-    app.listen(PORT, () => {
+    server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
