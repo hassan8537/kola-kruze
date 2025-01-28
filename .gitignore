@@ -6,6 +6,8 @@
 # Node artifact files
 node_modules/
 dist/
+.env
+uploads
 
 # Compiled Java class files
 *.class
