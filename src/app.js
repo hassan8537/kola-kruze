@@ -16,13 +16,13 @@ const connectToDatabase = require("./config/database");
 
 const app = express();
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("tiny"));
 app.use(adminSeeder);
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const adminRoutes = {
   authentication: require("./routes/admin-routes/authentication-routes"),
