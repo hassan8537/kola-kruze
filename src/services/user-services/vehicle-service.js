@@ -1,4 +1,4 @@
-const { Vehicle } = require("../../models/Vehicle");
+const Vehicle = require("../../models/Vehicle");
 const {
   successResponse,
   failedResponse,
@@ -12,14 +12,15 @@ class Service {
 
   async addVehicle(request, response) {
     try {
-      const user_id = request.user.user_id;
+      const user_id = request.user._id;
       const body = request.body;
 
-      const insurance_document = request.files.insurance_document?.[0] ?? null;
+      const insurance_document = request.files?.insurance_document?.[0] ?? null;
       const inspection_document =
-        request.files.inspection_document?.[0] ?? null;
-      const vehicle_images = request.files.vehicle_images ?? [];
-      const driver_license = request.files.driver_license ?? [];
+        request.files?.inspection_document?.[0] ?? null;
+      const vehicle_images = request.files?.vehicle_images ?? [];
+      const vehicle_driver_licenses =
+        request.files?.vehicle_driver_licenses ?? [];
 
       const formData = {
         user_id,
@@ -39,7 +40,7 @@ class Service {
         insurance_document,
         inspection_document,
         vehicle_images,
-        driver_license
+        vehicle_driver_licenses
       };
 
       const existingVehicle = await this.vehicle.findOne({ user_id });
@@ -64,14 +65,15 @@ class Service {
 
   async editVehicleDetails(request, response) {
     try {
-      const user_id = request.user.user_id;
+      const user_id = request.user._id;
       const body = request.body;
 
-      const insurance_document = request.files.insurance_document?.[0] ?? null;
+      const insurance_document = request.files?.insurance_document?.[0] ?? null;
       const inspection_document =
-        request.files.inspection_document?.[0] ?? null;
-      const vehicle_images = request.files.vehicle_images ?? [];
-      const driver_license = request.files.driver_license ?? [];
+        request.files?.inspection_document?.[0] ?? null;
+      const vehicle_images = request.files?.vehicle_images ?? [];
+      const vehicle_driver_licenses =
+        request.files?.vehicle_driver_licenses ?? [];
 
       const formData = {
         user_id,
@@ -91,7 +93,7 @@ class Service {
         insurance_document,
         inspection_document,
         vehicle_images,
-        driver_license
+        vehicle_driver_licenses
       };
 
       const vehicle = await this.vehicle.findOne({ user_id });

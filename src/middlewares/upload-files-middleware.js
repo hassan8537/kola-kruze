@@ -7,12 +7,12 @@ const uploadFiles = async (request, response, next) => {
     const user_id = request.user._id;
     const files = request.files;
 
-    const fields = Object.keys(files);
-
     if (!files) {
       console.log("No files uploaded");
       return next();
     }
+
+    const fields = Object.keys(files);
 
     const fileIds = {};
     const fileDeletionPromises = [];

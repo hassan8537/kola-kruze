@@ -5,34 +5,37 @@ const uploadFiles = require("../../middlewares/upload-files-middleware");
 const router = require("express").Router();
 
 const controllers = {
-  profiles: require("../../controllers/user-controllers/profile-controller"),
-  vehicle: require("../../controllers/user-controllers/vehicle-controller")
+  profile: require("../../controllers/user-controllers/profile-controller"),
+  vehicle: require("../../controllers/user-controllers/vehicle-controller"),
+  file: require("../../controllers/user-controllers/file-controller")
 };
 
+// profiles
 router.get(
   "/profiles",
-  controllers.profiles.getProfile.bind(controllers.profiles)
+  controllers.profile.getProfile.bind(controllers.profile)
 );
 
 router.post(
   "/profiles",
   upload.fields([{ name: "profile_picture" }, { name: "identity_document" }]),
   uploadFiles,
-  controllers.profiles.createProfile.bind(controllers.profiles)
+  controllers.profile.createProfile.bind(controllers.profile)
 );
 
 router.put(
   "/profiles",
   upload.fields([{ name: "profile_picture" }, { name: "identity_document" }]),
   uploadFiles,
-  controllers.profiles.updateProfile.bind(controllers.profiles)
+  controllers.profile.updateProfile.bind(controllers.profile)
 );
 
 router.delete(
   "/profiles",
-  controllers.profiles.deleteAccount.bind(controllers.profiles)
+  controllers.profile.deleteAccount.bind(controllers.profile)
 );
 
+// vehicles
 router.post(
   "/vehicles",
   driverVerification,
@@ -40,7 +43,7 @@ router.post(
     { name: "insurance_document" },
     { name: "inspection_document" },
     { name: "vehicle_images" },
-    { name: "driver_license" }
+    { name: "vehicle_driver_licenses" }
   ]),
   uploadFiles,
   controllers.vehicle.addVehicle.bind(controllers.vehicle)
@@ -53,10 +56,13 @@ router.put(
     { name: "insurance_document" },
     { name: "inspection_document" },
     { name: "vehicle_images" },
-    { name: "driver_license" }
+    { name: "vehicle_driver_licenses" }
   ]),
   uploadFiles,
   controllers.vehicle.editVehicleDetails.bind(controllers.vehicle)
 );
+
+// files
+router.get("/files", controllers.file.getFiles.bind(controllers.file));
 
 module.exports = router;

@@ -14,5 +14,14 @@ module.exports = {
         select: {}
       }
     ]
+  },
+  populateFile: {
+    populate: [
+      {
+        path: "user_id",
+        select: "first_name last_name legal_name email_address profile_picture",
+        populate: { path: "profile_picture", select: "file_url" }
+      }
+    ]
   }
 };

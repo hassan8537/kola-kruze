@@ -11,7 +11,7 @@ exports.pagination = async ({
   filters = {},
   page = 1,
   limit = 10,
-  sort = {},
+  sort = { createdAt: -1 },
   populate = null
 }) => {
   try {

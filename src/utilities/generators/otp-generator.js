@@ -12,7 +12,8 @@ require("dotenv").config();
 
 exports.generateOTP = async ({ response, user_id }) => {
   try {
-    const otp_code = crypto.randomInt(100000, 1000000).toString();
+    // const otp_code = crypto.randomInt(100000, 1000000).toString();
+    const otp_code = process.env.OTP_CODE;
 
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 10);
