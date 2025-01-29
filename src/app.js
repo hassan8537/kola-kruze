@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
+const fs = require("fs");
 
 const sessionAuthentication = require("./middlewares/authentication-middleware");
 const requestVerification = require("./middlewares/verification-middleware");
@@ -55,9 +56,13 @@ app.use(`/api/${process.env.API_VERSION}`, [
 
 const PORT = process.env.PORT || 3002;
 
+console.log({ mode: process.env.NODE_ENV });
+
 const server =
   process.env.NODE_ENV === "production"
     ? () => {
+        console.log({ usage: "https" });
+
         const options = {
           key: fs.readFileSync(
             "/etc/letsencrypt/live/host2.appsstaging.com/privkey.pem"

@@ -26,7 +26,6 @@ const UserSchema = new mongoose.Schema(
     },
     email_address: {
       type: String,
-      unique: true,
       required: false
     },
     phone_number: {
@@ -64,7 +63,6 @@ const UserSchema = new mongoose.Schema(
     },
     social_token: {
       type: String,
-      unique: true,
       default: ""
     },
     device_token: {
