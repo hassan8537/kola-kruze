@@ -1,6 +1,6 @@
 const {
   errorResponse,
-  failedResponse
+  unauthorizedResponse
 } = require("../utilities/handlers/response-handler");
 
 const driverVerification = async (request, response, next) => {
@@ -8,7 +8,7 @@ const driverVerification = async (request, response, next) => {
     const isDriver = request.user.role === "driver";
 
     if (!isDriver) {
-      return failedResponse({
+      return unauthorizedResponse({
         response,
         message: "Unauthorized request."
       });

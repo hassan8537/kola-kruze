@@ -30,7 +30,7 @@ class Service {
         filters,
         page,
         limit,
-        sort: sort ? [sort.split(",")] : [["createdAt", "DESC"]],
+        sort,
         populate: populateFile.populate
       });
     } catch (error) {

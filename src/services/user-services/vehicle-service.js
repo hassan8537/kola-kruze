@@ -2,7 +2,8 @@ const Vehicle = require("../../models/Vehicle");
 const {
   successResponse,
   failedResponse,
-  errorResponse
+  errorResponse,
+  unavailableResponse
 } = require("../../utilities/handlers/response-handler");
 
 class Service {
@@ -98,7 +99,7 @@ class Service {
 
       const vehicle = await this.vehicle.findOne({ user_id });
       if (!vehicle)
-        return failedResponse({ response, message: "No vehicle found." });
+        return unavailableResponse({ response, message: "No vehicle found." });
 
       Object.assign(vehicle, formData);
       await vehicle.save();

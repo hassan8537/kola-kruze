@@ -10,7 +10,8 @@ const {
 const {
   errorResponse,
   failedResponse,
-  successResponse
+  successResponse,
+  unavailableResponse
 } = require("../../utilities/handlers/response-handler");
 
 class Service {
@@ -28,7 +29,7 @@ class Service {
         .populate(populateUser.populate);
 
       if (!profile) {
-        return failedResponse({ response, message: "No profile found." });
+        return unavailableResponse({ response, message: "No profile found." });
       }
 
       return successResponse({
@@ -50,7 +51,7 @@ class Service {
       const user = await this.user.findById(user_id);
 
       if (!user) {
-        return failedResponse({ response, message: "No profile found." });
+        return unavailableResponse({ response, message: "No profile found." });
       }
 
       const usedEmail = await this.user.findOne({
@@ -126,7 +127,7 @@ class Service {
       const user = await this.user.findById(user_id);
 
       if (!user) {
-        return failedResponse({ response, message: "No profile found." });
+        return unavailableResponse({ response, message: "No profile found." });
       }
 
       const usedEmail = await this.user.findOne({
@@ -192,7 +193,7 @@ class Service {
         .populate(populateUser.populate);
 
       if (!user) {
-        return failedResponse({ response, message: "No profile found." });
+        return unavailableResponse({ response, message: "No profile found." });
       }
 
       user.is_deleted = true;

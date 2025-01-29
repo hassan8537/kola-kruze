@@ -1,7 +1,8 @@
 const User = require("../models/User");
 const {
   errorResponse,
-  failedResponse
+  failedResponse,
+  unauthorizedResponse
 } = require("../utilities/handlers/response-handler");
 const jwt = require("jsonwebtoken");
 
@@ -23,7 +24,10 @@ const sessionAuthentication = async (request, response, next) => {
     const user = await User.findById(verifiedToken.user_id);
 
     if (!user) {
-      return failedResponse({ response, message: "Unauthorized request." });
+      return unauthorizedResponse({
+        response,
+        message: "Unauthorized request."
+      });
     }
 
     request.user = user;

@@ -10,8 +10,26 @@ exports.successResponse = ({ response, message, data }) => {
 
 exports.failedResponse = ({ response, message }) => {
   console.log({ log: message });
-  return response.status(200).json({
-    code: 200,
+  return response.status(400).json({
+    code: 400,
+    status: 0,
+    message: message
+  });
+};
+
+exports.unavailableResponse = ({ response, message }) => {
+  console.log({ log: message });
+  return response.status(404).json({
+    code: 404,
+    status: 0,
+    message: message
+  });
+};
+
+exports.unauthorizedResponse = ({ response, message }) => {
+  console.log({ log: message });
+  return response.status(401).json({
+    code: 401,
     status: 0,
     message: message
   });

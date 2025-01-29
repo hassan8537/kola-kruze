@@ -1,6 +1,6 @@
 const {
   errorResponse,
-  failedResponse
+  unauthorizedResponse
 } = require("../utilities/handlers/response-handler");
 
 const adminVerification = async (request, response, next) => {
@@ -8,7 +8,7 @@ const adminVerification = async (request, response, next) => {
     const isAdmin = request.user.role === "admin";
 
     if (!isAdmin) {
-      return failedResponse({
+      return unauthorizedResponse({
         response,
         message: "Unauthorized request."
       });

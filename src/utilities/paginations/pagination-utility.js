@@ -1,7 +1,7 @@
 const {
   errorResponse,
   successResponse,
-  failedResponse
+  unavailableResponse
 } = require("../handlers/response-handler");
 
 exports.pagination = async ({
@@ -30,7 +30,7 @@ exports.pagination = async ({
     const totalCount = await model.countDocuments(filters);
 
     if (!data.length) {
-      return failedResponse({
+      return unavailableResponse({
         response,
         message: `No ${table.toLowerCase()} found.`
       });

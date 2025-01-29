@@ -5,7 +5,8 @@ const { populateUser } = require("../../populate/populate-models");
 const {
   errorResponse,
   successResponse,
-  failedResponse
+  failedResponse,
+  unavailableResponse
 } = require("../handlers/response-handler");
 const crypto = require("crypto");
 require("dotenv").config();
@@ -21,7 +22,7 @@ exports.generateOTP = async ({ response, user_id }) => {
     const user = await User.findById(user_id).populate(populateUser.populate);
 
     if (!user_id) {
-      return failedResponse({
+      return unavailableResponse({
         response,
         message: "No user found."
       });

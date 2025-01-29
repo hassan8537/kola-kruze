@@ -3,7 +3,8 @@ const User = require("../../models/User");
 const {
   errorResponse,
   failedResponse,
-  successResponse
+  successResponse,
+  unavailableResponse
 } = require("../../utilities/handlers/response-handler");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const { populateUser } = require("../../populate/populate-models");
@@ -31,7 +32,7 @@ class Service {
           .populate(populateUser.populate);
 
         if (!user) {
-          return failedResponse({
+          return unavailableResponse({
             response,
             message: "No user found."
           });

@@ -32,7 +32,7 @@ class Service {
         filters,
         page,
         limit,
-        sort: sort ? [sort.split(",")] : [["createdAt", "DESC"]],
+        sort,
         populate: populateStudent.populate
       });
     } catch (error) {
