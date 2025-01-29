@@ -58,25 +58,22 @@ const PORT = process.env.PORT || 3002;
 
 console.log({ mode: process.env.NODE_ENV });
 
-const server =
-  process.env.NODE_ENV === "production"
-    ? () => {
-        console.log({ usage: "https" });
+let server;
 
-        const options = {
-          key: fs.readFileSync(
-            "/etc/letsencrypt/live/host2.appsstaging.com/privkey.pem"
-          ),
-          cert: fs.readFileSync(
-            "/etc/letsencrypt/live/host2.appsstaging.com/cert.pem"
-          ),
-          ca: fs.readFileSync(
-            "/etc/letsencrypt/live/host2.appsstaging.com/chain.pem"
-          )
-        };
-        require("https").createServer(options, app);
-      }
-    : require("http").createServer(app);
+if (process.env.NODE_ENV === "production") {
+  const options = {
+    key: fs.readFileSync(
+      "/etc/letsencrypt/live/host2.appsstaging.com/privkey.pem"
+    ),
+    cert: fs.readFileSync(
+      "/etc/letsencrypt/live/host2.appsstaging.com/cert.pem"
+    ),
+    ca: fs.readFileSync("/etc/letsencrypt/live/host2.appsstaging.com/chain.pem")
+  };
+  server = require("https").createServer(options, app);
+} else {
+  server = require("http").createServer(app);
+}
 
 connectToDatabase()
   .then(() => {
