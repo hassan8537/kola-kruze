@@ -36,6 +36,12 @@ router.delete(
 );
 
 // vehicles
+router.get(
+  "/vehicles",
+  driverVerification,
+  controllers.vehicle.getVehicle.bind(controllers.vehicle)
+);
+
 router.post(
   "/vehicles",
   driverVerification,

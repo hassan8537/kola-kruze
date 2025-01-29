@@ -1,10 +1,6 @@
 const Student = require("../../models/Student");
 const { populateStudent } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  successResponse,
-  failedResponse
-} = require("../../utilities/handlers/response-handler");
+const { errorResponse } = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -20,8 +16,9 @@ class Service {
 
       const filters = {};
 
-      if (query.student_id) filters.student_id = query.student_id;
+      if (query._id) filters._id = query._id;
       if (query.user_id) filters.user_id = query.user_id;
+      if (query.student_id) filters.student_id = query.student_id;
 
       const { page, limit, sort } = query;
 

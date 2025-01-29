@@ -1,4 +1,5 @@
 const Vehicle = require("../../models/Vehicle");
+const { populateVehicle } = require("../../populate/populate-models");
 const {
   successResponse,
   failedResponse,
@@ -9,6 +10,28 @@ const {
 class Service {
   constructor() {
     this.vehicle = Vehicle;
+  }
+
+  async getVehicle(request, response) {
+    try {
+      const user_id = request.user._id;
+
+      const vehicle = await this.vehicle
+        .findOne({ user_id })
+        .populate(populateVehicle.populate);
+
+      if (!vehicle) {
+        return unavailableResponse({ response, message: "No vehicle found." });
+      }
+
+      return successResponse({
+        response,
+        message: "Vehicle retrieved successfully.",
+        data: vehicle
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
   }
 
   async addVehicle(request, response) {

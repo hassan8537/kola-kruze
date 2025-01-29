@@ -5,6 +5,10 @@ class Controller {
     this.service = service;
   }
 
+  async getVehicle(request, response) {
+    return this.service.getVehicle(request, response);
+  }
+
   async addVehicle(request, response) {
     return this.service.addVehicle(request, response);
   }

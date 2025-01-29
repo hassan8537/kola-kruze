@@ -6,6 +6,8 @@ const controller = require("../../controllers/user-controllers/vehicle-controlle
 
 // const validateResult = require("../../validators/result-validator");
 
+router.get("/", controller.getVehicle.bind(controller));
+
 router.post("/", controller.addVehicle.bind(controller));
 
 router.put("/", controller.editVehicleDetails.bind(controller));
