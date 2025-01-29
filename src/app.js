@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
+const path = require("path");
 const fs = require("fs");
 
 const sessionAuthentication = require("./middlewares/authentication-middleware");
@@ -15,7 +16,7 @@ const connectToDatabase = require("./config/database");
 
 const app = express();
 
-app.use(express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
