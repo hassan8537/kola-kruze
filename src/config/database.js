@@ -1,12 +1,25 @@
 const mongoose = require("mongoose");
-require("dotenv").config();
+
+const mongoURI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/kola-kruze";
+const mode = process.env.NODE_ENV;
 
 const connectToDatabase = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log("MongoDB connected successfully!");
+    const options = {
+      ...(mode === "production"
+        ? {
+            user: process.env.MONGODB_USERNAME,
+            pass: process.env.MONGODB_PASSWORD
+          }
+        : {})
+    };
+
+    await mongoose.connect(mongoURI, options);
+    console.log("MongoDB connected successfully.");
   } catch (err) {
-    console.error("Unable to connect to the database:", err);
+    console.error("MongoDB connection failed:", err.message);
+    process.exit(1); // Exit the process if the connection fails
   }
 };
 
