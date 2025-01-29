@@ -4,21 +4,13 @@ const path = require("path");
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.mimetype.startsWith("image")) {
-      cb(null, "uploads/images");
+      cb(null, "./uploads/images");
     } else if (file.mimetype.startsWith("video")) {
-      cb(null, "uploads/videos");
+      cb(null, "./uploads/videos");
     } else if (file.mimetype.startsWith("audio")) {
-      cb(null, "uploads/audios");
-    } else if (
-      [
-        "application/pdf",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      ].includes(file.mimetype)
-    ) {
-      cb(null, "uploads/documents");
+      cb(null, "./uploads/audios");
     } else {
-      cb(new Error("Invalid file type"), false);
+      cb(null, "./uploads/documents");
     }
   },
   filename: (req, file, cb) => {
