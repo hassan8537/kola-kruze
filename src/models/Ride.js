@@ -2,9 +2,11 @@ const mongoose = require("mongoose");
 
 const RideSchema = new mongoose.Schema(
   {
-    user_ids: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
-    ],
+    user_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true
+    },
     driver_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -16,6 +18,14 @@ const RideSchema = new mongoose.Schema(
       default: null
     },
 
+    share_with: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      }
+    ],
+
     pickup_locations: [
       {
         user_id: {
@@ -25,6 +35,14 @@ const RideSchema = new mongoose.Schema(
         },
         address: { type: String, required: true },
         coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
+      }
+    ],
+
+    stops: [
+      {
+        address: { type: String, required: true },
+        coordinates: { type: [Number], index: "2dsphere", required: true }, // [longitude, latitude]
+        stop_order: { type: Number, required: true } // Order in which the stop should be reached
       }
     ],
 
@@ -105,4 +123,5 @@ const RideSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-module.exports = mongoose.model("Ride", RideSchema);
+const Ride = mongoose.model("Ride", RideSchema);
+module.exports = Ride;

@@ -9,14 +9,16 @@ const jwt = require("jsonwebtoken");
 const sessionAuthentication = async (request, response, next) => {
   try {
     const bearerToken =
-      request.headers["authorization"] || request.cookies.authorization;
+      request.headers["Authorization"] || request.cookies.authorization;
+
+    console.log({ bearerToken });
 
     if (!bearerToken) {
       return failedResponse({ response, message: "Invalid session." });
     }
 
     const token = bearerToken.includes("Bearer")
-      ? bearerToken.split("")[1]
+      ? bearerToken.split(" ")[1]
       : bearerToken;
 
     const verifiedToken = jwt.verify(token, process.env.SESSION_SECRET_KEY);
