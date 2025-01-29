@@ -74,6 +74,10 @@ const UserSchema = new mongoose.Schema(
       enum: ["passenger", "driver", "admin"],
       default: "passenger"
     },
+    is_student: {
+      type: Boolean,
+      default: false
+    },
     is_verified: {
       type: Boolean,
       default: false
@@ -86,27 +90,44 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-    is_student: {
+    is_merchant_setup: {
       type: Boolean,
       default: false
     },
     driver_preference: {
       type: String,
-      enum: ["any", "student-only"],
+      enum: ["any", "student"],
       default: "any"
     },
     gender_preference: {
       type: String,
-      enum: ["any", "female-only"],
+      enum: ["any", "female"],
       default: "any"
     },
     ssn_number: {
       type: String,
       default: ""
     },
+    stripe_customer_id: {
+      type: Boolean,
+      default: false
+    },
+    stripe_merchant_id: {
+      type: Boolean,
+      default: false
+    },
+    stripe_default_card: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Card",
+      default: null
+    },
     session_token: {
       type: String,
       default: ""
+    },
+    is_card_added: {
+      type: Boolean,
+      default: false
     },
     is_deleted: {
       type: Boolean,

@@ -3,6 +3,10 @@ module.exports = {
     populate: [
       {
         path: "profile_picture",
+        select: "file_url"
+      },
+      {
+        path: "stripe_default_card",
         select: {}
       }
     ]
@@ -11,7 +15,7 @@ module.exports = {
     populate: [
       {
         path: "identity_document",
-        select: {}
+        select: "file_url"
       }
     ]
   },
@@ -48,5 +52,15 @@ module.exports = {
         select: "file_url"
       }
     ]
+  },
+  populateCard: {
+    populate: [
+      {
+        path: "user_id",
+        select: "first_name last_name legal_name email_address profile_picture",
+        populate: { path: "profile_picture", select: "file_url" }
+      }
+    ],
+    sort: { createdAt: -1 }
   }
 };
