@@ -11,8 +11,6 @@ const sessionAuthentication = async (request, response, next) => {
     const bearerToken =
       request.headers["authorization"] || request.cookies.authorization;
 
-    console.log({ bearerToken });
-
     if (!bearerToken) {
       return failedResponse({ response, message: "Invalid session." });
     }

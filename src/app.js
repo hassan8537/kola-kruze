@@ -15,6 +15,8 @@ const connectToDatabase = require("./config/database");
 
 const app = express();
 
+app.use(express.static("uploads"));
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
