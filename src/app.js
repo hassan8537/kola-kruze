@@ -63,12 +63,14 @@ let server;
 if (process.env.NODE_ENV === "production") {
   const options = {
     key: fs.readFileSync(
-      "/etc/letsencrypt/live/host2.appsstaging.com/privkey.pem"
+      "/etc/letsencrypt/live/client1.appsstaging.com/privkey.pem"
     ),
     cert: fs.readFileSync(
-      "/etc/letsencrypt/live/host2.appsstaging.com/cert.pem"
+      "/etc/letsencrypt/live/client1.appsstaging.com/cert.pem"
     ),
-    ca: fs.readFileSync("/etc/letsencrypt/live/host2.appsstaging.com/chain.pem")
+    ca: fs.readFileSync(
+      "/etc/letsencrypt/live/client1.appsstaging.com/chain.pem"
+    )
   };
   server = require("https").createServer(options, app);
 } else {
