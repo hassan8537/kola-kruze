@@ -9,7 +9,7 @@ const jwt = require("jsonwebtoken");
 const sessionAuthentication = async (request, response, next) => {
   try {
     const bearerToken =
-      request.headers["Authorization"] || request.cookies.authorization;
+      request.headers["authorization"] || request.cookies.authorization;
 
     console.log({ bearerToken });
 

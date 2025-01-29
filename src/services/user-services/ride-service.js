@@ -1,6 +1,9 @@
 const Ride = require("../../models/Ride");
 const User = require("../../models/User");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const {
+  errorResponse,
+  successResponse
+} = require("../../utilities/handlers/response-handler");
 
 class Service {
   constructor() {
@@ -11,56 +14,78 @@ class Service {
   async createRide(request, response) {
     try {
       const user_id = request.user._id;
-      const driver_id = request.user.driver_id;
-      const vehicle_id = request.user.vehicle_id;
+      const {
+        share_with,
+        pickup_locations,
+        stops,
+        dropoff_locations,
+        ride_type,
+        ride_status,
+        scheduled_time,
+        reserved_at,
+        start_time,
+        end_time,
+        fare_details,
+        ride_preferences,
+        cancellation,
+        tracking
+      } = request.body;
 
-      const share_with = request.body.share_with;
-
-      const pickup_locations = {
-        user_id: user_id,
-        address: request.pickup_locations.address,
-        coordinates: request.pickup_locations.coordinates
-      };
-
-      const stops = request.body.stops.map((stop) => {
-        return {
-          user_id: user_id,
+      const ride = await this.ride.create({
+        user_id,
+        driver_id: request.user.driver_id || null,
+        vehicle_id: request.user.vehicle_id || null,
+        share_with,
+        pickup_locations: [
+          {
+            user_id,
+            address: pickup_locations.address,
+            coordinates: pickup_locations.coordinates
+          }
+        ],
+        stops: stops.map((stop, index) => ({
           address: stop.address,
-          coordinates: stop.coordinates
-        };
+          coordinates: stop.coordinates,
+          stop_order: index + 1
+        })),
+        dropoff_locations: [
+          {
+            user_id,
+            address: dropoff_locations.address,
+            coordinates: dropoff_locations.coordinates
+          }
+        ],
+        ride_type,
+        ride_status,
+        scheduled_time,
+        reserved_at,
+        start_time,
+        end_time,
+        fare_details: fare_details.map((detail) => ({
+          user_id: detail.user_id,
+          amount: detail.amount,
+          payment_status: detail.payment_status
+        })),
+        ride_preferences,
+        cancellation: {
+          cancelled_by: request.body.cancellation.cancelled_by,
+          cancellation_reason: request.body.cancellation.cancellation_reason
+        },
+        tracking: {
+          current_location: request.body.tracking.current_location.coordinates,
+          eta: request.body.tracking.eta
+        }
       });
 
-      const dropoff_locations = {
-        user_id: user_id,
-        address: request.dropoff_locations.address,
-        coordinates: request.dropoff_locations.coordinates
-      };
-
-      const ride_type = request.body.ride_type;
-
-      const ride_status = request.body.ride_status;
-
-      const scheduled_time = request.body.scheduled_time;
-      const reserved_at = request.body.reserved_at;
-      const start_time = request.body.scheduled_time;
-      const end_time = request.body.end_time;
-
-      const fare_details = request.body.share_with.map((share_with) => {
-        return {
-          user_id: share_with.user_id,
-          amount: share_with.amount,
-          payment_status: share_with.payment_status
-        };
+      return successResponse({
+        response,
+        message: "Ride created successfully",
+        data: ride
       });
-
-      const ride_preferences = {
-        pet_friendly: request.body.ride_preferences.pet_friendly,
-        wheelchair_accessible:
-          request.body.ride_preferences.wheelchair_accessible,
-        air_conditioning: request.body.ride_preferences.air_conditioning
-      };
     } catch (error) {
       return errorResponse({ response, error });
     }
   }
 }
+
+module.exports = new Service();
