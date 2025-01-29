@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
@@ -9,8 +11,6 @@ const adminVerification = require("./middlewares/admin-verification-middleware")
 const accountStatusVerification = require("./middlewares/account-status-verification-middleware");
 const adminSeeder = require("./middlewares/admin-seeder-middleware");
 const connectToDatabase = require("./config/database");
-
-require("dotenv").config();
 
 const app = express();
 
@@ -75,8 +75,6 @@ const server =
 
 connectToDatabase()
   .then(() => {
-    console.log("Database connected successfully.");
-
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
