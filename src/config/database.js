@@ -17,6 +17,16 @@ const connectToDatabase = async () => {
     };
 
     await mongoose.connect(mongoURI, options);
+
+    require("../models/User");
+    require("../models/Card");
+    require("../models/File");
+    require("../models/OTP");
+    require("../models/Rating");
+    require("../models/Ride");
+    require("../models/Student");
+    require("../models/Vehicle");
+
     console.log("MongoDB connected successfully.");
   } catch (err) {
     console.error("MongoDB connection failed:", err.message);

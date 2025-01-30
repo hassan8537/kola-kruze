@@ -125,10 +125,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    is_card_added: {
-      type: Boolean,
-      default: false
-    },
     is_deleted: {
       type: Boolean,
       default: false
