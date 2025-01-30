@@ -18,16 +18,24 @@ router.get(
 
 router.post(
   "/profiles",
-  upload.fields([{ name: "profile_picture" }, { name: "identity_document" }]),
+  upload.fields([
+    { name: "profile_picture" },
+    { name: "identity_document" },
+    { name: "driver_license" }
+  ]),
   uploadFiles,
   controllers.profile.createProfile.bind(controllers.profile)
 );
 
 router.put(
   "/profiles",
-  upload.fields([{ name: "profile_picture" }, { name: "identity_document" }]),
+  upload.fields([
+    { name: "profile_picture" },
+    { name: "identity_document" },
+    { name: "driver_license" }
+  ]),
   uploadFiles,
-  controllers.profile.updateProfile.bind(controllers.profile)
+  controllers.profile.editProfile.bind(controllers.profile)
 );
 
 router.delete(
@@ -48,8 +56,7 @@ router.post(
   upload.fields([
     { name: "insurance_document" },
     { name: "inspection_document" },
-    { name: "vehicle_images" },
-    { name: "vehicle_driver_licenses" }
+    { name: "vehicle_images" }
   ]),
   uploadFiles,
   controllers.vehicle.addVehicle.bind(controllers.vehicle)
@@ -61,8 +68,7 @@ router.put(
   upload.fields([
     { name: "insurance_document" },
     { name: "inspection_document" },
-    { name: "vehicle_images" },
-    { name: "vehicle_driver_licenses" }
+    { name: "vehicle_images" }
   ]),
   uploadFiles,
   controllers.vehicle.editVehicleDetails.bind(controllers.vehicle)
