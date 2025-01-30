@@ -94,6 +94,10 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    is_vehicle_setup: {
+      type: Boolean,
+      default: false
+    },
     driver_preference: {
       type: String,
       enum: ["any", "student"],
