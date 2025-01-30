@@ -129,6 +129,11 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+    driver_license: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "File",
+      default: null
+    },
     is_deleted: {
       type: Boolean,
       default: false

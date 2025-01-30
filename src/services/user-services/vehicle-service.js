@@ -43,8 +43,6 @@ class Service {
       const inspection_document =
         request.files?.inspection_document?.[0] ?? null;
       const vehicle_images = request.files?.vehicle_images ?? [];
-      const vehicle_driver_licenses =
-        request.files?.vehicle_driver_licenses ?? [];
 
       const formData = {
         user_id,
@@ -63,8 +61,7 @@ class Service {
         vehicle_seatbelts: body.vehicle_seatbelts,
         insurance_document,
         inspection_document,
-        vehicle_images,
-        vehicle_driver_licenses
+        vehicle_images
       };
 
       const existingVehicle = await this.vehicle.findOne({ user_id });
@@ -98,8 +95,6 @@ class Service {
       const inspection_document =
         request.files?.inspection_document?.[0] ?? null;
       const vehicle_images = request.files?.vehicle_images ?? [];
-      const vehicle_driver_licenses =
-        request.files?.vehicle_driver_licenses ?? [];
 
       const formData = {
         user_id,
@@ -118,8 +113,7 @@ class Service {
         vehicle_seatbelts: body.vehicle_seatbelts,
         insurance_document,
         inspection_document,
-        vehicle_images,
-        vehicle_driver_licenses
+        vehicle_images
       };
 
       const vehicle = await this.vehicle.findOne({ user_id });

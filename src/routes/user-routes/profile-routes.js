@@ -9,7 +9,7 @@ router.get("/", controller.getProfile.bind(controller));
 
 router.post("/", controller.createProfile.bind(controller));
 
-router.put("/", controller.updateProfile.bind(controller));
+router.put("/", controller.editProfile.bind(controller));
 
 router.delete("/", controller.deleteAccount.bind(controller));
 

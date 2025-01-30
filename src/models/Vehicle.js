@@ -77,13 +77,6 @@ const VehicleSchema = new mongoose.Schema(
         default: []
       }
     ],
-    vehicle_driver_licenses: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "File",
-        default: []
-      }
-    ],
     is_verified: {
       type: Boolean,
       default: false,

@@ -47,6 +47,7 @@ class Service {
       const user_id = request.user._id;
       const body = request.body;
       const profile_picture = request.files.profile_picture?.[0] ?? null;
+      const driver_license = request.files.driver_license?.[0] ?? null;
 
       const user = await this.user.findById(user_id);
 
@@ -94,6 +95,7 @@ class Service {
         user.first_name = body.first_name;
         user.last_name = body.last_name;
         user.gender = body.gender;
+        user.driver_license = driver_license;
       }
 
       if (body.is_student) {
@@ -118,11 +120,12 @@ class Service {
     }
   }
 
-  async updateProfile(request, response) {
+  async editProfile(request, response) {
     try {
       const user_id = request.user._id;
       const body = request.body;
       const profile_picture = request.files.profile_picture?.[0] ?? null;
+      const driver_license = request.files.driver_license?.[0] ?? null;
 
       const user = await this.user.findById(user_id);
 
@@ -158,9 +161,11 @@ class Service {
         user.profile_picture = profile_picture;
         user.legal_name = body.legal_name;
         user.phone_number = body.phone_number;
-        user.email = body.email;
+        user.email_address = body.email_address;
         user.emergency_contact = body.emergency_contact;
         user.location = body.location;
+        user.latitude = body.latitude;
+        user.longitude = body.longitude;
         user.gender = body.gender;
         user.driver_preference = body.driver_preference;
         user.gender_preference = body.gender_preference;
@@ -170,7 +175,16 @@ class Service {
         user.first_name = body.first_name;
         user.last_name = body.last_name;
         user.gender = body.gender;
+        user.driver_license = driver_license;
       }
+
+      user.state = body.state;
+      user.ssn_number = body.ssn_number;
+      user.is_verified = body.is_verified;
+      user.is_notification_enabled = body.is_notification_enabled;
+      user.is_profile_completed = body.is_profile_completed;
+      user.is_merchant_setup = body.is_merchant_setup;
+      user.is_vehicle_setup = body.is_vehicle_setup;
 
       await user.save();
 

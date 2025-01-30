@@ -13,8 +13,8 @@ class Controller {
     return this.service.createProfile(request, response);
   }
 
-  async updateProfile(request, response) {
-    return this.service.updateProfile(request, response);
+  async editProfile(request, response) {
+    return this.service.editProfile(request, response);
   }
 
   async deleteAccount(request, response) {
