@@ -75,7 +75,9 @@ class Service {
         });
 
       const newVehicle = new this.vehicle(formData);
+      request.user.is_vehicle_setup = true;
       await newVehicle.save();
+      await request.user.save();
 
       return successResponse({
         response,
