@@ -1,6 +1,6 @@
-const { Schema, model } = require("mongoose");
+const mongoose = require("mongoose");
 
-const CardSchema = new Schema(
+const CardSchema = new mongoose.Schema(
   {
     user_id: {
       type: Schema.Types.ObjectId,
@@ -23,5 +23,5 @@ CardSchema.index({
   card_type: 1
 });
 
-const Card = model("Card", CardSchema);
+const Card = mongoose.model("Card", CardSchema);
 module.exports = Card;

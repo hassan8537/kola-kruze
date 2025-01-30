@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 
-const mongoURI = "mongodb://127.0.0.1:27017/kola-kruze";
+// const mongoURI = "mongodb://127.0.0.1:27017/kola-kruze";
+const mongoURI =
+  "mongodb://user_kola-kruze:Abcd%401234@client1.appsstaging.com:27017/kola-kruze?authSource=kola-kruze&authMechanism=SCRAM-SHA-256";
 const mode = process.env.NODE_ENV;
 
 const connectToDatabase = async () => {
