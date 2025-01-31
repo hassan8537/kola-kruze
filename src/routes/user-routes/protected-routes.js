@@ -6,6 +6,7 @@ const router = require("express").Router();
 
 const controllers = {
   profile: require("../../controllers/user-controllers/profile-controller"),
+  student: require("../../controllers/user-controllers/student-controller"),
   vehicle: require("../../controllers/user-controllers/vehicle-controller"),
   file: require("../../controllers/user-controllers/file-controller")
 };
@@ -41,6 +42,12 @@ router.put(
 router.delete(
   "/profiles",
   controllers.profile.deleteAccount.bind(controllers.profile)
+);
+
+// students
+router.get(
+  "/students",
+  controllers.student.getStudents.bind(controllers.student)
 );
 
 // vehicles
