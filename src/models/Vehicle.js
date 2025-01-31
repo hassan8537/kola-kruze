@@ -45,7 +45,7 @@ const VehicleSchema = new mongoose.Schema(
       default: 4
     },
     vehicle_registration_number: {
-      type: Number,
+      type: String,
       default: 0
     },
     vehicle_color: {
