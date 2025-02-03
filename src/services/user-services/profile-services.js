@@ -129,9 +129,7 @@ class Service {
       const profile_picture = request.files.profile_picture?.[0] ?? null;
       const driver_license = request.files.driver_license?.[0] ?? null;
 
-      const user = await this.user
-        .findById(user_id)
-        .populate(populateUser.populate);
+      const user = await this.user.findById(user_id);
 
       if (!user) {
         return unavailableResponse({ response, message: "No profile found." });
@@ -164,6 +162,7 @@ class Service {
             message: "Phone number and Emergency contact cannot be same."
           });
 
+        user.profile_picture = profile_picture;
         user.legal_name = body.legal_name;
         user.phone_number = body.phone_number;
         user.email_address = body.email_address;
