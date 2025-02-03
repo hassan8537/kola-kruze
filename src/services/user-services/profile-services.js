@@ -141,7 +141,7 @@ class Service {
       if (!usedEmail)
         return failedResponse({ response, message: "Email already in use" });
 
-      user.profile_picture = profile_picture;
+      user.profile_picture = profile_picture || user.profile_picture;
 
       if (user.role === "passenger") {
         const sanitizedPhoneNumber = sanitizeNumber({
@@ -160,22 +160,24 @@ class Service {
             message: "Phone number and Emergency contact cannot be same."
           });
 
-        user.profile_picture = profile_picture;
-        user.legal_name = body.legal_name;
-        user.phone_number = body.phone_number;
-        user.email_address = body.email_address;
-        user.emergency_contact = body.emergency_contact;
-        user.current_location = body.current_location;
-        user.gender = body.gender;
-        user.driver_preference = body.driver_preference;
-        user.gender_preference = body.gender_preference;
+        user.legal_name = body.legal_name || user.legal_name;
+        user.phone_number = body.phone_number || user.phone_number;
+        user.email_address = body.email_address || user.email_address;
+        user.emergency_contact =
+          body.emergency_contact || user.emergency_contact;
+        user.current_location = body.current_location || user.current_location;
+        user.gender = body.gender || user.gender;
+        user.driver_preference =
+          body.driver_preference || user.driver_preference;
+        user.gender_preference =
+          body.gender_preference || user.gender_preference;
       }
 
       if (user.role === "driver") {
-        user.first_name = body.first_name;
-        user.last_name = body.last_name;
-        user.gender = body.gender;
-        user.driver_license = driver_license;
+        user.first_name = body.first_name || user.first_name;
+        user.last_name = body.last_name || user.last_name;
+        user.gender = body.gender || user.gender;
+        user.driver_license = driver_license || user.driver_license;
       }
 
       user.state = body.state || user.state;
