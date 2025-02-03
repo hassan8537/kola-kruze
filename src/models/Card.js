@@ -7,8 +7,7 @@ const CardSchema = new mongoose.Schema(
       ref: "User",
       required: true
     },
-    stripe_card_id: { type: String, required: true },
-    card_type: { type: String, required: true }
+    stripe_card_id: { type: String, required: true }
   },
   { timestamps: true }
 );

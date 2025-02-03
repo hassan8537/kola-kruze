@@ -1,5 +1,6 @@
 const Student = require("../../models/Student");
 const User = require("../../models/User");
+const { populateUser } = require("../../populate/populate-models");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const {
   errorResponse,
@@ -64,9 +65,11 @@ class Service {
       const { phone_number, social_token, role, auth_provider, device_token } =
         request.body;
 
-      const user = await this.user.findOne({
-        social_token: social_token
-      });
+      const user = await this.user
+        .findOne({
+          social_token: social_token
+        })
+        .populate(populateUser.populate);
 
       if (user) {
         await createSession({
@@ -79,7 +82,8 @@ class Service {
 
         return successResponse({
           response,
-          message: "Authentication successful"
+          message: "Authentication successful",
+          data: user
         });
       } else {
         let newUser;
@@ -116,7 +120,8 @@ class Service {
 
           return successResponse({
             response,
-            message: "Authentication successful"
+            message: "Authentication successful",
+            data: user
           });
         }
       }

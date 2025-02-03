@@ -1,3 +1,5 @@
+const { default: mongoose } = require("mongoose");
+
 exports.sanitizeNumber = ({ field, value }) => {
   try {
     console.log({ value });
@@ -13,4 +15,8 @@ exports.sanitizeNumber = ({ field, value }) => {
     console.error(error);
     return error.message;
   }
+};
+
+exports.convertToObjectId = (_id) => {
+  return new mongoose.Types.ObjectId(`${_id}`);
 };

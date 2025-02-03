@@ -19,9 +19,11 @@ class Service {
   async addCard(request, response) {
     try {
       const user_id = request.user._id;
-      const { card_type, stripe_card_id } = request.body;
+      const { stripe_card_id } = request.body;
 
-      const card = await this.card.findOne({ user_id, stripe_card_id });
+      const card = await this.card
+        .findOne({ user_id, stripe_card_id })
+        .populate(populateCard.populate);
 
       if (card) {
         return failedResponse({
@@ -66,26 +68,25 @@ class Service {
     }
   }
 
-  async getCards(request, response) {
+  async getMyCards(request, response) {
     try {
-      const user_id = request.user._id;
+      const { _id } = request.query;
 
-      const filters = { user_id };
+      const filters = { user_id: request.user._id };
 
-      if (request.params._id) filters._id = request.params._id;
+      if (_id) filters._id = _id;
 
-      const cards = await this.card
-        .find(filters)
-        .populate(populateCard.populate)
-        .sort(populateCard.sort);
+      const { page, limit, sort } = query;
 
-      if (!cards.length)
-        return unavailableResponse({ response, message: "No cards found" });
-
-      return successResponse({
+      await pagination({
         response,
-        message: "Cards fetched successfully",
-        data: cards
+        table: "Cards",
+        model: this.card,
+        filters,
+        page,
+        limit,
+        sort,
+        populate: populateCard.populate
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -97,7 +98,9 @@ class Service {
       const user_id = request.user._id;
       const { _id } = request.body;
 
-      const card = await this.card.findOne({ _id, user_id });
+      const card = await this.card
+        .findOne({ _id, user_id })
+        .populate(populateCard.populate);
 
       if (!card) {
         return unavailableResponse({

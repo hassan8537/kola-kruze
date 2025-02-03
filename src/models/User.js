@@ -36,17 +36,9 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
-    location: {
-      type: String,
-      default: ""
-    },
-    latitude: {
-      type: Number,
-      default: 0
-    },
-    longitude: {
-      type: Number,
-      default: 0
+    current_location: {
+      address: { type: String, required: true },
+      coordinates: { type: [Number], index: "2dsphere", required: true }
     },
     state: {
       type: String,
@@ -133,6 +125,10 @@ const UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "File",
       default: null
+    },
+    is_available: {
+      type: Boolean,
+      default: false
     },
     is_deleted: {
       type: Boolean,

@@ -46,6 +46,7 @@ class Service {
     try {
       const user_id = request.user._id;
       const body = request.body;
+
       const profile_picture = request.files.profile_picture?.[0] ?? null;
       const driver_license = request.files.driver_license?.[0] ?? null;
 
@@ -85,9 +86,7 @@ class Service {
         user.phone_number = body.phone_number;
         user.email = body.email;
         user.emergency_contact = body.emergency_contact;
-        user.location = body.location;
-        user.latitude = body.latitude;
-        user.longitude = body.longitude;
+        user.current_location = body.current_location;
         user.gender = body.gender;
       }
 
@@ -163,9 +162,7 @@ class Service {
         user.phone_number = body.phone_number;
         user.email_address = body.email_address;
         user.emergency_contact = body.emergency_contact;
-        user.location = body.location;
-        user.latitude = body.latitude;
-        user.longitude = body.longitude;
+        user.current_location = body.current_location;
         user.gender = body.gender;
         user.driver_preference = body.driver_preference;
         user.gender_preference = body.gender_preference;
