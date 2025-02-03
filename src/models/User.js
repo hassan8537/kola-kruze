@@ -92,12 +92,12 @@ const UserSchema = new mongoose.Schema(
     },
     driver_preference: {
       type: String,
-      enum: ["any", "student"],
+      enum: ["any", "student-only"],
       default: "any"
     },
     gender_preference: {
       type: String,
-      enum: ["any", "female"],
+      enum: ["any", "female-only"],
       default: "any"
     },
     ssn_number: {
