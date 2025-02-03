@@ -93,7 +93,7 @@ class Service {
         let user;
 
         if (auth_provider === "phone") {
-          const newUser = await this.user.create({
+          const newUser = new this.user({
             phone_number: phone_number,
             social_token: social_token,
             role: role,
@@ -104,7 +104,7 @@ class Service {
 
           user = await newUser.save();
         } else {
-          const newUser = await this.user.create({
+          const newUser = new this.user({
             social_token: social_token,
             role: role,
             auth_provider: auth_provider,
