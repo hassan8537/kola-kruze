@@ -37,8 +37,8 @@ const UserSchema = new mongoose.Schema(
       default: ""
     },
     current_location: {
-      address: { type: String, required: true },
-      coordinates: { type: [Number], index: "2dsphere", required: true }
+      address: { type: String },
+      coordinates: { type: [Number], index: "2dsphere" }
     },
     state: {
       type: String,
