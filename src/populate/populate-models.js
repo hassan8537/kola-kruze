@@ -49,10 +49,6 @@ module.exports = {
       {
         path: "vehicle_images",
         select: "file_url"
-      },
-      {
-        path: "vehicle_driver_licenses",
-        select: "file_url"
       }
     ],
     sort: { createdAt: -1 }
