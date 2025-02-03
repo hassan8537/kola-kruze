@@ -96,31 +96,37 @@ class Service {
         request.files?.inspection_document?.[0] ?? null;
       const vehicle_images = request.files?.vehicle_images ?? [];
 
-      const formData = {
-        user_id,
-        license_plate_number: body.license_plate_number,
-        vehicle_vin: body.vehicle_vin,
-        vehicle_state: body.vehicle_state,
-        vehicle_category: body.vehicle_category,
-        vehicle_make: body.vehicle_make,
-        vehicle_model: body.vehicle_model,
-        vehicle_year: body.vehicle_year,
-        vehicle_variant: body.vehicle_variant,
-        passenger_limit: body.passenger_limit,
-        vehicle_registration_number: body.vehicle_registration_number,
-        vehicle_color: body.vehicle_color,
-        vehicle_doors: body.vehicle_doors,
-        vehicle_seatbelts: body.vehicle_seatbelts,
-        insurance_document,
-        inspection_document,
-        vehicle_images
-      };
-
       const vehicle = await this.vehicle.findOne({ user_id });
-      if (!vehicle)
-        return unavailableResponse({ response, message: "No vehicle found." });
 
-      Object.assign(vehicle, formData);
+      if (!vehicle) {
+        return unavailableResponse({ response, message: "No vehicle found." });
+      }
+
+      // **Update only provided fields**
+      if (body.license_plate_number)
+        vehicle.license_plate_number = body.license_plate_number;
+      if (body.vehicle_vin) vehicle.vehicle_vin = body.vehicle_vin;
+      if (body.vehicle_state) vehicle.vehicle_state = body.vehicle_state;
+      if (body.vehicle_category)
+        vehicle.vehicle_category = body.vehicle_category;
+      if (body.vehicle_make) vehicle.vehicle_make = body.vehicle_make;
+      if (body.vehicle_model) vehicle.vehicle_model = body.vehicle_model;
+      if (body.vehicle_year) vehicle.vehicle_year = body.vehicle_year;
+      if (body.vehicle_variant) vehicle.vehicle_variant = body.vehicle_variant;
+      if (body.passenger_limit) vehicle.passenger_limit = body.passenger_limit;
+      if (body.vehicle_registration_number)
+        vehicle.vehicle_registration_number = body.vehicle_registration_number;
+      if (body.vehicle_color) vehicle.vehicle_color = body.vehicle_color;
+      if (body.vehicle_doors) vehicle.vehicle_doors = body.vehicle_doors;
+      if (body.vehicle_seatbelts)
+        vehicle.vehicle_seatbelts = body.vehicle_seatbelts;
+
+      // **Update documents only if provided**
+      if (insurance_document) vehicle.insurance_document = insurance_document;
+      if (inspection_document)
+        vehicle.inspection_document = inspection_document;
+      if (vehicle_images.length > 0) vehicle.vehicle_images = vehicle_images;
+
       await vehicle.save();
 
       return successResponse({
