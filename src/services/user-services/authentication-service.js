@@ -96,7 +96,7 @@ class Service {
             is_verified: true
           });
 
-          user = await newUser.save();
+          user = (await newUser.save()).populate(populateUser.populate);
         } else {
           const newUser = new this.user({
             social_token: social_token,
@@ -106,7 +106,7 @@ class Service {
             is_verified: true
           });
 
-          user = await newUser.save();
+          user = (await newUser.save()).populate(populateUser.populate);
         }
 
         if (!user) {
