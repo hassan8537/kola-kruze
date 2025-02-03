@@ -50,7 +50,9 @@ class Service {
       const profile_picture = request.files.profile_picture?.[0] ?? null;
       const driver_license = request.files.driver_license?.[0] ?? null;
 
-      const user = await this.user.findById(user_id);
+      const user = await this.user
+        .findById(user_id)
+        .populate(populateUser.populate);
 
       if (!user) {
         return unavailableResponse({ response, message: "No profile found." });
@@ -126,7 +128,9 @@ class Service {
       const profile_picture = request.files.profile_picture?.[0] ?? null;
       const driver_license = request.files.driver_license?.[0] ?? null;
 
-      const user = await this.user.findById(user_id);
+      const user = await this.user
+        .findById(user_id)
+        .populate(populateUser.populate);
 
       if (!user) {
         return unavailableResponse({ response, message: "No profile found." });
