@@ -6,6 +6,10 @@ module.exports = {
         select: "file_url"
       },
       {
+        path: "driver_license",
+        select: "file_url"
+      },
+      {
         path: "stripe_default_card",
         select: {}
       }
