@@ -20,16 +20,11 @@ class Service {
       const { email_address, role, device_token } = request.body;
 
       const user = await this.user
-        .findOne({
-          email_address: email_address
-        })
+        .findOne({ email_address })
         .populate(populateUser.populate);
 
       if (user) {
-        await createSession({
-          response: response,
-          user: user
-        });
+        await createSession({ response, user });
 
         user.device_token = device_token;
         user.is_verified = false;
@@ -38,25 +33,24 @@ class Service {
         await generateOTP({ response, user_id: user._id });
       } else {
         const newUser = new this.user({
-          email_address: email_address,
-          role: role,
-          device_token: device_token
-        }).populate(populateUser.populate);
+          email_address,
+          role,
+          device_token
+        });
 
-        const user = await newUser.save();
+        const savedUser = await newUser.save();
 
-        if (!user) {
+        if (!savedUser) {
           return failedResponse({
             response,
             message: "Failed to authenticate user"
           });
         } else {
-          await createSession({
-            response,
-            user: user
-          });
+          await savedUser.populate(populateUser.populate);
 
-          await generateOTP({ response, user_id: newUser._id });
+          await createSession({ response, user: savedUser });
+
+          await generateOTP({ response, user_id: savedUser._id });
         }
       }
     } catch (error) {
