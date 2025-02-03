@@ -19,9 +19,11 @@ class Service {
     try {
       const { email_address, role, device_token } = request.body;
 
-      const user = await this.user.findOne({
-        email_address: email_address
-      });
+      const user = await this.user
+        .findOne({
+          email_address: email_address
+        })
+        .populate(populateUser.populate);
 
       if (user) {
         await createSession({
@@ -35,13 +37,15 @@ class Service {
 
         await generateOTP({ response, user_id: user._id });
       } else {
-        const newUser = await this.user.create({
+        const newUser = new this.user({
           email_address: email_address,
           role: role,
           device_token: device_token
-        });
+        }).populate(populateUser.populate);
 
-        if (!newUser) {
+        const user = await newUser.save();
+
+        if (!user) {
           return failedResponse({
             response,
             message: "Failed to authenticate user"
@@ -49,7 +53,7 @@ class Service {
         } else {
           await createSession({
             response,
-            user: newUser
+            user: user
           });
 
           await generateOTP({ response, user_id: newUser._id });
@@ -86,10 +90,10 @@ class Service {
           data: user
         });
       } else {
-        let newUser;
+        let user;
 
         if (auth_provider === "phone") {
-          newUser = await this.user.create({
+          const newUser = await this.user.create({
             phone_number: phone_number,
             social_token: social_token,
             role: role,
@@ -97,17 +101,21 @@ class Service {
             device_token: device_token,
             is_verified: true
           });
+
+          user = await newUser.save();
         } else {
-          newUser = await this.user.create({
+          const newUser = await this.user.create({
             social_token: social_token,
             role: role,
             auth_provider: auth_provider,
             device_token: device_token,
             is_verified: true
           });
+
+          user = await newUser.save();
         }
 
-        if (!newUser) {
+        if (!user) {
           return failedResponse({
             response,
             message: "Failed to authenticate user"
@@ -115,7 +123,7 @@ class Service {
         } else {
           await createSession({
             response,
-            user: newUser
+            user: user
           });
 
           return successResponse({
