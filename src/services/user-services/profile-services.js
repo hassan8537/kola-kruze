@@ -178,12 +178,12 @@ class Service {
         user.driver_license = driver_license;
       }
 
-      user.state = body.state;
-      user.ssn_number = body.ssn_number;
-      user.is_notification_enabled = body.is_notification_enabled;
-      user.is_profile_completed = body.is_profile_completed;
-      user.is_merchant_setup = body.is_merchant_setup;
-      user.is_vehicle_setup = body.is_vehicle_setup;
+      user.state = body.state || user.state;
+      user.ssn_number = body.ssn_number || user.ssn_number;
+      user.is_notification_enabled =
+        body.is_notification_enabled || user.is_notification_enabled;
+      user.is_merchant_setup = body.is_merchant_setup || user.is_merchant_setup;
+      user.is_vehicle_setup = body.is_vehicle_setup || user.is_vehicle_setup;
 
       await user.save();
 
