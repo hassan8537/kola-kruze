@@ -127,9 +127,7 @@ class Service {
       const profile_picture = request.files.profile_picture?.[0] ?? null;
       const driver_license = request.files.driver_license?.[0] ?? null;
 
-      const user = await this.user
-        .findById(user_id)
-        .populate(populateUser.populate);
+      const user = await this.user.findById(user_id);
 
       if (!user) {
         return unavailableResponse({ response, message: "No profile found." });
@@ -182,13 +180,14 @@ class Service {
 
       user.state = body.state;
       user.ssn_number = body.ssn_number;
-      user.is_verified = body.is_verified;
       user.is_notification_enabled = body.is_notification_enabled;
       user.is_profile_completed = body.is_profile_completed;
       user.is_merchant_setup = body.is_merchant_setup;
       user.is_vehicle_setup = body.is_vehicle_setup;
 
       await user.save();
+
+      await user.populate(populateUser.populate);
 
       return successResponse({
         response,
