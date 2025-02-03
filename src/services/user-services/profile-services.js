@@ -101,8 +101,6 @@ class Service {
       }
 
       if (body.is_student) {
-        console.log(request.files);
-
         const identity_document = request.files.identity_document?.[0] ?? null;
 
         user.identity_document = identity_document;
@@ -233,6 +231,13 @@ class Service {
         user_id: user._id
       });
 
+      if (student) {
+        return failedResponse({
+          response,
+          message: "You already have a student profile."
+        });
+      }
+
       const newStudent = await this.student.create({
         user_id: user._id,
         university_name: body.university_name,
@@ -252,10 +257,14 @@ class Service {
       user.is_profile_completed = true;
       await user.save();
 
+      const studentUser = await this.user
+        .findById(user._id)
+        .populate(populateUser.populate);
+
       return successResponse({
         response,
         message: "Profile created successfully",
-        data: user
+        data: studentUser
       });
     } catch (error) {
       return errorResponse({ response, error });
