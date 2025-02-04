@@ -4,8 +4,7 @@ const { populateUser } = require("../../populate/populate-models");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const {
   errorResponse,
-  successResponse,
-  failedResponse
+  successResponse
 } = require("../../utilities/handlers/response-handler");
 const { createSession } = require("../../utilities/handlers/session-handler");
 
@@ -19,40 +18,26 @@ class Service {
     try {
       const { email_address, role, device_token } = request.body;
 
-      const user = await this.user
-        .findOne({ email_address })
-        .populate(populateUser.populate);
+      let user = await this.user.findOne({ email_address });
 
       if (user) {
-        await createSession({ response, user });
-
         user.device_token = device_token;
         user.is_verified = false;
-        await user.save();
-
-        await generateOTP({ response, user_id: user._id });
       } else {
-        const newUser = new this.user({
-          email_address,
-          role,
-          device_token
-        });
-
-        const savedUser = await newUser.save();
-
-        if (!savedUser) {
-          return failedResponse({
-            response,
-            message: "Failed to authenticate user"
-          });
-        } else {
-          await savedUser.populate(populateUser.populate);
-
-          await createSession({ response, user: savedUser });
-
-          await generateOTP({ response, user_id: savedUser._id });
-        }
+        user = new this.user({ email_address, role, device_token });
       }
+
+      await user.save();
+      await user.populate(populateUser.populate);
+
+      await createSession({ response, user });
+      await generateOTP({ response, user_id: user._id });
+
+      return successResponse({
+        response,
+        message: "Authentication successful",
+        data: user
+      });
     } catch (error) {
       return errorResponse({ response, error });
     }
@@ -60,73 +45,43 @@ class Service {
 
   async socialAuthentication(request, response) {
     try {
-      const { phone_number, social_token, role, auth_provider, device_token } =
-        request.body;
+      const {
+        first_name,
+        last_name,
+        phone_number,
+        social_token,
+        role,
+        auth_provider,
+        device_token
+      } = request.body;
 
-      const user = await this.user
-        .findOne({
-          social_token: social_token
-        })
-        .populate(populateUser.populate);
+      let user = await this.user.findOne({ social_token });
 
-      if (user) {
-        await createSession({
-          response,
-          user: user
-        });
+      if (!user) {
+        const newUserData = {
+          first_name,
+          last_name,
+          social_token,
+          role,
+          auth_provider,
+          device_token,
+          is_verified: true
+        };
 
-        user.device_token = device_token;
+        if (auth_provider === "phone") newUserData.phone_number = phone_number;
+
+        user = new this.user(newUserData);
         await user.save();
-
-        return successResponse({
-          response,
-          message: "Authentication successful",
-          data: user
-        });
-      } else {
-        let user;
-
-        if (auth_provider === "phone") {
-          const newUser = new this.user({
-            phone_number: phone_number,
-            social_token: social_token,
-            role: role,
-            auth_provider: auth_provider,
-            device_token: device_token,
-            is_verified: true
-          });
-
-          user = (await newUser.save()).populate(populateUser.populate);
-        } else {
-          const newUser = new this.user({
-            social_token: social_token,
-            role: role,
-            auth_provider: auth_provider,
-            device_token: device_token,
-            is_verified: true
-          });
-
-          user = (await newUser.save()).populate(populateUser.populate);
-        }
-
-        if (!user) {
-          return failedResponse({
-            response,
-            message: "Failed to authenticate user"
-          });
-        } else {
-          await createSession({
-            response,
-            user: user
-          });
-
-          return successResponse({
-            response,
-            message: "Authentication successful",
-            data: user
-          });
-        }
       }
+
+      await user.populate(populateUser.populate);
+      await createSession({ response, user });
+
+      return successResponse({
+        response,
+        message: "Authentication successful",
+        data: user
+      });
     } catch (error) {
       return errorResponse({ response, error });
     }

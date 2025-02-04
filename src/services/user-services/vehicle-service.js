@@ -75,6 +75,7 @@ class Service {
       request.user.is_vehicle_setup = true;
       await newVehicle.save();
       await request.user.save();
+      await newVehicle.populate(populateVehicle.populate);
 
       return successResponse({
         response,
@@ -96,7 +97,9 @@ class Service {
         request.files?.inspection_document?.[0] ?? null;
       const vehicle_images = request.files?.vehicle_images ?? [];
 
-      const vehicle = await this.vehicle.findOne({ user_id });
+      const vehicle = await this.vehicle
+        .findOne({ user_id })
+        .populate(populateVehicle.populate);
 
       if (!vehicle) {
         return unavailableResponse({ response, message: "No vehicle found." });
@@ -128,6 +131,7 @@ class Service {
       if (vehicle_images.length > 0) vehicle.vehicle_images = vehicle_images;
 
       await vehicle.save();
+      await vehicle.populate(populateVehicle.populate);
 
       return successResponse({
         response,
