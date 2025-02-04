@@ -11,7 +11,7 @@ const {
 } = require("../../utilities/calculators/distance-calculator");
 
 class Service {
-  constructor(socket) {
+  constructor(io) {
     this.io = io;
     this.user = User;
     this.ride = Ride;
