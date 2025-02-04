@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const Chat = require("../../models/Chat");
 const { populateChat } = require("../../populate/populate-models");
+const {
+  successEvent,
+  errorEvent
+} = require("../../utilities/handlers/event-handlers");
 
 class Service {
   constructor(io) {
@@ -12,7 +16,7 @@ class Service {
     try {
       const { sender_id, receiver_id, limit = 10, skip = 0 } = data;
 
-      const messages = await this.chat
+      const inbox = await this.chat
         .find({
           $or: [
             { sender_id, receiver_id },
@@ -25,17 +29,12 @@ class Service {
         .exec()
         .populate(populateChat.populate);
 
-      socket.emit("get-inbox", {
-        status: 1,
-        message: "Inbox fetched successfully",
-        data: messages
-      });
+      socket.emit(
+        "get-inbox",
+        successEvent({ message: "Inbox fetch successfully", data: inbox })
+      );
     } catch (error) {
-      socket.emit("get-inbox", {
-        status: 0,
-        message: "Error fetching inbox",
-        error
-      });
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
@@ -66,109 +65,76 @@ class Service {
         { $set: { is_read: true } }
       );
 
-      socket.emit("get-chats", {
-        status: 1,
-        message: "Chats fetched successfully",
-        data: chats
-      });
+      socket.emit(
+        "get-chats",
+        successEvent({ message: "Chats fetch successfully", data: chats })
+      );
     } catch (error) {
-      socket.emit("get-chats", {
-        status: 0,
-        message: "Error fetching chats",
-        error
-      });
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
   async chatMessage(socket, data) {
     try {
-      const { sender_id, receiver_id, text, files = [] } = data;
+      const { sender_id, receiver_id, text = "", files = [] } = data;
 
-      const newMessage = new this.chat({
-        sender_id,
-        receiver_id,
-        text,
-        files,
-        is_read: false
-      }).populate(populateChat.populate);
+      let message = await this.chat
+        .findOne({
+          sender_id,
+          receiver_id
+        })
+        .populate(populateChat.populate);
 
-      await newMessage.save();
+      if (message) {
+        message.text.push(text);
+        message.files.push(...files);
+        await message.save();
+      } else {
+        message = new this.chat({
+          sender_id,
+          receiver_id,
+          text: [text],
+          files,
+          is_read: false
+        });
+        await message.save();
+      }
 
-      socket.emit("chat-message", {
-        status: 1,
-        message: "Message sent successfully",
-        data: newMessage
-      });
+      socket.emit(
+        "chat-message",
+        successEvent({
+          message: "New chat created successfully.",
+          data: message
+        })
+      );
 
-      this.io.to(receiver_id).emit("chat-message", {
-        sender_id,
-        receiver_id,
-        text,
-        files,
-        is_read: false,
-        _id: newMessage._id
-      });
+      socket.join(message._id.toString());
+      this.io.to(message._id).emit(
+        "chat-message",
+        successEvent({
+          message: "New chat created successfully.",
+          data: message
+        })
+      );
     } catch (error) {
-      socket.emit("chat-message", {
-        status: 0,
-        message: "Error sending message",
-        error
-      });
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
   async chatTyping(socket, data) {
     try {
-      const { sender_id, receiver_id } = data;
+      const { chat_id } = data;
 
-      this.io.to(receiver_id).emit("chat-typing", {
-        sender_id,
-        receiver_id,
-        is_typing: true
-      });
+      socket.join(chat_id.toString());
+      this.io.to(chat_id.toString()).emit(
+        "chat-typing",
+        successEvent({
+          message: "Recipient is typing.",
+          data: { is_typing: true }
+        })
+      );
     } catch (error) {
-      socket.emit("chat-typing", {
-        status: 0,
-        message: "Error sending typing indicator",
-        error
-      });
-    }
-  }
-
-  async chatSeen(socket, data) {
-    try {
-      const { message_id, receiver_id } = data;
-
-      const message = await this.chat
-        .findById(message_id)
-        .populate(populateChat.populate);
-
-      if (!message || message.receiver_id !== receiver_id) {
-        return socket.emit("chat-seen", {
-          status: 0,
-          message: "Message not found or receiver mismatch"
-        });
-      }
-
-      message.is_read = "true";
-      await message.save();
-
-      socket.emit("chat-seen", {
-        status: 1,
-        message: "Message marked as read",
-        data: message
-      });
-
-      this.io.to(message.sender_id).emit("chat-seen", {
-        message_id,
-        is_read: "true"
-      });
-    } catch (error) {
-      socket.emit("chat-seen", {
-        status: 0,
-        message: "Error marking message as read",
-        error
-      });
+      socket.emit("error", errorEvent({ error }));
     }
   }
 }

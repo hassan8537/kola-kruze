@@ -11,7 +11,7 @@ const {
 } = require("../../utilities/calculators/distance-calculator");
 
 class Service {
-  constructor(io) {
+  constructor(socket) {
     this.io = io;
     this.user = User;
     this.ride = Ride;
@@ -126,6 +126,7 @@ class Service {
       if (nearbyDrivers.length > 0) {
         await Promise.all(
           nearbyDrivers.map((driver) => {
+            socket.join(driver._id.toString());
             this.io.to(driver._id.toString()).emit("ride-request", newRide);
 
             const body = {
@@ -182,7 +183,8 @@ class Service {
         ride
       });
 
-      this.io.to(ride.user_id).emit("ride-status-update", ride);
+      socket.join(ride.user_id.toString());
+      this.io.to(ride.user_id.toString()).emit("ride-status-update", ride);
 
       const body = {
         device_token: ride.user.device_token,
@@ -240,6 +242,9 @@ class Service {
         ride
       });
 
+      socket.join(ride.user_id.toString());
+      socket.join(ride.driver_id.toString());
+
       this.io.to(ride.user_id.toString()).emit("ride-status-update", ride);
       this.io.to(ride.driver_id.toString()).emit("ride-status-update", ride);
 
@@ -296,6 +301,7 @@ class Service {
         ride
       });
 
+      socket.join(user_id.toString());
       this.io.to(user_id.toString()).emit("share-ride", ride);
 
       const body = {
@@ -335,11 +341,13 @@ class Service {
 
       await ride.save();
 
+      socket.join(ride.user_id.toString());
       this.io.to(ride.user_id.toString()).emit("ride-location-update", {
         status: 1,
         ride
       });
 
+      socket.join(ride.driver_id.toString());
       this.io.to(ride.driver_id.toString()).emit("ride-location-update", {
         status: 1,
         ride

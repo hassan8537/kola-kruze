@@ -143,43 +143,38 @@ class Service {
 
       if (profile_picture) user.profile_picture = profile_picture;
 
-      if (user.role === "passenger") {
-        const sanitizedPhoneNumber = sanitizeNumber({
-          field: "phone number",
-          value: body.phone_number
+      const sanitizedPhoneNumber = sanitizeNumber({
+        field: "phone number",
+        value: body.phone_number
+      });
+
+      const sanitizedEmergencyContact = sanitizeNumber({
+        field: "emergency contact",
+        value: body.emergency_contact
+      });
+
+      if (sanitizedPhoneNumber === sanitizedEmergencyContact)
+        return failedResponse({
+          response,
+          message: "Phone number and Emergency contact cannot be same."
         });
 
-        const sanitizedEmergencyContact = sanitizeNumber({
-          field: "emergency contact",
-          value: body.emergency_contact
-        });
+      if (body.legal_name) user.legal_name = body.legal_name;
+      if (body.phone_number) user.phone_number = body.phone_number;
+      if (body.email_address) user.email_address = body.email_address;
+      if (body.emergency_contact)
+        user.emergency_contact = body.emergency_contact;
+      if (body.current_location) user.current_location = body.current_location;
+      if (body.gender) user.gender = body.gender;
+      if (body.driver_preference)
+        user.driver_preference = body.driver_preference;
+      if (body.gender_preference)
+        user.gender_preference = body.gender_preference;
 
-        if (sanitizedPhoneNumber === sanitizedEmergencyContact)
-          return failedResponse({
-            response,
-            message: "Phone number and Emergency contact cannot be same."
-          });
-
-        if (body.legal_name) user.legal_name = body.legal_name;
-        if (body.phone_number) user.phone_number = body.phone_number;
-        if (body.email_address) user.email_address = body.email_address;
-        if (body.emergency_contact)
-          user.emergency_contact = body.emergency_contact;
-        if (body.current_location)
-          user.current_location = body.current_location;
-        if (body.gender) user.gender = body.gender;
-        if (body.driver_preference)
-          user.driver_preference = body.driver_preference;
-        if (body.gender_preference)
-          user.gender_preference = body.gender_preference;
-      }
-
-      if (user.role === "driver") {
-        if (body.first_name) user.first_name = body.first_name;
-        if (body.last_name) user.last_name = body.last_name;
-        if (body.gender) user.gender = body.gender;
-        if (driver_license) user.driver_license = driver_license;
-      }
+      if (body.first_name) user.first_name = body.first_name;
+      if (body.last_name) user.last_name = body.last_name;
+      if (body.gender) user.gender = body.gender;
+      if (driver_license) user.driver_license = driver_license;
 
       if (body.state) user.state = body.state;
       if (body.ssn_number) user.ssn_number = body.ssn_number;

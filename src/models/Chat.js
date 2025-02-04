@@ -11,11 +11,12 @@ const ChatSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  text: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  text: [
+    {
+      type: String,
+      trim: true
+    }
+  ],
   files: [
     {
       type: mongoose.Schema.Types.ObjectId,
