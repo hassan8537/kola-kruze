@@ -53,19 +53,15 @@ class Service {
         source: stripe_card_id
       });
 
-      const newCard = await this.card.create({
+      await this.card.create({
         user_id: user._id,
         stripe_card_id: card.id
       });
 
-      const createdCard = await this.card
-        .findById(newCard._id)
-        .populate(populateCard.populate);
-
       return successResponse({
         response,
         message: "Card added successfully.",
-        data: createdCard
+        data: card
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -74,23 +70,24 @@ class Service {
 
   async getMyCards(request, response) {
     try {
-      const { _id } = request.query;
+      const stripeCustomerId = request.user.stripe_customer_id;
 
-      const filters = { user_id: request.user._id };
+      if (!stripeCustomerId) {
+        return unavailableResponse({
+          response,
+          message: "Stripe customer ID not found."
+        });
+      }
 
-      if (_id) filters._id = _id;
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: stripeCustomerId,
+        type: "card"
+      });
 
-      const { page, limit, sort } = query;
-
-      await pagination({
+      return successResponse({
         response,
-        table: "Cards",
-        model: this.card,
-        filters,
-        page,
-        limit,
-        sort,
-        populate: populateCard.populate
+        message: "Cards retrieved successfully.",
+        data: paymentMethods.data
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -134,9 +131,7 @@ class Service {
       const user_id = request.user._id;
       const { stripe_card_id } = request.body;
 
-      const card = await this.card
-        .findOne({ user_id, stripe_card_id })
-        .populate(populateCard.populate);
+      const card = await this.card.findOne({ user_id, stripe_card_id });
 
       if (!card) {
         return unavailableResponse({
@@ -163,9 +158,12 @@ class Service {
         }
       });
 
+      const stripeCard = await stripe.paymentMethods.retrieve(stripe_card_id);
+
       return successResponse({
         response,
-        message: "Default card set successfully in both system and Stripe."
+        message: "Default card set successfully.",
+        data: stripeCard
       });
     } catch (error) {
       return errorResponse({ response, error });
