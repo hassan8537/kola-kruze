@@ -109,6 +109,7 @@ class Service {
 
       user.is_profile_completed = true;
       await user.save();
+      await user.populate(populateUser.populate);
 
       return successResponse({
         response,

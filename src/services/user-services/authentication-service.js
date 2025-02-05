@@ -32,12 +32,6 @@ class Service {
 
       await createSession({ response, user });
       await generateOTP({ response, user_id: user._id });
-
-      return successResponse({
-        response,
-        message: "Authentication successful",
-        data: user
-      });
     } catch (error) {
       return errorResponse({ response, error });
     }
