@@ -4,7 +4,8 @@ const { populateUser } = require("../../populate/populate-models");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const {
   errorResponse,
-  successResponse
+  successResponse,
+  failedResponse
 } = require("../../utilities/handlers/response-handler");
 const { createSession } = require("../../utilities/handlers/session-handler");
 
@@ -75,6 +76,36 @@ class Service {
         response,
         message: "Authentication successful",
         data: user
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async logout(request, response) {
+    try {
+      const user_id = request.user._id;
+
+      await this.user.findByIdAndUpdate(
+        user_id,
+        { session_token: null },
+        { new: true }
+      );
+
+      response.clearCookie("authentication");
+
+      request.session.destroy((error) => {
+        if (error) {
+          return failedResponse({
+            response,
+            message: "Something went wrong while logging out. Please try again."
+          });
+        }
+      });
+
+      return successResponse({
+        response,
+        message: "You have successfully logged out."
       });
     } catch (error) {
       return errorResponse({ response, error });

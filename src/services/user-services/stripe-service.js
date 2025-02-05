@@ -56,12 +56,10 @@ class Service {
       const user_id = request.user._id;
       const user = await this.user.findById(user_id);
 
-      // If merchant setup is already done, return response
       if (user.is_merchant_setup) {
         return failedResponse({ response, message: "Merchant already setup." });
       }
 
-      // If stripe_merchant_id is missing, create a new Stripe account
       if (!user.stripe_merchant_id) {
         console.log("Creating new Stripe account...");
         const account = await stripe.accounts.create({
@@ -74,13 +72,11 @@ class Service {
         await user.save();
       }
 
-      // Retrieve the Stripe account
       const account = await stripe.accounts.retrieve(user.stripe_merchant_id);
       console.log("Stripe Account Details:", account);
 
-      // Check if transfers capability is active
       if (account.capabilities?.transfers === "active") {
-        user.is_merchant_setup = true; // Update the field
+        user.is_merchant_setup = true;
         await user.save();
 
         return successResponse({
@@ -90,7 +86,6 @@ class Service {
         });
       }
 
-      // Generate Stripe onboarding link if setup is incomplete
       console.log("Generating Stripe onboarding link...");
       const accountLink = await stripe.accountLinks.create({
         account: user.stripe_merchant_id,

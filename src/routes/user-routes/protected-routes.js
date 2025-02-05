@@ -5,6 +5,7 @@ const uploadFiles = require("../../middlewares/upload-files-middleware");
 const router = require("express").Router();
 
 const controllers = {
+  authentication: require("../../controllers/user-controllers/authentication-controller"),
   profile: require("../../controllers/user-controllers/profile-controller"),
   student: require("../../controllers/user-controllers/student-controller"),
   vehicle: require("../../controllers/user-controllers/vehicle-controller"),
@@ -12,6 +13,12 @@ const controllers = {
   card: require("../../controllers/user-controllers/card-controller"),
   stripe: require("../../controllers/user-controllers/stripe-controller")
 };
+
+// session
+router.get(
+  "/auth/logout",
+  controllers.authentication.logout(controllers.authentication)
+);
 
 // profiles
 router.get(

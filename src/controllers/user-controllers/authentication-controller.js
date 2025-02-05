@@ -12,6 +12,10 @@ class Controller {
   async socialAuthentication(request, response) {
     return this.service.socialAuthentication(request, response);
   }
+
+  async logout(request, response) {
+    return this.service.logout(request, response);
+  }
 }
 
 module.exports = new Controller();
