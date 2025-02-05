@@ -104,7 +104,7 @@ class Service {
       const { _id } = request.params;
 
       const card = await this.card
-        .findById(_id)
+        .findOne({ stripe_card_id: _id, user_id })
         .populate(populateCard.populate);
 
       if (!card) {
