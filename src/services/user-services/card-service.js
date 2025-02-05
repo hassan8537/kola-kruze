@@ -84,10 +84,14 @@ class Service {
         type: "card"
       });
 
+      if (!paymentMethods.data.length) {
+        return unavailableResponse({ response, message: "No cards found." });
+      }
+
       return successResponse({
         response,
         message: "Cards retrieved successfully.",
-        data: paymentMethods.data
+        data: this.formatStripeList(paymentMethods.data)
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -168,6 +172,16 @@ class Service {
     } catch (error) {
       return errorResponse({ response, error });
     }
+  }
+
+  formatStripeList(array) {
+    return array.map((item) => {
+      return {
+        id: item.id,
+        brand: item.card.brand,
+        last4: item.card.last4
+      };
+    });
   }
 }
 
