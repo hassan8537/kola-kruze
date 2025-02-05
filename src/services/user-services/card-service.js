@@ -88,10 +88,24 @@ class Service {
         return unavailableResponse({ response, message: "No cards found." });
       }
 
+      const customer = await stripe.customers.retrieve(stripeCustomerId);
+      const defaultPaymentMethod =
+        customer.invoice_settings.default_payment_method;
+
+      const sortedCards = paymentMethods.data.sort((a, b) => {
+        if (a.id === defaultPaymentMethod) {
+          return -1;
+        }
+        if (b.id === defaultPaymentMethod) {
+          return 1;
+        }
+        return 0;
+      });
+
       return successResponse({
         response,
         message: "Cards retrieved successfully.",
-        data: this.formatStripeList(paymentMethods.data)
+        data: this.formatStripeList(sortedCards)
       });
     } catch (error) {
       return errorResponse({ response, error });
