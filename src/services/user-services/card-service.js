@@ -101,7 +101,7 @@ class Service {
   async deleteCard(request, response) {
     try {
       const user_id = request.user._id;
-      const { _id } = request.body;
+      const { _id } = request.params;
 
       const card = await this.card
         .findOne({ _id, user_id })
