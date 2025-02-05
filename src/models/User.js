@@ -45,8 +45,7 @@ const UserSchema = new mongoose.Schema(
       address: { type: String, default: "" },
       coordinates: {
         type: [Number],
-        index: "2dsphere",
-        required: true
+        index: "2dsphere"
       }
     },
     state: {
