@@ -104,7 +104,7 @@ class Service {
       const { _id } = request.params;
 
       const card = await this.card
-        .findOne({ _id, user_id })
+        .findById(_id)
         .populate(populateCard.populate);
 
       if (!card) {
