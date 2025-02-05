@@ -17,7 +17,7 @@ const controllers = {
 // session
 router.get(
   "/auth/logout",
-  controllers.authentication.logout(controllers.authentication)
+  controllers.authentication.logout.bind(controllers.authentication)
 );
 
 // profiles
