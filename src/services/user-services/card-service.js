@@ -18,50 +18,54 @@ class Service {
 
   async addCard(request, response) {
     try {
-      const user_id = request.user._id;
+      const user = request.user;
       const { stripe_card_id } = request.body;
 
-      const card = await this.card
-        .findOne({ user_id, stripe_card_id })
-        .populate(populateCard.populate);
-
-      if (card) {
+      if (!stripe_card_id) {
         return failedResponse({
           response,
-          message: "You already have added this card."
+          message: "Stripe card id is required."
         });
       }
 
-      let stripeCustomerId = request.user.stripe_customer_id;
+      const existingAccount = await this.card
+        .findOne({ user_id: user._id, stripe_card_id })
+        .populate(populateCard.populate);
 
-      if (!stripeCustomerId) {
+      if (existingAccount) {
+        return failedResponse({
+          response,
+          message: "Stripe card already exists."
+        });
+      }
+
+      let stripeCustomer = user.stripe_customer_id;
+      if (!stripeCustomer) {
         const customer = await stripe.customers.create({
-          email: request.user.email_address
+          email: user.email_address
         });
-
-        request.user.stripe_customer_id = customer.id;
-        await request.user.save();
-        stripeCustomerId = customer.id;
+        user.stripe_customer_id = customer.id;
+        await user.save();
+        stripeCustomer = customer.id;
       }
 
-      const stripeCard = await stripe.customers.createSource(stripeCustomerId, {
+      const card = await stripe.customers.createSource(stripeCustomer, {
         source: stripe_card_id
       });
 
       const newCard = await this.card.create({
-        user_id,
-        card_type,
-        stripe_card_id: stripeCard.id
+        user_id: user._id,
+        stripe_card_id: card.id
       });
 
-      const addedCard = await this.card
+      const createdCard = await this.card
         .findById(newCard._id)
         .populate(populateCard.populate);
 
       return successResponse({
         response,
-        message: "Card added successfully",
-        data: addedCard
+        message: "Card added successfully.",
+        data: createdCard
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -144,9 +148,24 @@ class Service {
       request.user.stripe_default_card = card._id;
       await request.user.save();
 
+      const stripeCustomerId = request.user.stripe_customer_id;
+
+      if (!stripeCustomerId) {
+        return unavailableResponse({
+          response,
+          message: "Stripe customer ID not found."
+        });
+      }
+
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: stripe_card_id
+        }
+      });
+
       return successResponse({
         response,
-        message: "Default card set successfully"
+        message: "Default card set successfully in both system and Stripe."
       });
     } catch (error) {
       return errorResponse({ response, error });

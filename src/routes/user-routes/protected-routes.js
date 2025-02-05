@@ -9,7 +9,8 @@ const controllers = {
   student: require("../../controllers/user-controllers/student-controller"),
   vehicle: require("../../controllers/user-controllers/vehicle-controller"),
   file: require("../../controllers/user-controllers/file-controller"),
-  card: require("../../controllers/user-controllers/card-controller")
+  card: require("../../controllers/user-controllers/card-controller"),
+  stripe: require("../../controllers/user-controllers/stripe-controller")
 };
 
 // profiles
@@ -98,6 +99,12 @@ router.delete(
 router.put(
   "/cards/default",
   controllers.card.setDefaultCard.bind(controllers.card)
+);
+
+// stripe
+router.get(
+  "/stripe/setup",
+  controllers.stripe.setupStripeMerchant.bind(controllers.stripe)
 );
 
 module.exports = router;
