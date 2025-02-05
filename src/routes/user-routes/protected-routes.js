@@ -8,7 +8,8 @@ const controllers = {
   profile: require("../../controllers/user-controllers/profile-controller"),
   student: require("../../controllers/user-controllers/student-controller"),
   vehicle: require("../../controllers/user-controllers/vehicle-controller"),
-  file: require("../../controllers/user-controllers/file-controller")
+  file: require("../../controllers/user-controllers/file-controller"),
+  card: require("../../controllers/user-controllers/card-controller")
 };
 
 // profiles
@@ -83,5 +84,20 @@ router.put(
 
 // files
 router.get("/files", controllers.file.getFiles.bind(controllers.file));
+
+// cards
+router.get("/cards", controllers.card.getCards.bind(controllers.card));
+
+router.post("/cards", controllers.card.addCard.bind(controllers.card));
+
+router.delete(
+  "/cards/:_id",
+  controllers.card.deleteCard.bind(controllers.card)
+);
+
+router.put(
+  "/cards/default",
+  controllers.card.setDefaultCard.bind(controllers.card)
+);
 
 module.exports = router;

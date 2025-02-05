@@ -10,7 +10,7 @@ class Controller {
   }
 
   async getCards(request, response) {
-    return this.service.getCards(request, response);
+    return this.service.getMyCards(request, response);
   }
 
   async deleteCard(request, response) {

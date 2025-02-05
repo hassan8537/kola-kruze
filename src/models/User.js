@@ -113,11 +113,11 @@ const UserSchema = new mongoose.Schema(
       default: ""
     },
     stripe_customer_id: {
-      type: Boolean,
+      type: String,
       default: false
     },
     stripe_merchant_id: {
-      type: Boolean,
+      type: String,
       default: false
     },
     stripe_default_card: {
