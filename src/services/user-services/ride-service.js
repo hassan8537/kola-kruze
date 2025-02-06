@@ -186,14 +186,7 @@ class Service {
 
   async rideRequest(socket, data) {
     try {
-      const {
-        user_id,
-        pickup_locations,
-        stops,
-        dropoff_locations,
-        ride_type,
-        ride_preferences
-      } = data;
+      const { user_id, pickup_locations, stops, dropoff_locations } = data;
 
       console.log(data);
 
@@ -247,9 +240,7 @@ class Service {
             type: "Point",
             coordinates: dropoff.location.coordinates
           }
-        })),
-        ride_type,
-        ride_preferences
+        }))
       });
 
       const ride = await this.ride

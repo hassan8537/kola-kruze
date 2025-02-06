@@ -79,12 +79,6 @@ const RideSchema = new mongoose.Schema(
       }
     ],
 
-    ride_type: {
-      type: String,
-      enum: ["private", "shared"],
-      default: "private"
-    },
-
     ride_status: {
       type: String,
       enum: [
@@ -118,12 +112,6 @@ const RideSchema = new mongoose.Schema(
         }
       }
     ],
-
-    ride_preferences: {
-      pet_friendly: { type: Boolean, default: false },
-      wheelchair_accessible: { type: Boolean, default: false },
-      air_conditioning: { type: Boolean, default: true }
-    },
 
     cancellation: {
       cancelled_by: {
