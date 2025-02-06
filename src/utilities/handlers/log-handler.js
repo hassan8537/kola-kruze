@@ -35,6 +35,6 @@ exports.errorLog = ({ error }) => {
   console.log({
     code: 500,
     status: 0,
-    message: error.message
+    message: error
   });
 };

@@ -27,7 +27,7 @@ const NotificationSchema = new mongoose.Schema(
     },
     model_type: {
       type: String,
-      enum: ["payment", "ride", "user", "vehicle", "review", "chat"],
+      enum: ["Payment", "Ride", "User", "Vehicle", "Rating", "Chat"],
       required: true
     }
   },

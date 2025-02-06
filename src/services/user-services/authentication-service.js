@@ -21,6 +21,12 @@ class Service {
 
       let user = await this.user.findOne({ email_address });
 
+      if (user && user.role !== role)
+        return failedResponse({
+          response,
+          message: "Email address already in use"
+        });
+
       if (user) {
         user.device_token = device_token;
         user.is_verified = false;
@@ -51,6 +57,18 @@ class Service {
       } = request.body;
 
       let user = await this.user.findOne({ social_token });
+
+      if (user && user.role !== role)
+        return failedResponse({
+          response,
+          message: "Invalid social token."
+        });
+
+      if (user && user.auth_provider !== auth_provider)
+        return failedResponse({
+          response,
+          message: "You are trying to login with incorrect platform."
+        });
 
       if (!user) {
         const newUserData = {

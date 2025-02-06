@@ -23,15 +23,7 @@ class Service {
   // Utilities
 
   async createNotification({ body }) {
-    const {
-      device_token,
-      user_id,
-      message,
-      type,
-      model_id,
-      model_type,
-      meta_data
-    } = body;
+    const { user_id, message, type, model_id, model_type } = body;
     try {
       const notification = new this.notification({
         user_id: user_id,
@@ -44,13 +36,6 @@ class Service {
       console.log({ notification });
 
       await notification.save();
-
-      // await sendNotification({
-      //   device_token: device_token,
-      //   title: message,
-      //   payload: notification,
-      //   meta_data
-      // });
 
       return successLog({
         message: "Notification created successfully.",

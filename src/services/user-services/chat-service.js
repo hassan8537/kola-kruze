@@ -11,10 +11,9 @@ const {
   successResponse,
   errorResponse
 } = require("../../utilities/handlers/response-handler");
-const {
-  convertToObjectId
-} = require("../../utilities/formatters/value-formatters");
 const User = require("../../models/User");
+const { sendNotification } = require("../../config/firebase");
+const notificationService = require("./notification-service");
 
 class Service {
   constructor(io) {
@@ -158,15 +157,15 @@ class Service {
     try {
       const { sender_id, receiver_id, text = "", files = [] } = data;
 
-      const message = new this.chat({
+      const newChat = new this.chat({
         sender_id,
         receiver_id,
         text: text,
         files,
         is_read: false
       });
-      await message.save();
-      await message.populate(populateChat.populate);
+      await newChat.save();
+      await newChat.populate(populateChat.populate);
 
       socket.join(receiver_id.toString());
       this.io.to(receiver_id).emit(
@@ -174,9 +173,14 @@ class Service {
         successEvent({
           object_type: "get-chat",
           message: "New chat created successfully.",
-          data: message
+          data: newChat
         })
       );
+
+      // await this.notificationManagement({
+      //   type: "chat",
+      //   chat: newChat
+      // });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
@@ -197,6 +201,75 @@ class Service {
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
+  }
+
+  async notificationManagement({ type, chat }) {
+    const sender = chat.sender_id;
+    const receiver = chat.receiver_id;
+    console.log({ receiver: receiver.device_token });
+
+    const fcmPayload = JSON.stringify({
+      message: {
+        token: receiver.device_token,
+        notification: {
+          title: "New message",
+          body: `${sender.first_name || sender.legal_name} sent you a message`
+        },
+        data: {
+          notificationType: type,
+          data: {
+            type: type,
+            sender_id: {
+              _id: sender._id.toString() || null,
+              email_address: sender.email_address.toString() || null,
+              first_name:
+                sender.first_name.toString() ||
+                sender.legal_name.toString() ||
+                null,
+              last_name: sender.last_name.toString() || null,
+              profile_picture:
+                sender.profile_picture.file_url.toString() || null
+            },
+            receiver_id: {
+              _id: receiver._id.toString() || null,
+              email_address: receiver.email_address.toString() || null,
+              first_name:
+                receiver.first_name.toString() ||
+                receiver.legal_name.toString() ||
+                null,
+              last_name: receiver.last_name.toString() || null,
+              profile_picture:
+                receiver.profile_picture.file_url.toString() || null
+            },
+            text: chat.text.toString() || null,
+            files: chat.files.toString() || null
+          }
+        }
+      }
+    });
+
+    const updateNotificationCount = await this.user.findByIdAndUpdate(
+      receiver._id,
+      { $inc: { notification_count: 1 } },
+      { new: true }
+    );
+
+    await sendNotification(fcmPayload);
+
+    const notificationBody = {
+      user_id: sender._id,
+      message: "New message.",
+      type: "chat",
+      model_id: chat._id,
+      model_type: "Chat"
+    };
+
+    await notificationService.createNotification({ body: notificationBody });
+
+    // await io.to(receiver._id.toString()).emit("response", {
+    //   object_type: "notification-count",
+    //   data: updateNotificationCount.notification_count
+    // });
   }
 }
 

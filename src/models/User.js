@@ -141,6 +141,10 @@ const UserSchema = new mongoose.Schema(
     is_deleted: {
       type: Boolean,
       default: false
+    },
+    notification_count: {
+      type: Number,
+      default: 0
     }
   },
   {
