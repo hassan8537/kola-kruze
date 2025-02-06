@@ -4,7 +4,8 @@ const User = require("../../models/User");
 const { populateNotification } = require("../../populate/populate-models");
 const {
   successLog,
-  failedLog
+  failedLog,
+  errorLog
 } = require("../../utilities/handlers/log-handler");
 const {
   successResponse,
@@ -25,24 +26,20 @@ class Service {
   async createNotification({ body }) {
     const { user_id, message, type, model_id, model_type } = body;
     try {
-      const notification = new this.notification({
+      const notification = await this.notification.create({
         user_id: user_id,
         message: message,
         type: type,
         model_id: model_id,
         model_type: model_type
-      }).populate(populateNotification.populate);
-
-      console.log({ notification });
-
-      await notification.save();
+      });
 
       return successLog({
         message: "Notification created successfully.",
         data: notification
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      return errorLog({ error });
     }
   }
 

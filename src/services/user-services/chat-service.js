@@ -14,6 +14,7 @@ const {
 const User = require("../../models/User");
 const { sendNotification } = require("../../config/firebase");
 const notificationService = require("./notification-service");
+const { errorLog } = require("../../utilities/handlers/log-handler");
 
 class Service {
   constructor(io) {
@@ -177,10 +178,10 @@ class Service {
         })
       );
 
-      // await this.notificationManagement({
-      //   type: "chat",
-      //   chat: newChat
-      // });
+      await this.notificationManagement({
+        type: "chat",
+        chat: newChat
+      });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
@@ -204,72 +205,76 @@ class Service {
   }
 
   async notificationManagement({ type, chat }) {
-    const sender = chat.sender_id;
-    const receiver = chat.receiver_id;
-    console.log({ receiver: receiver.device_token });
+    try {
+      const sender = chat.sender_id;
+      const receiver = chat.receiver_id;
+      console.log({ receiver: receiver.device_token });
 
-    const fcmPayload = JSON.stringify({
-      message: {
-        token: receiver.device_token,
-        notification: {
-          title: "New message",
-          body: `${sender.first_name || sender.legal_name} sent you a message`
-        },
-        data: {
-          notificationType: type,
+      const fcmPayload = JSON.stringify({
+        message: {
+          token: receiver.device_token,
+          notification: {
+            title: "New message",
+            body: `${sender.first_name || sender.legal_name} sent you a message`
+          },
           data: {
-            type: type,
-            sender_id: {
-              _id: sender._id.toString() || null,
-              email_address: sender.email_address.toString() || null,
-              first_name:
-                sender.first_name.toString() ||
-                sender.legal_name.toString() ||
-                null,
-              last_name: sender.last_name.toString() || null,
-              profile_picture:
-                sender.profile_picture.file_url.toString() || null
-            },
-            receiver_id: {
-              _id: receiver._id.toString() || null,
-              email_address: receiver.email_address.toString() || null,
-              first_name:
-                receiver.first_name.toString() ||
-                receiver.legal_name.toString() ||
-                null,
-              last_name: receiver.last_name.toString() || null,
-              profile_picture:
-                receiver.profile_picture.file_url.toString() || null
-            },
-            text: chat.text.toString() || null,
-            files: chat.files.toString() || null
+            notificationType: type,
+            data: JSON.stringify({
+              type: type,
+              sender_id: {
+                _id: sender._id.toString() || null,
+                email_address: sender.email_address.toString() || null,
+                first_name:
+                  sender.first_name.toString() ||
+                  sender.legal_name.toString() ||
+                  null,
+                last_name: sender.last_name.toString() || null,
+                profile_picture:
+                  sender.profile_picture.file_url.toString() || null
+              },
+              receiver_id: {
+                _id: receiver._id.toString() || null,
+                email_address: receiver.email_address.toString() || null,
+                first_name:
+                  receiver.first_name.toString() ||
+                  receiver.legal_name.toString() ||
+                  null,
+                last_name: receiver.last_name.toString() || null,
+                profile_picture:
+                  receiver.profile_picture.file_url.toString() || null
+              },
+              text: chat.text.toString() || null,
+              files: chat.files.toString() || null
+            })
           }
         }
-      }
-    });
+      });
 
-    const updateNotificationCount = await this.user.findByIdAndUpdate(
-      receiver._id,
-      { $inc: { notification_count: 1 } },
-      { new: true }
-    );
+      const updateNotificationCount = await this.user.findByIdAndUpdate(
+        receiver._id,
+        { $inc: { notification_count: 1 } },
+        { new: true }
+      );
 
-    await sendNotification(fcmPayload);
+      await sendNotification(fcmPayload);
 
-    const notificationBody = {
-      user_id: sender._id,
-      message: "New message.",
-      type: "chat",
-      model_id: chat._id,
-      model_type: "Chat"
-    };
+      const notificationBody = {
+        user_id: sender._id,
+        message: "New message.",
+        type: "chat",
+        model_id: chat._id,
+        model_type: "Chat"
+      };
 
-    await notificationService.createNotification({ body: notificationBody });
+      await notificationService.createNotification({ body: notificationBody });
 
-    // await io.to(receiver._id.toString()).emit("response", {
-    //   object_type: "notification-count",
-    //   data: updateNotificationCount.notification_count
-    // });
+      // await io.to(receiver._id.toString()).emit("response", {
+      //   object_type: "notification-count",
+      //   data: updateNotificationCount.notification_count
+      // });
+    } catch (error) {
+      return errorLog({ error });
+    }
   }
 }
 

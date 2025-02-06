@@ -12,28 +12,32 @@ admin.initializeApp({
 const SCOPES = "https://www.googleapis.com/auth/firebase.messaging";
 
 const getAccessToken = () => {
-  return new Promise((resolve, reject) => {
-    const key = require("../keys/kola-kruze-4ba2c-firebase-adminsdk-fbsvc-bd69855ae8.json");
+  try {
+    return new Promise((resolve, reject) => {
+      const key = require("../keys/kola-kruze-4ba2c-firebase-adminsdk-fbsvc-bd69855ae8.json");
 
-    const jwtClient = new google.auth.JWT(
-      key.client_email,
-      null,
-      key.private_key,
-      SCOPES
-    );
+      const jwtClient = new google.auth.JWT(
+        key.client_email,
+        null,
+        key.private_key,
+        SCOPES
+      );
 
-    jwtClient.authorize((err, tokens) => {
-      if (err) return reject(err);
-      resolve(tokens.access_token);
+      jwtClient.authorize((err, tokens) => {
+        if (err) return reject(err);
+        resolve(tokens.access_token);
+      });
     });
-  });
+  } catch (error) {
+    return errorLog({ error });
+  }
 };
 
 const AxiosConfig = async (token, payload) => {
   try {
     const config = {
       method: "post",
-      url: `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`,
+      url: `https://fcm.googleapis.com/v1/projects/${process.env.FIREBASE_PROJECT_ID}/messages:send`,
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -59,7 +63,7 @@ const sendNotification = async (payload) => {
 
     await AxiosConfig(access_token, payload);
   } catch (error) {
-    console.log("Error in sendNotification:", error.message);
+    return errorLog({ error });
   }
 };
 
