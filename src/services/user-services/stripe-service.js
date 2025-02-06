@@ -1,5 +1,6 @@
 const stripeSecretKey = require("../../config/stripe");
 const stripe = require("stripe")(stripeSecretKey);
+console.log("Stripe Secret Key:", stripeSecretKey);
 const User = require("../../models/User");
 const {
   errorResponse,
@@ -67,6 +68,8 @@ class Service {
           email: request.user.email_address,
           capabilities: { transfers: { requested: true } }
         });
+
+        return;
 
         user.stripe_merchant_id = account.id;
         await user.save();
