@@ -11,9 +11,6 @@ const {
   successResponse,
   errorResponse
 } = require("../../utilities/handlers/response-handler");
-const {
-  convertToObjectId
-} = require("../../utilities/formatters/value-formatters");
 const User = require("../../models/User");
 
 class Service {
@@ -115,12 +112,12 @@ class Service {
 
       if (!chats)
         socket.emit(
-          "get-chats",
+          "response",
           failedEvent({ object_type: "get-chats", message: "No chats found" })
         );
 
       socket.emit(
-        "get-chats",
+        "response",
         successEvent({
           object_type: "get-chats",
           message: "Chats fetch successfully",
@@ -148,7 +145,7 @@ class Service {
 
       socket.join(receiver_id.toString());
       this.io.to(receiver_id).emit(
-        "chat-message",
+        "response",
         successEvent({
           object_type: "get-chat",
           message: "New chat created successfully.",
@@ -166,7 +163,7 @@ class Service {
 
       socket.join(chat_id.toString());
       this.io.to(chat_id.toString()).emit(
-        "chat-typing",
+        "response",
         successEvent({
           message: "Recipient is typing.",
           data: { is_typing: true }
