@@ -14,11 +14,13 @@ const {
 const {
   convertToObjectId
 } = require("../../utilities/formatters/value-formatters");
+const User = require("../../models/User");
 
 class Service {
   constructor(io) {
     this.io = io;
     this.chat = Chat;
+    this.user = User;
   }
 
   async getInbox(request, response) {
@@ -26,25 +28,61 @@ class Service {
       const user_id = request.user._id;
       const { limit = 10, skip = 0 } = request.query;
 
-      const inbox = await this.chat
+      // Step 1: Find all chats where user is either sender or receiver
+      const chats = await this.chat
         .find({
           $or: [{ sender_id: user_id }, { receiver_id: user_id }]
         })
-        .sort({ createdAt: -1 });
+        .sort({ createdAt: -1 }) // Step 2: Sort chats by creation time
+        .skip(parseInt(skip)) // Step 3: Skip the records as per pagination
+        .limit(parseInt(limit)); // Step 3: Limit the number of records
 
-      console.log("Inbox Result:", inbox);
-
-      if (!inbox.length) {
+      if (!chats.length) {
         return unavailableResponse({
           response,
           message: "Inbox is empty. Be the first to start a chat."
         });
       }
 
+      // Step 4: Group chats by sender-receiver pairs
+      const groupedChats = {};
+      chats.forEach((chat) => {
+        const user1 = chat.sender_id.toString();
+        const user2 = chat.receiver_id.toString();
+        const pairKey =
+          user1 < user2 ? `${user1}-${user2}` : `${user2}-${user1}`;
+
+        if (!groupedChats[pairKey]) {
+          groupedChats[pairKey] = chat;
+        }
+      });
+
+      // Step 5: Prepare unique chat pair details (sender and receiver lookup)
+      const uniqueChats = Object.values(groupedChats);
+
+      // Step 6: Look up sender and receiver details
+      const result = await Promise.all(
+        uniqueChats.map(async (chat) => {
+          const sender = await this.user.findById(chat.sender_id);
+          const receiver = await this.user.findById(chat.receiver_id);
+
+          return {
+            _id: chat._id,
+            sender_id: sender,
+            receiver_id: receiver,
+            text: chat.text,
+            files: chat.files,
+            createdAt: chat.createdAt,
+            updatedAt: chat.updatedAt
+          };
+        })
+      );
+
+      // Step 7: Return response
       return successResponse({
         response,
         message: "Inbox retrieved successfully",
-        data: inbox
+        data: result
       });
     } catch (error) {
       return errorResponse({ response, error });
