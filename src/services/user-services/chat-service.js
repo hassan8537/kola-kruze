@@ -241,7 +241,7 @@ class Service {
                   null,
                 last_name: receiver.last_name.toString() || null,
                 profile_picture:
-                  receiver.profile_picture.file_url.toString() || null
+                  receiver.profile_picture?.file_url.toString() || null
               },
               text: chat.text.toString() || null,
               files: chat.files.toString() || null
