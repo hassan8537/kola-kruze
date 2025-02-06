@@ -11,6 +11,9 @@ const {
   successResponse,
   errorResponse
 } = require("../../utilities/handlers/response-handler");
+const {
+  convertToObjectId
+} = require("../../utilities/formatters/value-formatters");
 
 class Service {
   constructor(io) {
@@ -21,12 +24,16 @@ class Service {
   async getInbox(request, response) {
     try {
       const user_id = request.user._id;
+
       const { limit = 10, skip = 0 } = request.query;
 
       const inbox = await this.chat.aggregate([
         {
           $match: {
-            $or: [{ sender_id: user_id }, { receiver_id: user_id }]
+            $or: [
+              { sender_id: convertToObjectId(user_id) },
+              { receiver_id: convertToObjectId(user_id) }
+            ]
           }
         },
         { $sort: { created_at: -1 } },

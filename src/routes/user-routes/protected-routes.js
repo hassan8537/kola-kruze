@@ -11,7 +11,8 @@ const controllers = {
   vehicle: require("../../controllers/user-controllers/vehicle-controller"),
   file: require("../../controllers/user-controllers/file-controller"),
   card: require("../../controllers/user-controllers/card-controller"),
-  stripe: require("../../controllers/user-controllers/stripe-controller")
+  stripe: require("../../controllers/user-controllers/stripe-controller"),
+  chat: require("../../controllers/user-controllers/chat-controller")
 };
 
 // session
@@ -113,5 +114,8 @@ router.get(
   "/stripe/setup",
   controllers.stripe.setupStripeMerchant.bind(controllers.stripe)
 );
+
+// chats
+router.get("/chats/inbox", controllers.chat.getInbox.bind(controllers.chat));
 
 module.exports = router;
