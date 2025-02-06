@@ -11,6 +11,9 @@ const {
   successResponse,
   errorResponse
 } = require("../../utilities/handlers/response-handler");
+const {
+  convertToObjectId
+} = require("../../utilities/formatters/value-formatters");
 const User = require("../../models/User");
 
 class Service {
@@ -25,61 +28,83 @@ class Service {
       const user_id = request.user._id;
       const { limit = 10, skip = 0 } = request.query;
 
-      // Step 1: Find all chats where user is either sender or receiver
-      const chats = await this.chat
-        .find({
-          $or: [{ sender_id: user_id }, { receiver_id: user_id }]
-        })
-        .sort({ createdAt: -1 }) // Step 2: Sort chats by creation time
-        .skip(parseInt(skip)) // Step 3: Skip the records as per pagination
-        .limit(parseInt(limit)); // Step 3: Limit the number of records
+      const inbox = await this.chat.aggregate([
+        {
+          $match: {
+            $or: [{ sender_id: user_id }, { receiver_id: user_id }]
+          }
+        },
+        {
+          $addFields: {
+            user1: {
+              $cond: [
+                { $lt: ["$sender_id", "$receiver_id"] },
+                "$sender_id",
+                "$receiver_id"
+              ]
+            },
+            user2: {
+              $cond: [
+                { $lt: ["$sender_id", "$receiver_id"] },
+                "$receiver_id",
+                "$sender_id"
+              ]
+            }
+          }
+        },
+        { $sort: { createdAt: -1 } },
+        {
+          $group: {
+            _id: { user1: "$user1", user2: "$user2" },
+            latestMessage: { $last: "$$ROOT" }
+          }
+        },
+        { $replaceRoot: { newRoot: "$latestMessage" } },
+        { $skip: parseInt(skip) },
+        { $limit: parseInt(limit) },
+        {
+          $lookup: {
+            from: "users",
+            localField: "sender_id",
+            foreignField: "_id",
+            as: "sender_id"
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "receiver_id",
+            foreignField: "_id",
+            as: "receiver_id"
+          }
+        },
+        { $unwind: "$sender_id" },
+        { $unwind: "$receiver_id" },
+        {
+          $project: {
+            sender_id: 1,
+            receiver_id: 1,
+            text: 1,
+            files: 1,
+            createdAt: 1,
+            updatedAt: 1
+          }
+        }
+      ]);
 
-      if (!chats.length) {
+      console.log("Inbox Result:", inbox);
+
+      if (!inbox.length) {
         return unavailableResponse({
           response,
           message: "Inbox is empty. Be the first to start a chat."
         });
       }
 
-      // Step 4: Group chats by sender-receiver pairs
-      const groupedChats = {};
-      chats.forEach((chat) => {
-        const user1 = chat.sender_id.toString();
-        const user2 = chat.receiver_id.toString();
-        const pairKey =
-          user1 < user2 ? `${user1}-${user2}` : `${user2}-${user1}`;
-
-        if (!groupedChats[pairKey]) {
-          groupedChats[pairKey] = chat;
-        }
-      });
-
-      // Step 5: Prepare unique chat pair details (sender and receiver lookup)
-      const uniqueChats = Object.values(groupedChats);
-
-      // Step 6: Look up sender and receiver details
-      const result = await Promise.all(
-        uniqueChats.map(async (chat) => {
-          const sender = await this.user.findById(chat.sender_id);
-          const receiver = await this.user.findById(chat.receiver_id);
-
-          return {
-            _id: chat._id,
-            sender_id: sender,
-            receiver_id: receiver,
-            text: chat.text,
-            files: chat.files,
-            createdAt: chat.createdAt,
-            updatedAt: chat.updatedAt
-          };
-        })
-      );
-
-      // Step 7: Return response
       return successResponse({
         response,
         message: "Inbox retrieved successfully",
-        data: result
+        data: inbox
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -163,7 +188,7 @@ class Service {
 
       socket.join(chat_id.toString());
       this.io.to(chat_id.toString()).emit(
-        "response",
+        "chat-typing",
         successEvent({
           message: "Recipient is typing.",
           data: { is_typing: true }
