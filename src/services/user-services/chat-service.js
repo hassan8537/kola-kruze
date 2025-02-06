@@ -24,58 +24,22 @@ class Service {
   async getInbox(request, response) {
     try {
       const user_id = request.user._id;
-
       const { limit = 10, skip = 0 } = request.query;
 
-      const inbox = await this.chat.aggregate([
-        {
-          $match: {
-            $or: [
-              { sender_id: convertToObjectId(user_id) },
-              { receiver_id: convertToObjectId(user_id) }
-            ]
-          }
-        },
-        { $sort: { created_at: -1 } },
-        {
-          $group: {
-            _id: {
-              sender: { $min: ["$sender_id", "$receiver_id"] },
-              receiver: { $max: ["$sender_id", "$receiver_id"] }
-            },
-            latestMessage: { $first: "$$ROOT" }
-          }
-        },
-        { $replaceRoot: { newRoot: "$latestMessage" } },
-        { $sort: { created_at: -1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $lookup: {
-            from: "users",
-            localField: "sender_id",
-            foreignField: "_id",
-            as: "user"
-          }
-        },
-        {
-          $lookup: {
-            from: "users",
-            localField: "receiver_id",
-            foreignField: "_id",
-            as: "user"
-          }
-        },
-        {
-          $unwind: "$user"
-        }
-      ]);
+      const inbox = await this.chat
+        .find({
+          $or: [{ sender_id: user_id }, { receiver_id: user_id }]
+        })
+        .sort({ createdAt: -1 });
 
-      if (!inbox.length)
+      console.log("Inbox Result:", inbox);
+
+      if (!inbox.length) {
         return unavailableResponse({
           response,
           message: "Inbox is empty. Be the first to start a chat."
         });
+      }
 
       return successResponse({
         response,
