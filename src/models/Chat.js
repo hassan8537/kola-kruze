@@ -11,23 +11,22 @@ const ChatSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  text: [
-    {
-      type: String,
-      trim: true
-    }
-  ],
+  text: {
+    type: String,
+    trim: true,
+    default: null
+  },
   files: [
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      trim: true
+      trim: true,
+      default: []
     }
   ],
   is_read: {
     type: String,
-    required: true,
-    trim: true
+    default: false
   }
 });
 

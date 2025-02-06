@@ -69,8 +69,6 @@ class Service {
           capabilities: { transfers: { requested: true } }
         });
 
-        return;
-
         user.stripe_merchant_id = account.id;
         await user.save();
       }

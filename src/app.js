@@ -140,7 +140,6 @@ io.on("connection", (socket) => {
   );
 
   // Chat Events
-  socket.on("get-inbox", (data) => chatService.getInbox(socket, data));
   socket.on("get-chats", (data) => chatService.getChats(socket, data));
   socket.on("chat-message", (data) => chatService.chatMessage(socket, data));
   socket.on("chat-typing", (data) => chatService.chatTyping(socket, data));

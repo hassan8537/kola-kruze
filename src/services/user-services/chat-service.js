@@ -5,6 +5,11 @@ const {
   successEvent,
   errorEvent
 } = require("../../utilities/handlers/event-handlers");
+const {
+  unavailableResponse,
+  successResponse,
+  errorResponse
+} = require("../../utilities/handlers/response-handler");
 
 class Service {
   constructor(io) {
@@ -12,29 +17,65 @@ class Service {
     this.chat = Chat;
   }
 
-  async getInbox(socket, data) {
+  async getInbox(request, response) {
     try {
-      const { sender_id, receiver_id, limit = 10, skip = 0 } = data;
+      const user_id = request.user._id;
+      const { limit = 10, skip = 0 } = request.query;
 
-      const inbox = await this.chat
-        .find({
-          $or: [
-            { sender_id, receiver_id },
-            { sender_id: receiver_id, receiver_id: sender_id }
-          ]
-        })
-        .sort(populateChat.sort)
-        .skip(skip)
-        .limit(limit)
-        .exec()
-        .populate(populateChat.populate);
+      const inbox = await this.chat.aggregate([
+        {
+          $match: {
+            $or: [{ sender_id: user_id }, { receiver_id: user_id }]
+          }
+        },
+        { $sort: { created_at: -1 } },
+        {
+          $group: {
+            _id: {
+              sender: { $min: ["$sender_id", "$receiver_id"] },
+              receiver: { $max: ["$sender_id", "$receiver_id"] }
+            },
+            latestMessage: { $first: "$$ROOT" }
+          }
+        },
+        { $replaceRoot: { newRoot: "$latestMessage" } },
+        { $sort: { created_at: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $lookup: {
+            from: "users",
+            localField: "sender_id",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "receiver_id",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
+        {
+          $unwind: "$user"
+        }
+      ]);
 
-      socket.emit(
-        "get-inbox",
-        successEvent({ message: "Inbox fetch successfully", data: inbox })
-      );
+      if (!inbox.length)
+        return unavailableResponse({
+          response,
+          message: "Inbox is empty. Be the first to start a chat."
+        });
+
+      return successResponse({
+        response,
+        message: "Inbox retrieved successfully",
+        data: inbox
+      });
     } catch (error) {
-      socket.emit("error", errorEvent({ error }));
+      return errorResponse({ response, error });
     }
   }
 
@@ -78,27 +119,15 @@ class Service {
     try {
       const { sender_id, receiver_id, text = "", files = [] } = data;
 
-      let message = await this.chat
-        .findOne({
-          sender_id,
-          receiver_id
-        })
-        .populate(populateChat.populate);
-
-      if (message) {
-        message.text.push(text);
-        message.files.push(...files);
-        await message.save();
-      } else {
-        message = new this.chat({
-          sender_id,
-          receiver_id,
-          text: [text],
-          files,
-          is_read: false
-        });
-        await message.save();
-      }
+      const message = new this.chat({
+        sender_id,
+        receiver_id,
+        text: text,
+        files,
+        is_read: false
+      });
+      await message.save();
+      await message.populate(populateChat.populate);
 
       socket.emit(
         "chat-message",
@@ -108,8 +137,8 @@ class Service {
         })
       );
 
-      socket.join(message._id.toString());
-      this.io.to(message._id).emit(
+      socket.join(receiver_id.toString());
+      this.io.to(receiver_id).emit(
         "chat-message",
         successEvent({
           message: "New chat created successfully.",
