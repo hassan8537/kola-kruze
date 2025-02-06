@@ -3,7 +3,8 @@ const Chat = require("../../models/Chat");
 const { populateChat } = require("../../populate/populate-models");
 const {
   successEvent,
-  errorEvent
+  errorEvent,
+  failedEvent
 } = require("../../utilities/handlers/event-handlers");
 const {
   unavailableResponse,
@@ -81,7 +82,7 @@ class Service {
 
   async getChats(socket, data) {
     try {
-      const { sender_id, receiver_id, limit = 10, skip = 0 } = data;
+      const { sender_id, receiver_id } = data;
 
       const chats = await this.chat
         .find({
@@ -91,9 +92,6 @@ class Service {
           ]
         })
         .sort(populateChat.sort)
-        .skip(skip)
-        .limit(limit)
-        .exec()
         .populate(populateChat.populate);
 
       await this.chat.updateMany(
@@ -106,9 +104,19 @@ class Service {
         { $set: { is_read: true } }
       );
 
+      if (!chats)
+        socket.emit(
+          "get-chats",
+          failedEvent({ object_type: "get-chats", message: "No chats found" })
+        );
+
       socket.emit(
         "get-chats",
-        successEvent({ message: "Chats fetch successfully", data: chats })
+        successEvent({
+          object_type: "get-chats",
+          message: "Chats fetch successfully",
+          data: chats
+        })
       );
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
@@ -132,6 +140,7 @@ class Service {
       socket.emit(
         "chat-message",
         successEvent({
+          object_type: "get-chat",
           message: "New chat created successfully.",
           data: message
         })
@@ -141,6 +150,7 @@ class Service {
       this.io.to(receiver_id).emit(
         "chat-message",
         successEvent({
+          object_type: "get-chat",
           message: "New chat created successfully.",
           data: message
         })
