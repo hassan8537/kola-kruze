@@ -108,15 +108,6 @@ class Service {
       await message.save();
       await message.populate(populateChat.populate);
 
-      socket.emit(
-        "chat-message",
-        successEvent({
-          object_type: "get-chat",
-          message: "New chat created successfully.",
-          data: message
-        })
-      );
-
       socket.join(receiver_id.toString());
       this.io.to(receiver_id).emit(
         "chat-message",
