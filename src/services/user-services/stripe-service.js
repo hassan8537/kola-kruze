@@ -90,8 +90,8 @@ class Service {
       console.log("Generating Stripe onboarding link...");
       const accountLink = await stripe.accountLinks.create({
         account: user.stripe_merchant_id,
-        refresh_url: `${request.headers.origin}/merchant/setup`,
-        return_url: `${request.headers.origin}/merchant/thank-you`,
+        refresh_url: `${process.env.BASE_URL}/merchant/setup`,
+        return_url: `${process.env.BASE_URL}/merchant/thank-you`,
         type: "account_onboarding"
       });
 
