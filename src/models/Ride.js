@@ -34,15 +34,29 @@ const RideSchema = new mongoose.Schema(
           required: true
         },
         address: { type: String, required: true },
-        coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
+        location: {
+          type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point"
+          },
+          coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
+        }
       }
     ],
 
     stops: [
       {
         address: { type: String, required: true },
-        coordinates: { type: [Number], index: "2dsphere", required: true }, // [longitude, latitude]
-        stop_order: { type: Number, required: true } // Order in which the stop should be reached
+        location: {
+          type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point"
+          },
+          coordinates: { type: [Number], index: "2dsphere", required: true }
+        },
+        stop_order: { type: Number, required: true }
       }
     ],
 
@@ -54,7 +68,14 @@ const RideSchema = new mongoose.Schema(
           required: true
         },
         address: { type: String, required: true },
-        coordinates: { type: [Number], index: "2dsphere", required: true }
+        location: {
+          type: {
+            type: String,
+            enum: ["Point"],
+            default: "Point"
+          },
+          coordinates: { type: [Number], index: "2dsphere", required: true }
+        }
       }
     ],
 
@@ -115,6 +136,11 @@ const RideSchema = new mongoose.Schema(
 
     tracking: {
       current_location: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point"
+        },
         coordinates: { type: [Number], index: "2dsphere", default: null }
       },
       eta: { type: Number, default: null }

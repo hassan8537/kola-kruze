@@ -7,8 +7,13 @@ const {
 } = require("../../utilities/paginations/pagination-utility");
 const notification = require("../../services/user-services/notification-service");
 const {
-  getDistance
-} = require("../../utilities/calculators/distance-calculator");
+  getDistanceBetweenSourceAndDestination
+} = require("../../utilities/calculators/calculators");
+const {
+  failedEvent,
+  successEvent,
+  errorEvent
+} = require("../../utilities/handlers/event-handlers");
 
 class Service {
   constructor(io) {
@@ -38,6 +43,147 @@ class Service {
     }
   }
 
+  // async rideRequest(socket, data) {
+  //   try {
+  //     const {
+  //       user_id,
+  //       pickup_locations,
+  //       stops,
+  //       dropoff_locations,
+  //       ride_type,
+  //       ride_status,
+  //       fare_details,
+  //       ride_preferences,
+  //       tracking
+  //     } = data;
+
+  //     console.log(data);
+
+  //     const user = await this.user.findById(user_id);
+
+  //     const object_type = "get-ride";
+
+  //     if (!user) {
+  //       return socket.emit(
+  //         "response",
+  //         failedEvent({ object_type: object_type, message: "Invalid session" })
+  //       );
+  //     }
+
+  //     const existingRide = await this.ride.findOne({
+  //       $or: [
+  //         { user_id, ride_status: "pending" },
+  //         { user_id, ride_status: "ongoing" }
+  //       ]
+  //     });
+
+  //     if (existingRide) {
+  //       return socket.emit(
+  //         "response",
+  //         failedEvent({
+  //           object_type: object_type,
+  //           message: "A ride is already in progress"
+  //         })
+  //       );
+  //     }
+
+  //     const newRide = await this.ride.create({
+  //       user_id,
+  //       pickup_locations: [
+  //         {
+  //           user_id,
+  //           address: pickup_locations.address,
+  //           coordinates: pickup_locations.coordinates
+  //         }
+  //       ],
+  //       stops: stops.map((stop, index) => ({
+  //         address: stop.address,
+  //         coordinates: stop.coordinates,
+  //         stop_order: index + 1
+  //       })),
+  //       dropoff_locations: [
+  //         {
+  //           user_id,
+  //           address: dropoff_locations.address,
+  //           coordinates: dropoff_locations.coordinates
+  //         }
+  //       ],
+  //       ride_type,
+  //       ride_status,
+  //       fare_details: fare_details.map((detail) => ({
+  //         user_id: detail.user_id,
+  //         amount: detail.amount,
+  //         payment_status: detail.payment_status
+  //       })),
+  //       ride_preferences,
+  //       tracking
+  //     });
+
+  //     const ride = await this.ride
+  //       .findById(newRide._id)
+  //       .populate(populateRide.populate);
+
+  //     socket.emit(
+  //       "response",
+  //       successEvent({
+  //         object_type: object_type,
+  //         message: "Ride request sent successfully",
+  //         data: ride
+  //       })
+  //     );
+
+  //     const maxDistanceInMiles = process.env.MAX_DISTANCE_IN_MILES || 5;
+
+  //     const drivers = await this.user.find({
+  //       role: "driver",
+  //       driver_preference: user.driver_preference,
+  //       gender_preference: user.gender_preference,
+  //       is_available: true,
+  //       is_deleted: false
+  //     });
+
+  //     const nearbyDrivers = drivers.filter((driver) => {
+  //       const driverCoordinates = driver.current_location[0]?.coordinates || [];
+  //       if (driverCoordinates.length === 0) return false;
+
+  //       const [driverLongitude, driverLatitude] = driverCoordinates;
+  //       const [pickupLongitude, pickupLatitude] = pickup_locations.coordinates;
+  //       const distance = getDistanceBetweenSourceAndDestination(
+  //         pickupLatitude,
+  //         pickupLongitude,
+  //         driverLatitude,
+  //         driverLongitude
+  //       );
+
+  //       return distance <= maxDistanceInMiles;
+  //     });
+
+  //     if (nearbyDrivers.length > 0) {
+  //       await Promise.all(
+  //         nearbyDrivers.map((driver) => {
+  //           socket.join(driver._id.toString());
+  //           this.io.to(driver._id.toString()).emit("ride-request", newRide);
+
+  //           const body = {
+  //             device_token: driver.device_token,
+  //             user: driver._id,
+  //             message: "A user requested a ride within your area",
+  //             type: "ride",
+  //             model_id: newRide._id,
+  //             model_type: "ride",
+  //             meta_data: { ...newRide.toJSON() }
+  //           };
+  //           return notification.createNotification({ body });
+  //         })
+  //       );
+  //     } else {
+  //       console.log("No drivers found within the specified range.");
+  //     }
+  //   } catch (error) {
+  //     socket.emit("error", errorEvent({ error }));
+  //   }
+  // }
+
   async rideRequest(socket, data) {
     try {
       const {
@@ -46,74 +192,97 @@ class Service {
         stops,
         dropoff_locations,
         ride_type,
-        ride_status,
-        fare_details,
-        ride_preferences,
-        tracking
+        ride_preferences
       } = data;
 
-      const existingRide = await this.ride.findOne({ user_id });
+      console.log(data);
+
+      const user = await this.user.findById(user_id);
+      const object_type = "get-ride";
+
+      if (!user) {
+        return socket.emit(
+          "response",
+          failedEvent({ object_type, message: "Invalid session" })
+        );
+      }
+
+      const existingRide = await this.ride.findOne({
+        user_id,
+        ride_status: { $in: ["pending", "ongoing"] }
+      });
 
       if (existingRide) {
-        return socket.emit("ride-request-response", {
-          status: 0,
-          message: "You already have a ride in progress"
-        });
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "A ride is already in progress"
+          })
+        );
       }
 
       const newRide = await this.ride.create({
         user_id,
-        pickup_locations: [
-          {
-            user_id,
-            address: pickup_locations.address,
-            coordinates: pickup_locations.coordinates
+        pickup_locations: pickup_locations.map((pickup) => ({
+          user_id,
+          address: pickup.address,
+          location: {
+            type: "Point",
+            coordinates: pickup.location.coordinates
           }
-        ],
+        })),
         stops: stops.map((stop, index) => ({
           address: stop.address,
-          coordinates: stop.coordinates,
+          location: {
+            type: "Point",
+            coordinates: stop.location.coordinates
+          },
           stop_order: index + 1
         })),
-        dropoff_locations: [
-          {
-            user_id,
-            address: dropoff_locations.address,
-            coordinates: dropoff_locations.coordinates
+        dropoff_locations: dropoff_locations.map((dropoff) => ({
+          user_id,
+          address: dropoff.address,
+          location: {
+            type: "Point",
+            coordinates: dropoff.location.coordinates
           }
-        ],
-        ride_type,
-        ride_status,
-        fare_details: fare_details.map((detail) => ({
-          user_id: detail.user_id,
-          amount: detail.amount,
-          payment_status: detail.payment_status
         })),
-        ride_preferences,
-        tracking
+        ride_type,
+        ride_preferences
       });
 
-      socket.emit("ride-request-response", {
-        status: 1,
-        message: "Ride request sent successfully",
-        ride: newRide
-      });
+      const ride = await this.ride
+        .findById(newRide._id)
+        .populate(populateRide.populate);
+
+      socket.emit(
+        "response",
+        successEvent({
+          object_type,
+          message: "Ride request sent successfully",
+          data: ride
+        })
+      );
 
       const maxDistanceInMiles = process.env.MAX_DISTANCE_IN_MILES || 5;
 
       const drivers = await this.user.find({
         role: "driver",
+        driver_preference: user.driver_preference,
+        gender_preference: user.gender_preference,
         is_available: true,
         is_deleted: false
       });
 
       const nearbyDrivers = drivers.filter((driver) => {
-        const driverCoordinates = driver.current_location[0]?.coordinates || [];
+        const driverCoordinates = driver.current_location?.coordinates || [];
         if (driverCoordinates.length === 0) return false;
 
         const [driverLongitude, driverLatitude] = driverCoordinates;
-        const [pickupLongitude, pickupLatitude] = pickup_locations.coordinates;
-        const distance = getDistance(
+        const [pickupLongitude, pickupLatitude] =
+          pickup_locations[0].location.coordinates;
+        const distance = getDistanceBetweenSourceAndDestination(
           pickupLatitude,
           pickupLongitude,
           driverLatitude,
@@ -127,31 +296,31 @@ class Service {
         await Promise.all(
           nearbyDrivers.map((driver) => {
             socket.join(driver._id.toString());
-            this.io.to(driver._id.toString()).emit("ride-request", newRide);
+            this.io.to(driver._id.toString()).emit("response", ride);
 
-            const body = {
-              device_token: driver.device_token,
-              user: driver._id,
-              message: "A user requested a ride within your area",
-              type: "ride",
-              model_id: newRide._id,
-              model_type: "ride",
-              meta_data: { ...newRide.toJSON() }
-            };
-            return notification.createNotification({ body });
+            // const body = {
+            //   device_token: driver.device_token,
+            //   user: driver._id,
+            //   message: "A user requested a ride within your area",
+            //   type: "ride",
+            //   model_id: newRide._id,
+            //   model_type: "ride",
+            //   meta_data: { ...newRide.toJSON() }
+            // };
+            // return notification.createNotification({ body });
           })
         );
       } else {
-        console.log("No drivers found within the specified range.");
+        socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "No drivers are available within your area."
+          })
+        );
       }
     } catch (error) {
-      console.error(error);
-
-      socket.emit("ride-request-response", {
-        status: 0,
-        message: "Error requesting ride",
-        error
-      });
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
@@ -160,7 +329,7 @@ class Service {
       const { ride_id, driver_id, accepted } = data;
       const ride = await this.ride.findOne({ _id: ride_id });
       if (!ride) {
-        return socket.emit("ride-request-response", {
+        return socket.emit("response", {
           status: 0,
           message: "Ride not found"
         });

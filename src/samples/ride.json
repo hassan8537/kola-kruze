@@ -1,0 +1,38 @@
+{
+  "user_id": "67a318e7abe5b7e2a27609af",
+  "pickup_locations": {
+    "address": "123 Main St, City, Country",
+    "coordinates": [-73.935242, 40.73061]
+  },
+  "stops": [
+    {
+      "address": "456 Secondary St, City, Country",
+      "coordinates": [-73.935244, 40.730612],
+      "stop_order": 1
+    }
+  ],
+  "dropoff_locations": {
+    "address": "789 Dropoff St, City, Country",
+    "coordinates": [-73.93525, 40.73062]
+  },
+  "ride_type": "private",
+  "ride_status": "pending",
+  "fare_details": [
+    {
+      "user_id": "60d5f1b0c4ebd210b3c83d8f",
+      "amount": 20,
+      "payment_status": "pending"
+    }
+  ],
+  "ride_preferences": {
+    "pet_friendly": true,
+    "wheelchair_accessible": false,
+    "air_conditioning": true
+  },
+  "tracking": {
+    "current_location": {
+      "coordinates": [-73.935242, 40.73061]
+    },
+    "eta": 15
+  }
+}

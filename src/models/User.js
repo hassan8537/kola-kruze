@@ -145,6 +145,10 @@ const UserSchema = new mongoose.Schema(
     notification_count: {
       type: Number,
       default: 0
+    },
+    rate_per_mile: {
+      type: Number,
+      default: 3
     }
   },
   {
