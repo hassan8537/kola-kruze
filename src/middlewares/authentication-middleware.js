@@ -21,6 +21,8 @@ const sessionAuthentication = async (request, response, next) => {
 
     const verifiedToken = jwt.verify(token, process.env.SESSION_SECRET_KEY);
 
+    console.log({ verifiedToken: verifiedToken.user_id });
+
     const user = await User.findById(verifiedToken.user_id);
 
     if (!user) {

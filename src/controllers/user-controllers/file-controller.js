@@ -8,6 +8,10 @@ class Controller {
   async getFiles(request, response) {
     return this.service.getFiles(request, response);
   }
+
+  async deleteFile(request, response) {
+    return this.service.deleteFile(request, response);
+  }
 }
 
 module.exports = new Controller();

@@ -72,10 +72,13 @@ class Service {
         });
 
       const newVehicle = new this.vehicle(formData);
+
       request.user.is_vehicle_setup = true;
+
       await newVehicle.save();
-      await request.user.save();
       await newVehicle.populate(populateVehicle.populate);
+
+      await request.user.save();
 
       return successResponse({
         response,
@@ -128,7 +131,8 @@ class Service {
       if (insurance_document) vehicle.insurance_document = insurance_document;
       if (inspection_document)
         vehicle.inspection_document = inspection_document;
-      if (vehicle_images.length > 0) vehicle.vehicle_images = vehicle_images;
+      if (vehicle_images.length > 0)
+        vehicle.vehicle_images = [vehicle.vehicle_images, ...vehicle_images];
 
       await vehicle.save();
       await vehicle.populate(populateVehicle.populate);

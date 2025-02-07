@@ -41,8 +41,6 @@ class Service {
         user: admin
       });
 
-      await generateToken({ response, user_id: admin.user_id });
-
       return successResponse({
         response,
         message: "Logged in successfully.",

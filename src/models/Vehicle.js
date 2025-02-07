@@ -20,9 +20,9 @@ const VehicleSchema = new mongoose.Schema(
       default: ""
     },
     vehicle_category: {
-      type: String,
-      enum: ["sedan", "suv"],
-      default: "sedan"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: true
     },
     vehicle_make: {
       type: String,

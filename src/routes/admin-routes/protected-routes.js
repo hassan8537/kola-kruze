@@ -1,10 +1,14 @@
+const upload = require("../../middlewares/multer-middleware");
+const uploadFiles = require("../../middlewares/upload-files-middleware");
+
 const router = require("express").Router();
 
 const controllers = {
   profile: require("../../controllers/admin-controllers/profile-controller"),
   student: require("../../controllers/admin-controllers/student-controller"),
   file: require("../../controllers/admin-controllers/file-controller"),
-  vehicle: require("../../controllers/admin-controllers/vehicle-controller")
+  vehicle: require("../../controllers/admin-controllers/vehicle-controller"),
+  category: require("../../controllers/admin-controllers/category-controller")
 };
 
 // profiles
@@ -26,6 +30,31 @@ router.get("/files", controllers.file.getFiles.bind(controllers.student));
 router.get(
   "/vehicles",
   controllers.vehicle.getVehicles.bind(controllers.vehicle)
+);
+
+// categories
+router.get(
+  "/categories",
+  controllers.category.getCategories.bind(controllers.category)
+);
+
+router.post(
+  "/categories",
+  upload.fields([{ name: "image", maxCount: 1 }]),
+  uploadFiles,
+  controllers.category.createCategory.bind(controllers.category)
+);
+
+router.put(
+  "/categories/:_id",
+  upload.fields([{ name: "image", maxCount: 1 }]),
+  uploadFiles,
+  controllers.category.updateCategory.bind(controllers.category)
+);
+
+router.delete(
+  "/categories/:_id",
+  controllers.category.deleteCategory.bind(controllers.category)
 );
 
 module.exports = router;

@@ -135,5 +135,14 @@ module.exports = {
       }
     ],
     sort: { createdAt: -1 }
+  },
+  populateCategory: {
+    populate: [
+      {
+        path: "image",
+        select: "file_url"
+      }
+    ],
+    sort: { createdAt: -1 }
   }
 };

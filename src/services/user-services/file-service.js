@@ -1,6 +1,10 @@
 const File = require("../../models/File");
 const { populateFile } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const {
+  errorResponse,
+  unavailableResponse,
+  successResponse
+} = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -32,6 +36,26 @@ class Service {
         limit,
         sort,
         populate: populateFile.populate
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async deleteFile(request, response) {
+    try {
+      const { _id } = request.params;
+
+      const file = await this.file.findById(_id);
+
+      if (!file)
+        return unavailableResponse({ response, message: "No file found." });
+
+      await this.file.findByIdAndDelete(_id);
+
+      return successResponse({
+        response,
+        message: "File delete successfully."
       });
     } catch (error) {
       return errorResponse({ response, error });

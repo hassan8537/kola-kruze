@@ -1,5 +1,5 @@
 const driverVerification = require("../../middlewares/driver-verification-middleware");
-const upload = require("../../middlewares/mutler-middleware");
+const upload = require("../../middlewares/multer-middleware");
 const uploadFiles = require("../../middlewares/upload-files-middleware");
 
 const router = require("express").Router();
@@ -12,7 +12,8 @@ const controllers = {
   file: require("../../controllers/user-controllers/file-controller"),
   card: require("../../controllers/user-controllers/card-controller"),
   stripe: require("../../controllers/user-controllers/stripe-controller"),
-  chat: require("../../controllers/user-controllers/chat-controller")
+  chat: require("../../controllers/user-controllers/chat-controller"),
+  category: require("../../controllers/user-controllers/category-controller")
 };
 
 // session
@@ -94,6 +95,11 @@ router.put(
 // files
 router.get("/files", controllers.file.getFiles.bind(controllers.file));
 
+router.delete(
+  "/files/:_id",
+  controllers.file.deleteFile.bind(controllers.file)
+);
+
 // cards
 router.get("/cards", controllers.card.getCards.bind(controllers.card));
 
@@ -117,5 +123,11 @@ router.get(
 
 // chats
 router.get("/chats/inbox", controllers.chat.getInbox.bind(controllers.chat));
+
+// categories
+router.get(
+  "/categories",
+  controllers.category.getCategories.bind(controllers.category)
+);
 
 module.exports = router;
