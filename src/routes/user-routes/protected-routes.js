@@ -13,7 +13,8 @@ const controllers = {
   card: require("../../controllers/user-controllers/card-controller"),
   stripe: require("../../controllers/user-controllers/stripe-controller"),
   chat: require("../../controllers/user-controllers/chat-controller"),
-  category: require("../../controllers/user-controllers/category-controller")
+  category: require("../../controllers/user-controllers/category-controller"),
+  ride: require("../../controllers/user-controllers/ride-controller")
 };
 
 // session
@@ -128,6 +129,14 @@ router.get("/chats/inbox", controllers.chat.getInbox.bind(controllers.chat));
 router.get(
   "/categories",
   controllers.category.getCategories.bind(controllers.category)
+);
+
+// rides
+router.post("/rides", controllers.ride.createRide.bind(controllers.ride));
+
+router.post(
+  "/rides/stops",
+  controllers.ride.manageStops.bind(controllers.ride)
 );
 
 module.exports = router;

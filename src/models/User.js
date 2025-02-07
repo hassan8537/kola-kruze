@@ -146,9 +146,9 @@ const UserSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
-    rate_per_mile: {
+    rate_per_stop: {
       type: Number,
-      default: 3
+      default: 3.5
     }
   },
   {

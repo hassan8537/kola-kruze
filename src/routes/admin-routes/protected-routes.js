@@ -8,7 +8,8 @@ const controllers = {
   student: require("../../controllers/admin-controllers/student-controller"),
   file: require("../../controllers/admin-controllers/file-controller"),
   vehicle: require("../../controllers/admin-controllers/vehicle-controller"),
-  category: require("../../controllers/admin-controllers/category-controller")
+  category: require("../../controllers/admin-controllers/category-controller"),
+  stop: require("../../controllers/admin-controllers/stop-controller")
 };
 
 // profiles
@@ -55,6 +56,12 @@ router.put(
 router.delete(
   "/categories/:_id",
   controllers.category.deleteCategory.bind(controllers.category)
+);
+
+// stops
+router.put(
+  "/rides/stops",
+  controllers.stop.updateRatePerStop.bind(controllers.stop)
 );
 
 module.exports = router;

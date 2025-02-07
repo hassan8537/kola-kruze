@@ -18,32 +18,17 @@ const RideSchema = new mongoose.Schema(
       default: null
     },
 
-    share_with: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
-      }
-    ],
-
-    pickup_locations: [
-      {
-        user_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true
+    pickup_location: {
+      address: { type: String, required: true },
+      location: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point"
         },
-        address: { type: String, required: true },
-        location: {
-          type: {
-            type: String,
-            enum: ["Point"],
-            default: "Point"
-          },
-          coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
-        }
+        coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
       }
-    ],
+    },
 
     stops: [
       {
@@ -60,25 +45,17 @@ const RideSchema = new mongoose.Schema(
       }
     ],
 
-    dropoff_locations: [
-      {
-        user_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true
+    dropoff_location: {
+      address: { type: String, required: true },
+      location: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point"
         },
-        address: { type: String, required: true },
-        location: {
-          type: {
-            type: String,
-            enum: ["Point"],
-            default: "Point"
-          },
-          coordinates: { type: [Number], index: "2dsphere", required: true }
-        }
+        coordinates: { type: [Number], index: "2dsphere", required: true }
       }
-    ],
-
+    },
     ride_status: {
       type: String,
       enum: [
@@ -97,21 +74,14 @@ const RideSchema = new mongoose.Schema(
     start_time: { type: Date, default: null },
     end_time: { type: Date, default: null },
 
-    fare_details: [
-      {
-        user_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          required: true
-        },
-        amount: { type: Number, required: true },
-        payment_status: {
-          type: String,
-          enum: ["pending", "paid"],
-          default: "pending"
-        }
+    fare_details: {
+      amount: { type: Number, required: true },
+      payment_status: {
+        type: String,
+        enum: ["pending", "paid"],
+        default: "pending"
       }
-    ],
+    },
 
     cancellation: {
       cancelled_by: {

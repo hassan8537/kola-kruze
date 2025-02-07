@@ -1,7 +1,15 @@
 const Ride = require("../../models/Ride");
 const User = require("../../models/User");
-const { populateRide } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const {
+  populateRide,
+  populateCategory
+} = require("../../populate/populate-models");
+const {
+  errorResponse,
+  failedResponse,
+  unavailableResponse,
+  successResponse
+} = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -14,12 +22,14 @@ const {
   successEvent,
   errorEvent
 } = require("../../utilities/handlers/event-handlers");
+const Category = require("../../models/Vehicle-Category");
 
 class Service {
   constructor(io) {
     this.io = io;
     this.user = User;
     this.ride = Ride;
+    this.category = Category;
   }
 
   async getMyRides(request, response) {
@@ -43,276 +53,126 @@ class Service {
     }
   }
 
-  // async rideRequest(socket, data) {
-  //   try {
-  //     const {
-  //       user_id,
-  //       pickup_locations,
-  //       stops,
-  //       dropoff_locations,
-  //       ride_type,
-  //       ride_status,
-  //       fare_details,
-  //       ride_preferences,
-  //       tracking
-  //     } = data;
-
-  //     console.log(data);
-
-  //     const user = await this.user.findById(user_id);
-
-  //     const object_type = "get-ride";
-
-  //     if (!user) {
-  //       return socket.emit(
-  //         "response",
-  //         failedEvent({ object_type: object_type, message: "Invalid session" })
-  //       );
-  //     }
-
-  //     const existingRide = await this.ride.findOne({
-  //       $or: [
-  //         { user_id, ride_status: "pending" },
-  //         { user_id, ride_status: "ongoing" }
-  //       ]
-  //     });
-
-  //     if (existingRide) {
-  //       return socket.emit(
-  //         "response",
-  //         failedEvent({
-  //           object_type: object_type,
-  //           message: "A ride is already in progress"
-  //         })
-  //       );
-  //     }
-
-  //     const newRide = await this.ride.create({
-  //       user_id,
-  //       pickup_locations: [
-  //         {
-  //           user_id,
-  //           address: pickup_locations.address,
-  //           coordinates: pickup_locations.coordinates
-  //         }
-  //       ],
-  //       stops: stops.map((stop, index) => ({
-  //         address: stop.address,
-  //         coordinates: stop.coordinates,
-  //         stop_order: index + 1
-  //       })),
-  //       dropoff_locations: [
-  //         {
-  //           user_id,
-  //           address: dropoff_locations.address,
-  //           coordinates: dropoff_locations.coordinates
-  //         }
-  //       ],
-  //       ride_type,
-  //       ride_status,
-  //       fare_details: fare_details.map((detail) => ({
-  //         user_id: detail.user_id,
-  //         amount: detail.amount,
-  //         payment_status: detail.payment_status
-  //       })),
-  //       ride_preferences,
-  //       tracking
-  //     });
-
-  //     const ride = await this.ride
-  //       .findById(newRide._id)
-  //       .populate(populateRide.populate);
-
-  //     socket.emit(
-  //       "response",
-  //       successEvent({
-  //         object_type: object_type,
-  //         message: "Ride request sent successfully",
-  //         data: ride
-  //       })
-  //     );
-
-  //     const maxDistanceInMiles = process.env.MAX_DISTANCE_IN_MILES || 5;
-
-  //     const drivers = await this.user.find({
-  //       role: "driver",
-  //       driver_preference: user.driver_preference,
-  //       gender_preference: user.gender_preference,
-  //       is_available: true,
-  //       is_deleted: false
-  //     });
-
-  //     const nearbyDrivers = drivers.filter((driver) => {
-  //       const driverCoordinates = driver.current_location[0]?.coordinates || [];
-  //       if (driverCoordinates.length === 0) return false;
-
-  //       const [driverLongitude, driverLatitude] = driverCoordinates;
-  //       const [pickupLongitude, pickupLatitude] = pickup_locations.coordinates;
-  //       const distance = getDistanceBetweenSourceAndDestination(
-  //         pickupLatitude,
-  //         pickupLongitude,
-  //         driverLatitude,
-  //         driverLongitude
-  //       );
-
-  //       return distance <= maxDistanceInMiles;
-  //     });
-
-  //     if (nearbyDrivers.length > 0) {
-  //       await Promise.all(
-  //         nearbyDrivers.map((driver) => {
-  //           socket.join(driver._id.toString());
-  //           this.io.to(driver._id.toString()).emit("ride-request", newRide);
-
-  //           const body = {
-  //             device_token: driver.device_token,
-  //             user: driver._id,
-  //             message: "A user requested a ride within your area",
-  //             type: "ride",
-  //             model_id: newRide._id,
-  //             model_type: "ride",
-  //             meta_data: { ...newRide.toJSON() }
-  //           };
-  //           return notification.createNotification({ body });
-  //         })
-  //       );
-  //     } else {
-  //       console.log("No drivers found within the specified range.");
-  //     }
-  //   } catch (error) {
-  //     socket.emit("error", errorEvent({ error }));
-  //   }
-  // }
-
-  async createRide(socket, data) {
+  async createRide(request, response) {
     try {
-      const { user_id, pickup_locations, dropoff_locations, scheduled_time } =
-        data;
+      const user_id = request.user._id;
 
-      console.log(data);
-
-      const user = await this.user.findById(user_id);
-      const object_type = "get-ride";
-
-      if (!user) {
-        return socket.emit(
-          "response",
-          failedEvent({ object_type, message: "Invalid session" })
-        );
-      }
-
-      const existingRide = await this.ride.findOne({
-        user_id,
-        ride_status: { $in: ["pending", "ongoing"] }
-      });
+      const existingRide = await this.ride
+        .findOne(
+          { user_id, ride_status: { $in: ["pending", "ongoing"] } },
+          "_id"
+        )
+        .lean();
 
       if (existingRide) {
-        return socket.emit(
-          "response",
-          failedEvent({
-            object_type,
-            message: "A ride is already in progress"
-          })
-        );
+        return failedResponse({
+          response,
+          message: "A ride is already in progress"
+        });
       }
 
-      const newRide = await this.ride.create({
-        user_id,
-        pickup_locations: pickup_locations.map((pickup) => ({
-          user_id,
-          address: pickup.address,
-          location: {
-            type: "Point",
-            coordinates: pickup.location.coordinates
-          }
-        })),
-        stops: stops.map((stop, index) => ({
-          address: stop.address,
-          location: {
-            type: "Point",
-            coordinates: stop.location.coordinates
-          },
-          stop_order: index + 1
-        })),
-        dropoff_locations: dropoff_locations.map((dropoff) => ({
-          user_id,
-          address: dropoff.address,
-          location: {
-            type: "Point",
-            coordinates: dropoff.location.coordinates
-          }
-        }))
+      const { pickup_location, dropoff_location, scheduled_time } =
+        request.body;
+
+      const totalMiles = getDistanceBetweenSourceAndDestination(
+        pickup_location.location.coordinates[1],
+        pickup_location.location.coordinates[0],
+        dropoff_location.location.coordinates[1],
+        dropoff_location.location.coordinates[0]
+      ).toFixed(2);
+
+      const categories = await this.category
+        .find()
+        .populate(populateCategory.populate)
+        .lean();
+      if (!categories.length) {
+        return unavailableResponse({
+          response,
+          message: "No categories found."
+        });
+      }
+
+      return successResponse({
+        response,
+        message: "Ride created successfully.",
+        data: {
+          vehicle_categories: categories,
+          distance_miles: Number(totalMiles),
+          pickup_location,
+          dropoff_location
+        }
       });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
 
-      const ride = await this.ride
-        .findById(newRide._id)
-        .populate(populateRide.populate);
+  async manageStops(request, response) {
+    try {
+      const { pickup_location, dropoff_location, stops = [] } = request.body;
 
-      socket.emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Ride request sent successfully",
-          data: ride
-        })
+      if (!stops.length) {
+        return failedResponse({
+          response,
+          message: "No new stops provided."
+        });
+      }
+
+      const admin = await this.user.findOne({ role: "admin" });
+
+      const pickupCoords = pickup_location.location.coordinates;
+      const dropoffCoords = dropoff_location.location.coordinates;
+
+      // Calculate total distance with stops in order
+      let totalMiles = 0;
+      let prevCoords = pickupCoords;
+
+      const sortedStops = stops.sort((a, b) => a.stop_order - b.stop_order);
+
+      for (const stop of sortedStops) {
+        const stopCoords = stop.location.coordinates;
+        totalMiles += getDistanceBetweenSourceAndDestination(
+          prevCoords[1],
+          prevCoords[0],
+          stopCoords[1],
+          stopCoords[0]
+        );
+        prevCoords = stopCoords;
+      }
+
+      // Add final segment from last stop to dropoff
+      totalMiles += getDistanceBetweenSourceAndDestination(
+        prevCoords[1],
+        prevCoords[0],
+        dropoffCoords[1],
+        dropoffCoords[0]
       );
 
-      const maxDistanceInMiles = process.env.MAX_DISTANCE_IN_MILES || 5;
-
-      const drivers = await this.user.find({
-        role: "driver",
-        driver_preference: user.driver_preference,
-        gender_preference: user.gender_preference,
-        is_available: true,
-        is_deleted: false
-      });
-
-      const nearbyDrivers = drivers.filter((driver) => {
-        const driverCoordinates = driver.current_location?.coordinates || [];
-        if (driverCoordinates.length === 0) return false;
-
-        const [driverLongitude, driverLatitude] = driverCoordinates;
-        const [pickupLongitude, pickupLatitude] =
-          pickup_locations[0].location.coordinates;
-        const distance = getDistanceBetweenSourceAndDestination(
-          pickupLatitude,
-          pickupLongitude,
-          driverLatitude,
-          driverLongitude
-        );
-
-        return distance <= maxDistanceInMiles;
-      });
-
-      if (nearbyDrivers.length > 0) {
-        await Promise.all(
-          nearbyDrivers.map((driver) => {
-            socket.join(driver._id.toString());
-            this.io.to(driver._id.toString()).emit("response", ride);
-
-            // const body = {
-            //   device_token: driver.device_token,
-            //   user: driver._id,
-            //   message: "A user requested a ride within your area",
-            //   type: "ride",
-            //   model_id: newRide._id,
-            //   model_type: "ride",
-            //   meta_data: { ...newRide.toJSON() }
-            // };
-            // return notification.createNotification({ body });
-          })
-        );
-      } else {
-        socket.emit(
-          "response",
-          failedEvent({
-            object_type,
-            message: "No drivers are available within your area."
-          })
-        );
+      const categories = await this.category
+        .find()
+        .populate(populateCategory.populate)
+        .lean();
+      if (!categories.length) {
+        return unavailableResponse({
+          response,
+          message: "No categories found."
+        });
       }
+
+      return successResponse({
+        response,
+        message: "Stop(s) managed successfully.",
+        data: {
+          vehicle_categories: categories,
+          rate_per_stop: admin.rate_per_stop,
+          distance_miles: Number(totalMiles.toFixed(2)),
+          pickup_location,
+          dropoff_location,
+          stops: sortedStops
+        }
+      });
     } catch (error) {
-      socket.emit("error", errorEvent({ error }));
+      return errorResponse({ response, error });
     }
   }
 

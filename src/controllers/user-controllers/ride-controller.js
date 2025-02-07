@@ -8,6 +8,14 @@ class Controller {
   async getMyRides(request, response) {
     return this.service.getMyRides(request, response);
   }
+
+  async createRide(request, response) {
+    return this.service.createRide(request, response);
+  }
+
+  async manageStops(request, response) {
+    return this.service.manageStops(request, response);
+  }
 }
 
 module.exports = new Controller();
