@@ -1,4 +1,4 @@
-const Category = require("../../models/category");
+const Category = require("../../models/Vehicle-Category");
 const { populateCategory } = require("../../populate/populate-models");
 const {
   errorResponse,
