@@ -132,7 +132,7 @@ class Service {
       if (inspection_document)
         vehicle.inspection_document = inspection_document;
       if (vehicle_images.length > 0)
-        vehicle.vehicle_images = [vehicle.vehicle_images, ...vehicle_images];
+        vehicle.vehicle_images = [...vehicle.vehicle_images, ...vehicle_images];
 
       await vehicle.save();
       await vehicle.populate(populateVehicle.populate);

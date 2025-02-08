@@ -15,7 +15,8 @@ const {
 } = require("../../utilities/paginations/pagination-utility");
 const notification = require("../../services/user-services/notification-service");
 const {
-  getDistanceBetweenSourceAndDestination
+  getDistanceBetweenSourceAndDestination,
+  isETAWithinTwoMinutes
 } = require("../../utilities/calculators/calculators");
 const {
   failedEvent,
@@ -99,7 +100,8 @@ class Service {
           vehicle_categories: categories,
           distance_miles: Number(totalMiles),
           pickup_location,
-          dropoff_location
+          dropoff_location,
+          scheduled_time
         }
       });
     } catch (error) {
@@ -168,7 +170,8 @@ class Service {
           distance_miles: Number(totalMiles.toFixed(2)),
           pickup_location,
           dropoff_location,
-          stops: sortedStops
+          stops: sortedStops,
+          scheduled_time
         }
       });
     } catch (error) {
@@ -178,9 +181,13 @@ class Service {
 
   async rideRequest(socket, data) {
     try {
-      const { user_id, pickup_locations, stops, dropoff_locations } = data;
-
-      console.log(data);
+      const {
+        user_id,
+        pickup_location,
+        dropoff_location,
+        stops,
+        scheduled_time
+      } = data;
 
       const user = await this.user.findById(user_id);
       const object_type = "get-ride";
@@ -188,7 +195,7 @@ class Service {
       if (!user) {
         return socket.emit(
           "response",
-          failedEvent({ object_type, message: "Invalid session" })
+          failedEvent({ object_type, message: "No user found" })
         );
       }
 
@@ -209,30 +216,12 @@ class Service {
 
       const newRide = await this.ride.create({
         user_id,
-        pickup_locations: pickup_locations.map((pickup) => ({
-          user_id,
-          address: pickup.address,
-          location: {
-            type: "Point",
-            coordinates: pickup.location.coordinates
-          }
-        })),
-        stops: stops.map((stop, index) => ({
-          address: stop.address,
-          location: {
-            type: "Point",
-            coordinates: stop.location.coordinates
-          },
-          stop_order: index + 1
-        })),
-        dropoff_locations: dropoff_locations.map((dropoff) => ({
-          user_id,
-          address: dropoff.address,
-          location: {
-            type: "Point",
-            coordinates: dropoff.location.coordinates
-          }
-        }))
+        pickup_location,
+        dropoff_location,
+        stops,
+        fare_details,
+        tracking,
+        scheduled_time
       });
 
       const ride = await this.ride
@@ -264,7 +253,7 @@ class Service {
 
         const [driverLongitude, driverLatitude] = driverCoordinates;
         const [pickupLongitude, pickupLatitude] =
-          pickup_locations[0].location.coordinates;
+          pickup_location[0].location.coordinates;
         const distance = getDistanceBetweenSourceAndDestination(
           pickupLatitude,
           pickupLongitude,
@@ -309,48 +298,161 @@ class Service {
 
   async rideRequestResponse(socket, data) {
     try {
-      const { ride_id, driver_id, accepted } = data;
-      const ride = await this.ride.findOne({ _id: ride_id });
+      const { ride_id, driver_id, ride_status } = data;
+      const ride = await this.ride.findById(ride_id);
       if (!ride) {
         return socket.emit("response", {
           status: 0,
-          message: "Ride not found"
+          message: "No ride found"
         });
       }
 
-      if (!accepted) {
-        return socket.emit("ride-request-response", {
+      if (!ride_status) {
+        return socket.emit("response", {
           status: 0,
-          message: "Ride rejected"
+          message: `Ride rejected`
         });
       }
 
       ride.driver_id = driver_id;
-      ride.ride_status = "accepted";
+      ride.ride_status = ride_status;
       await ride.save();
 
-      socket.emit("ride-request-response", {
+      socket.emit("response", {
         status: 1,
-        message: "Ride accepted",
+        message: `Ride ${ride_status}`,
         ride
       });
 
       socket.join(ride.user_id.toString());
-      this.io.to(ride.user_id.toString()).emit("ride-status-update", ride);
+      this.io.to(ride.user_id.toString()).emit("response", ride);
 
-      const body = {
-        device_token: ride.user.device_token,
-        user: ride.user_id,
-        message: "Your ride request has been accepted",
-        type: "ride",
-        model_id: ride._id,
-        model_type: "ride",
-        meta_data: { ...ride.toJSON() }
-      };
+      // const body = {
+      //   device_token: ride.user.device_token,
+      //   user: ride.user_id,
+      //   message: "Your ride request has been accepted",
+      //   type: "ride",
+      //   model_id: ride._id,
+      //   model_type: "ride",
+      //   meta_data: { ...ride.toJSON() }
+      // };
 
-      await notification.createNotification({ body });
+      // await notification.createNotification({ body });
     } catch (error) {
-      socket.emit("ride-request-response", {
+      socket.emit("response", {
+        status: 0,
+        message: "Error updating ride request",
+        error
+      });
+    }
+  }
+
+  async cancelRideRequest(socket, data) {
+    try {
+      const { user_id, ride_status, cancellation } = data;
+
+      let ride;
+
+      const user = await this.user.findById(user_id);
+
+      const rideQuery =
+        user.role === "passenger"
+          ? { user_id: user._id, ride_status: { $in: ["ongoing", "accepted"] } }
+          : {
+              driver_id: user._id,
+              ride_status: { $in: ["ongoing", "accepted"] }
+            };
+
+      ride = await this.ride.findOne(rideQuery);
+
+      if (!ride) {
+        return socket.emit(
+          "response",
+          failedEvent({ message: "No ride found" })
+        );
+      }
+
+      const statuses = ["accepted", "ongoing"];
+
+      if (ride && statuses.includes(ride.ride_status)) {
+        if (user.role === "passenger") {
+          const cancellationWindow = isETAWithinTwoMinutes(
+            ride.tracking.driver.eta_to_pickup
+          );
+
+          if (!cancellationWindow) {
+            const cancellationData = {
+              user_id: user._id,
+              reason: cancellation.reason,
+              description: cancellation.description
+            };
+
+            ride.ride_status = "cancelled";
+            ride.cancellation = cancellationData;
+            await ride.save();
+
+            socket.emit(
+              "response",
+              successEvent({
+                message: "Your ride has been cancelled successfully"
+              })
+            );
+
+            socket.join(ride.driver_id.toString());
+            io.to(ride.driver_id.toString());
+            // Logic to implement full charge back in passenger's account
+          } else {
+            const cancellationData = {
+              user_id: user._id,
+              reason: cancellation.reason,
+              description: cancellation.description
+            };
+
+            ride.ride_status = "cancelled";
+            ride.cancellation = cancellationData;
+            await ride.save();
+
+            socket.emit(
+              "response",
+              successEvent({
+                message: "Your ride has been cancelled successfully"
+              })
+            );
+          }
+        }
+      } else {
+        socket.emit(
+          "response",
+          failedEvent({ message: `You cannot cancel a ${ride_status} ride` })
+        );
+      }
+
+      ride.driver_id = driver_id;
+      ride.ride_status = ride_status;
+      await ride.save();
+
+      socket.emit("response", {
+        status: 1,
+        message: `Ride ${ride_status}`,
+        ride
+      });
+
+      socket.join(ride.user_id.toString());
+      this.io.to(ride.user_id.toString()).emit("response", ride);
+
+      // const body = {
+      //   device_token: ride.user.device_token,
+      //   user: ride.user_id,
+      //   message: "Your ride request has been accepted",
+      //   type: "ride",
+      //   model_id: ride._id,
+      //   model_type: "ride",
+      //   meta_data: { ...ride.toJSON() }
+      // };
+
+      // await notification.createNotification({ body });
+    } catch (error) {
+      socket.emit("response", {
         status: 0,
         message: "Error updating ride request",
         error
@@ -364,7 +466,7 @@ class Service {
       const ride = await this.ride.findOne({ _id: ride_id });
 
       if (!ride) {
-        return socket.emit("ride-status-update", {
+        return socket.emit("response", {
           status: 0,
           message: "Ride not found"
         });
@@ -388,7 +490,7 @@ class Service {
 
       await ride.save();
 
-      socket.emit("ride-status-update", {
+      socket.emit("response", {
         status: 1,
         message: "Ride status updated",
         ride
@@ -397,8 +499,8 @@ class Service {
       socket.join(ride.user_id.toString());
       socket.join(ride.driver_id.toString());
 
-      this.io.to(ride.user_id.toString()).emit("ride-status-update", ride);
-      this.io.to(ride.driver_id.toString()).emit("ride-status-update", ride);
+      this.io.to(ride.user_id.toString()).emit("response", ride);
+      this.io.to(ride.driver_id.toString()).emit("response", ride);
 
       const userBody = {
         device_token: ride.user.device_token,
@@ -422,7 +524,7 @@ class Service {
       };
       await notification.createNotification({ body: driverBody });
     } catch (error) {
-      socket.emit("ride-status-update", {
+      socket.emit("response", {
         status: 0,
         message: "Error updating ride status",
         error

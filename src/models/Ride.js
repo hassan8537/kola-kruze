@@ -64,7 +64,8 @@ const RideSchema = new mongoose.Schema(
         "reserved",
         "ongoing",
         "completed",
-        "canceled"
+        "canceled",
+        "accepted"
       ],
       default: "pending"
     },
@@ -84,24 +85,31 @@ const RideSchema = new mongoose.Schema(
     },
 
     cancellation: {
-      cancelled_by: {
-        type: String,
-        enum: ["passenger", "driver", "system"],
-        default: null
+      user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
       },
-      cancellation_reason: { type: String, default: null }
+      reason: { type: String, default: null },
+      description: { type: String, default: null }
     },
 
     tracking: {
-      current_location: {
-        type: {
-          type: String,
-          enum: ["Point"],
-          default: "Point"
+      driver: {
+        current_location: {
+          type: { type: String, enum: ["Point"], default: "Point" },
+          coordinates: { type: [Number], index: "2dsphere", default: null }
         },
-        coordinates: { type: [Number], index: "2dsphere", default: null }
+        eta_to_pickup: { type: Number, default: null },
+        eta_to_dropoff: { type: Number, default: null }
       },
-      eta: { type: Number, default: null }
+      user: {
+        current_location: {
+          type: { type: String, enum: ["Point"], default: "Point" },
+          coordinates: { type: [Number], index: "2dsphere", default: null }
+        },
+        waiting_time: { type: Number, default: null }
+      }
     }
   },
   { timestamps: true }
