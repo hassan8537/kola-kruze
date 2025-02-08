@@ -72,8 +72,7 @@ class Service {
         });
       }
 
-      const { pickup_location, dropoff_location, scheduled_time } =
-        request.body;
+      const { pickup_location, dropoff_location } = request.body;
 
       const totalMiles = getDistanceBetweenSourceAndDestination(
         pickup_location.location.coordinates[1],
@@ -100,8 +99,7 @@ class Service {
           vehicle_categories: categories,
           distance_miles: Number(totalMiles),
           pickup_location,
-          dropoff_location,
-          scheduled_time
+          dropoff_location
         }
       });
     } catch (error) {
@@ -170,8 +168,7 @@ class Service {
           distance_miles: Number(totalMiles.toFixed(2)),
           pickup_location,
           dropoff_location,
-          stops: sortedStops,
-          scheduled_time
+          stops: sortedStops
         }
       });
     } catch (error) {
