@@ -76,36 +76,65 @@ class Service {
         });
       }
 
-      const { pickup_location, dropoff_location } = request.body;
+      try {
+        const { pickup_location, dropoff_location, stops = [] } = request.body;
 
-      const totalMiles = getDistanceBetweenSourceAndDestination(
-        pickup_location.location.coordinates[1],
-        pickup_location.location.coordinates[0],
-        dropoff_location.location.coordinates[1],
-        dropoff_location.location.coordinates[0]
-      ).toFixed(2);
+        const admin = await this.user.findOne({ role: "admin" });
 
-      const categories = await this.category
-        .find()
-        .populate(populateCategory.populate)
-        .lean();
-      if (!categories.length) {
-        return unavailableResponse({
-          response,
-          message: "No categories found."
-        });
-      }
+        const pickupCoords = pickup_location.location.coordinates;
+        const dropoffCoords = dropoff_location.location.coordinates;
 
-      return successResponse({
-        response,
-        message: "Ride created successfully.",
-        data: {
-          vehicle_categories: categories,
-          distance_miles: Number(totalMiles),
-          pickup_location,
-          dropoff_location
+        // Calculate total distance with stops in order
+        let totalMiles = 0;
+        let prevCoords = pickupCoords;
+
+        if (!stops.length) {
+          for (const stop of stops) {
+            const stopCoords = stop.location.coordinates;
+            totalMiles += getDistanceBetweenSourceAndDestination(
+              prevCoords[1],
+              prevCoords[0],
+              stopCoords[1],
+              stopCoords[0]
+            );
+            prevCoords = stopCoords;
+          }
         }
-      });
+
+        // Add final segment from last stop to dropoff
+        totalMiles += getDistanceBetweenSourceAndDestination(
+          prevCoords[1],
+          prevCoords[0],
+          dropoffCoords[1],
+          dropoffCoords[0]
+        );
+
+        const categories = await this.category
+          .find()
+          .populate(populateCategory.populate)
+          .lean();
+        if (!categories.length) {
+          return unavailableResponse({
+            response,
+            message: "No categories found."
+          });
+        }
+
+        return successResponse({
+          response,
+          message: "Stop(s) managed successfully.",
+          data: {
+            vehicle_categories: categories,
+            rate_per_stop: admin.rate_per_stop,
+            distance_miles: Number(totalMiles.toFixed(2)),
+            pickup_location,
+            dropoff_location,
+            stops: stops
+          }
+        });
+      } catch (error) {
+        return errorResponse({ response, error });
+      }
     } catch (error) {
       return errorResponse({ response, error });
     }
