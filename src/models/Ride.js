@@ -88,28 +88,26 @@ const RideSchema = new mongoose.Schema(
       user_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true
+        default: null
       },
       reason: { type: String, default: null },
       description: { type: String, default: null }
     },
 
     tracking: {
-      driver: {
-        current_location: {
-          type: { type: String, enum: ["Point"], default: "Point" },
-          coordinates: { type: [Number], index: "2dsphere", default: null }
-        },
-        eta_to_pickup: { type: Number, default: null },
-        eta_to_dropoff: { type: Number, default: null }
+      driver_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
       },
-      user: {
-        current_location: {
-          type: { type: String, enum: ["Point"], default: "Point" },
-          coordinates: { type: [Number], index: "2dsphere", default: null }
-        },
-        waiting_time: { type: Number, default: null }
-      }
+      eta_to_pickup: { type: Number, default: null },
+      eta_to_dropoff: { type: Number, default: null },
+      passenger_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+      },
+      waiting_time: { type: Number, default: null }
     }
   },
   { timestamps: true }

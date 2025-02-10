@@ -83,16 +83,6 @@ module.exports = {
         path: "vehicle_id",
         select: "make model year color profile_picture",
         populate: { path: "profile_picture", select: "file_url" }
-      },
-      {
-        path: "share_with",
-        select: "first_name last_name legal_name email_address profile_picture",
-        populate: { path: "profile_picture", select: "file_url" }
-      },
-      {
-        path: "fare_details.user_id",
-        select: "first_name last_name legal_name email_address profile_picture",
-        populate: { path: "profile_picture", select: "file_url" }
       }
     ],
     sort: { createdAt: -1 }

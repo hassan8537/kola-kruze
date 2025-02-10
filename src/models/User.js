@@ -136,7 +136,7 @@ const UserSchema = new mongoose.Schema(
     },
     is_available: {
       type: Boolean,
-      default: false
+      default: true
     },
     is_deleted: {
       type: Boolean,

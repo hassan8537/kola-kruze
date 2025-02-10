@@ -183,7 +183,7 @@ class Service {
         pickup_location,
         dropoff_location,
         stops,
-        scheduled_time
+        fare_details
       } = data;
 
       const user = await this.user.findById(user_id);
@@ -216,9 +216,7 @@ class Service {
         pickup_location,
         dropoff_location,
         stops,
-        fare_details,
-        tracking,
-        scheduled_time
+        fare_details
       });
 
       const ride = await this.ride
@@ -238,32 +236,31 @@ class Service {
 
       const drivers = await this.user.find({
         role: "driver",
-        driver_preference: user.driver_preference,
-        gender_preference: user.gender_preference,
+        // driver_preference: user.driver_preference,
+        // gender_preference: user.gender_preference,
         is_available: true,
         is_deleted: false
       });
 
-      const nearbyDrivers = drivers.filter((driver) => {
-        const driverCoordinates = driver.current_location?.coordinates || [];
-        if (driverCoordinates.length === 0) return false;
+      // const nearbyDrivers = drivers.filter((driver) => {
+      //   const driverCoordinates = driver.current_location?.coordinates || [];
+      //   if (driverCoordinates.length === 0) return false;
 
-        const [driverLongitude, driverLatitude] = driverCoordinates;
-        const [pickupLongitude, pickupLatitude] =
-          pickup_location[0].location.coordinates;
-        const distance = getDistanceBetweenSourceAndDestination(
-          pickupLatitude,
-          pickupLongitude,
-          driverLatitude,
-          driverLongitude
-        );
+      //   const [driverLongitude, driverLatitude] = driverCoordinates;
+      //   const [pickupLongitude, pickupLatitude] =
+      //     pickup_location[0].location.coordinates;
+      //   const distance = getDistanceBetweenSourceAndDestination(
+      //     pickupLatitude,
+      //     pickupLongitude,
+      //     driverLatitude,
+      //     driverLongitude
+      //   );
 
-        return distance <= maxDistanceInMiles;
-      });
-
-      if (nearbyDrivers.length > 0) {
+      //   return distance <= maxDistanceInMiles;
+      // });
+      if (drivers.length > 0) {
         await Promise.all(
-          nearbyDrivers.map((driver) => {
+          drivers.map((driver) => {
             socket.join(driver._id.toString());
             this.io.to(driver._id.toString()).emit("response", ride);
 
