@@ -115,6 +115,7 @@ io.on("connection", (socket) => {
 
   // Ride Events
   socket.on("request-a-ride", (data) => rideService.requestARide(socket, data));
+  socket.on("cancel-a-ride", (data) => rideService.cancelARide(socket, data));
   socket.on("accept-a-ride", (data) => rideService.acceptARide(socket, data));
 
   socket.on("eta-to-pickup", (data) => rideService.etaToPickup(socket, data));

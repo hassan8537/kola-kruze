@@ -430,8 +430,14 @@ class Service {
       }, process.env.RIDE_REQUEST_TIMER); // 3 minutes (180,000 ms)
 
       // Listen for driver acceptance using pre-existing acceptARide functionality
-      socket.on("accept-a-ride", async (rideData) => {
-        if (rideData.ride_id === ride._id.toString()) {
+      socket.on("accept-a-ride", async (socket, data) => {
+        if (data.ride_id.toString() === ride._id.toString()) {
+          clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
+        }
+      });
+
+      socket.on("cancel-a-ride", async (socket, data) => {
+        if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
         }
       });
@@ -597,117 +603,110 @@ class Service {
     }
   }
 
-  async cancelRideRequest(socket, data) {
+  async cancelARide(socket, data) {
     try {
-      const { user_id, ride_status, cancellation } = data;
-
-      let ride;
+      const { user_id, ride_id, cancellation } = data;
+      const object_type = "cancel-ride";
 
       const user = await this.user.findById(user_id);
+      if (!user) {
+        return socket.emit(
+          "response",
+          failedEvent({ object_type, message: "User not found" })
+        );
+      }
 
       const rideQuery =
         user.role === "passenger"
-          ? { user_id: user._id, ride_status: { $in: ["ongoing", "accepted"] } }
+          ? {
+              user_id: user._id,
+              ride_status: { $in: ["ongoing", "accepted", "pending"] }
+            }
           : {
               driver_id: user._id,
-              ride_status: { $in: ["ongoing", "accepted"] }
+              ride_status: { $in: ["ongoing", "accepted", "pending"] }
             };
 
-      ride = await this.ride.findOne(rideQuery);
+      const ride = await this.ride.findOne(rideQuery);
 
       if (!ride) {
         return socket.emit(
           "response",
-          failedEvent({ message: "No ride found" })
+          failedEvent({
+            object_type,
+            message: "No active ride found to cancel"
+          })
         );
       }
 
-      const statuses = ["accepted", "ongoing"];
+      // Set cancellation details
+      ride.ride_status = "cancelled";
+      ride.cancellation = {
+        user_id: user._id,
+        reason: cancellation?.reason,
+        description: cancellation?.description
+      };
 
-      if (ride && statuses.includes(ride.ride_status)) {
-        if (user.role === "passenger") {
-          const cancellationWindow = isETAWithinTwoMinutes(
-            ride.tracking.driver.eta_to_pickup
-          );
-
-          if (!cancellationWindow) {
-            const cancellationData = {
-              user_id: user._id,
-              reason: cancellation.reason,
-              description: cancellation.description
-            };
-
-            ride.ride_status = "cancelled";
-            ride.cancellation = cancellationData;
-            await ride.save();
-
-            socket.emit(
-              "response",
-              successEvent({
-                message: "Your ride has been cancelled successfully"
-              })
-            );
-
-            socket.join(ride.driver_id.toString());
-            io.to(ride.driver_id.toString());
-            // Logic to implement full charge back in passenger's account
-            // Write your code here
-          } else {
-            const cancellationData = {
-              user_id: user._id,
-              reason: cancellation.reason,
-              description: cancellation.description
-            };
-
-            ride.ride_status = "cancelled";
-            ride.cancellation = cancellationData;
-            await ride.save();
-
-            socket.emit(
-              "response",
-              successEvent({
-                message: "Your ride has been cancelled successfully"
-              })
-            );
-          }
-        }
-      } else {
-        socket.emit(
-          "response",
-          failedEvent({ message: `You cannot cancel a ${ride_status} ride` })
-        );
-      }
-
-      ride.driver_id = driver_id;
-      ride.ride_status = ride_status;
       await ride.save();
 
-      socket.emit("response", {
-        status: 1,
-        message: `Ride ${ride_status}`,
-        ride
-      });
+      // If passenger cancels the ride
+      if (user.role === "passenger") {
+        const isWithinWindow = isETAWithinTwoMinutes(
+          ride.tracking?.driver?.eta_to_pickup
+        );
 
-      socket.join(ride.user_id.toString());
-      this.io.to(ride.user_id.toString()).emit("response", ride);
+        socket.emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "Your ride has been cancelled successfully",
+            data: ride
+          })
+        );
 
-      // const body = {
-      //   device_token: ride.user.device_token,
-      //   user: ride.user_id,
-      //   message: "Your ride request has been accepted",
-      //   type: "ride",
-      //   model_id: ride._id,
-      //   model_type: "ride",
-      //   meta_data: { ...ride.toJSON() }
-      // };
+        // Notify the driver
+        this.io.to(ride.driver_id.toString()).emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: isWithinWindow
+              ? "Ride cancelled by passenger"
+              : "Ride cancelled - full charge applied",
+            data: ride
+          })
+        );
 
-      // await notification.createNotification({ body });
+        // TODO: Implement refund or charge logic based on the cancellation window
+      } else {
+        // If the driver cancels the ride
+        socket.emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "You have cancelled the ride",
+            data: ride
+          })
+        );
+
+        // Notify the passenger
+        this.io.to(ride.user_id.toString()).emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "Driver has cancelled the ride",
+            data: ride
+          })
+        );
+      }
     } catch (error) {
-      socket.emit("response", {
-        status: 0,
-        message: "Error updating ride request",
-        error
-      });
+      socket.emit(
+        "response",
+        errorEvent({
+          object_type: "cancel-ride",
+          message: "Error cancelling ride",
+          error
+        })
+      );
     }
   }
 
