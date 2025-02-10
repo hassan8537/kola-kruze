@@ -378,14 +378,7 @@ class Service {
       );
 
       // Find available drivers
-      const availableDrivers = await this.user.find({
-        role: "driver",
-        is_available: true,
-        is_deleted: false,
-        driver_preference,
-        gender_preference,
-        driver_license: { $ne: null }
-      });
+      const availableDrivers = [];
 
       socket.emit(
         "response",
@@ -434,7 +427,7 @@ class Service {
             })
           );
         }
-      }, 180000); // 3 minutes (180,000 ms)
+      }, process.env.RIDE_REQUEST_TIMER); // 3 minutes (180,000 ms)
 
       // Listen for driver acceptance using pre-existing acceptARide functionality
       socket.on("accept-a-ride", async (rideData) => {
