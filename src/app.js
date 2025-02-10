@@ -40,6 +40,7 @@ app.use(morgan("tiny"));
 app.use(adminSeeder);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+console.log({ static_path: path.join(__dirname, "uploads") });
 
 // Admin Routes
 app.use(
