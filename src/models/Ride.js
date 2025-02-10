@@ -56,7 +56,7 @@ const RideSchema = new mongoose.Schema(
       }
     },
 
-    distance_miles: { type: String, default: 0 },
+    distance_miles: { type: Number, default: 0 },
 
     ride_status: {
       type: String,
