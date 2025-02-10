@@ -335,7 +335,7 @@ class Service {
 
       const user = await this.user.findById(user_id);
       if (!user) {
-        return socket.emit("response", errorEvent({ error: "No user found" }));
+        return socket.emit("error", errorEvent({ error: "No user found" }));
       }
 
       const existingRide = await this.ride.findOne({
@@ -436,8 +436,8 @@ class Service {
         }
       }, 180000); // 3 minutes (180,000 ms)
 
-      // Listen for driver acceptance and cancel timeout
-      this.io.on("accept-a-ride", async (rideData) => {
+      // Listen for driver acceptance using pre-existing acceptARide functionality
+      socket.on("accept-a-ride", async (rideData) => {
         if (rideData.ride_id === ride._id.toString()) {
           clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
         }
@@ -447,10 +447,10 @@ class Service {
     }
   }
 
-  async acceptRideRequest(socket, data) {
+  async acceptARide(socket, data) {
     try {
       const { ride_id, driver_id } = data;
-      const object_type = "accept-ride";
+      const object_type = "ride-accepted";
 
       // Check if the ride exists and is pending
       const ride = await this.ride.findOneAndUpdate(
@@ -463,7 +463,7 @@ class Service {
         return socket.emit(
           "response",
           failedEvent({
-            object_type,
+            object_type: "no-riders-available",
             message: "Ride is not available for acceptance"
           })
         );
@@ -479,7 +479,7 @@ class Service {
         return socket.emit(
           "response",
           failedEvent({
-            object_type,
+            object_type: "ride-in-progress",
             message: "You already have an active ride"
           })
         );
@@ -489,7 +489,7 @@ class Service {
       socket.emit(
         "response",
         successEvent({
-          object_type,
+          object_type: "ride-accepted",
           message: "Ride accepted successfully",
           data: ride
         })
