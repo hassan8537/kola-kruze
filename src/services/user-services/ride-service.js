@@ -398,9 +398,7 @@ class Service {
         driver_license: { $ne: null }
       });
 
-      const driversWithVehicleCategory = drivers.filter((driver) =>
-        vehicles.includes({ user_id: driver._id.toString() })
-      );
+      const driversWithVehicleCategory = drivers;
 
       socket.emit(
         "response",
@@ -425,6 +423,7 @@ class Service {
           })
         );
       } else {
+        await this.ride.findByIdAndDelete(ride._id);
         socket.emit(
           "response",
           failedEvent({
