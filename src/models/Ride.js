@@ -55,6 +55,9 @@ const RideSchema = new mongoose.Schema(
         coordinates: { type: [Number], index: "2dsphere", required: true }
       }
     },
+
+    distance_miles: { type: String, default: 0 },
+
     ride_status: {
       type: String,
       enum: [
@@ -64,7 +67,8 @@ const RideSchema = new mongoose.Schema(
         "ongoing",
         "completed",
         "canceled",
-        "accepted"
+        "accepted",
+        "arrived"
       ],
       default: "pending"
     },
@@ -94,19 +98,8 @@ const RideSchema = new mongoose.Schema(
     },
 
     tracking: {
-      driver_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
-      },
-      eta_to_pickup: { type: Number, default: null },
-      eta_to_dropoff: { type: Number, default: null },
-      passenger_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
-      },
-      waiting_time: { type: Number, default: null }
+      eta_to_pickup: { type: String, default: null },
+      eta_to_dropoff: { type: String, default: null }
     }
   },
   { timestamps: true }

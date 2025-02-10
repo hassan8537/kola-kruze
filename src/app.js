@@ -114,7 +114,10 @@ io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
   // Ride Events
-  socket.on("ride-request", (data) => rideService.rideRequest(socket, data));
+  socket.on("eta-to-pickup", (data) => rideService.etaToPickup(socket, data));
+  socket.on("eta-to-dropoff", (data) => rideService.etaToDropOff(socket, data));
+
+  socket.on("ride-request", (data) => rideService.requestARide(socket, data));
   socket.on("ride-request-response", (data) =>
     rideService.rideRequestResponse(socket, data)
   );

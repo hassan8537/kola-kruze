@@ -105,7 +105,7 @@ const UserSchema = new mongoose.Schema(
     },
     gender_preference: {
       type: String,
-      enum: ["any", "female-only"],
+      enum: ["any", "male-only", "female-only"],
       default: "any"
     },
     ssn_number: {

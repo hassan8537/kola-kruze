@@ -65,17 +65,17 @@ const haversineDistance = (coords1, coords2) => {
   return R * c; // Distance in km
 };
 
-exports.calculateETA = (driver_location, dropoff_location, avgSpeed = 40) => {
-  const distance = haversineDistance(
-    driver_location.coordinates,
-    dropoff_location.coordinates
-  );
+// exports.calculateETA = (driver_location, dropoff_location, avgSpeed = 40) => {
+//   const distance = haversineDistance(
+//     driver_location.coordinates,
+//     dropoff_location.coordinates
+//   );
 
-  const timeInHours = distance / avgSpeed; // Time in hours
-  const timeInMinutes = Math.round(timeInHours * 60); // Convert to minutes
+//   const timeInHours = distance / avgSpeed; // Time in hours
+//   const timeInMinutes = Math.round(timeInHours * 60); // Convert to minutes
 
-  return timeInMinutes; // Return estimated time in minutes
-};
+//   return timeInMinutes; // Return estimated time in minutes
+// };
 
 exports.calculateWaitingTime = (arrival_time, current_time) => {
   const arrival = new Date(arrival_time).getTime();
@@ -94,4 +94,39 @@ exports.isETAWithinTwoMinutes = (etaToPickup) => {
   const differenceInMinutes = (etaTime - currentTime) / (1000 * 60);
 
   return differenceInMinutes < process.env.CANCELLATION_WINDOW;
+};
+
+// Usable functions
+// In miles
+exports.calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 3958.8;
+  const toRad = (value) => (value * Math.PI) / 180;
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+  return Number(distance).toFixed(2);
+};
+
+exports.calculateETA = (distance, speed = 35) => {
+  if (!distance || !speed) return "N/A";
+
+  const timeInMinutes = Math.round((distance / speed) * 60);
+
+  if (timeInMinutes < 1) return "< 1 min";
+  if (timeInMinutes < 60) return `${timeInMinutes} min`;
+
+  const hours = Math.floor(timeInMinutes / 60);
+  const minutes = timeInMinutes % 60;
+
+  return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
 };
