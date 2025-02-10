@@ -66,7 +66,7 @@ const RideSchema = new mongoose.Schema(
         "reserved",
         "ongoing",
         "completed",
-        "canceled",
+        "cancelled",
         "accepted",
         "arrived"
       ],
