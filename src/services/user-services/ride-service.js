@@ -378,12 +378,7 @@ class Service {
       );
 
       // Find available drivers
-      const vehicles = await this.vehicle.find({
-        vehicle_category,
-        is_verified: true
-      });
-
-      const drivers = await this.user.find({
+      const availableDrivers = await this.user.find({
         role: "driver",
         is_available: true,
         is_deleted: false,
@@ -392,8 +387,6 @@ class Service {
         driver_license: { $ne: null }
       });
 
-      const availableDrivers = drivers;
-
       socket.emit(
         "response",
         successEvent({
@@ -401,22 +394,6 @@ class Service {
           message: "Connecting you to nearby drivers..."
         })
       );
-
-      let rideAccepted = false;
-
-      // Start a 3-minute timer to cancel the ride if no driver accepts
-      const rideTimeout = setTimeout(async () => {
-        if (!rideAccepted) {
-          await this.ride.findByIdAndDelete(ride._id);
-          socket.emit(
-            "response",
-            failedEvent({
-              object_type: "no-drivers-available",
-              message: "We are sorry! No drivers are available at the moment."
-            })
-          );
-        }
-      }, 180000); // 3 minutes (180,000 ms)
 
       if (availableDrivers.length > 0) {
         await Promise.all(
@@ -432,24 +409,39 @@ class Service {
             );
           })
         );
-
-        // Listen for driver acceptance to clear timeout
-        socket.on("accept-a-ride", async (rideData) => {
-          if (rideData.ride_id === ride._id.toString()) {
-            rideAccepted = true;
-            clearTimeout(rideTimeout); // Clear timeout when a driver accepts
-          }
-        });
-      } else {
-        await this.ride.findByIdAndDelete(ride._id);
-        socket.emit(
-          "response",
-          failedEvent({
-            object_type: "no-drivers-available",
-            message: "We are sorry! No drivers are available at the moment."
-          })
-        );
       }
+
+      // Start a 3-minute timer to cancel the ride if no driver accepts
+      const rideTimeout = setTimeout(async () => {
+        const latestRide = await this.ride.findById(ride._id);
+
+        if (latestRide && latestRide.ride_status === "pending") {
+          await this.ride.findByIdAndDelete(ride._id);
+          socket.emit(
+            "response",
+            failedEvent({
+              object_type: "no-drivers-available",
+              message: "We are sorry! No drivers accepted the ride request."
+            })
+          );
+
+          this.io.to(ride.user_id.toString()).emit(
+            "sorry-event",
+            failedEvent({
+              object_type: "ride-expired",
+              message:
+                "Your ride request has been canceled due to no available drivers."
+            })
+          );
+        }
+      }, 180000); // 3 minutes (180,000 ms)
+
+      // Listen for driver acceptance and cancel timeout
+      this.io.on("accept-a-ride", async (rideData) => {
+        if (rideData.ride_id === ride._id.toString()) {
+          clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
+        }
+      });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
