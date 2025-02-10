@@ -40,8 +40,7 @@ const RideSchema = new mongoose.Schema(
             default: "Point"
           },
           coordinates: { type: [Number], index: "2dsphere", required: true }
-        },
-        stop_order: { type: Number, required: true }
+        }
       }
     ],
 

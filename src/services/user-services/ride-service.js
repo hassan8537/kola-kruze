@@ -127,9 +127,7 @@ class Service {
       let totalMiles = 0;
       let prevCoords = pickupCoords;
 
-      const sortedStops = stops.sort((a, b) => a.stop_order - b.stop_order);
-
-      for (const stop of sortedStops) {
+      for (const stop of stops) {
         const stopCoords = stop.location.coordinates;
         totalMiles += getDistanceBetweenSourceAndDestination(
           prevCoords[1],
@@ -168,7 +166,7 @@ class Service {
           distance_miles: Number(totalMiles.toFixed(2)),
           pickup_location,
           dropoff_location,
-          stops: sortedStops
+          stops: stops
         }
       });
     } catch (error) {
