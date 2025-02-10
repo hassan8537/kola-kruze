@@ -39,10 +39,7 @@ app.use(cookieParser());
 app.use(morgan("tiny"));
 app.use(adminSeeder);
 
-app.use(
-  "/uploads",
-  express.static(path.join(__dirname, "uploads"), { maxAge: "1d" })
-);
+app.use("/uploads", express.static("uploads"));
 
 // Admin Routes
 app.use(
