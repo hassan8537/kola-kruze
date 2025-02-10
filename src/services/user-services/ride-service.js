@@ -334,39 +334,34 @@ class Service {
       } = data;
 
       const user = await this.user.findById(user_id);
-      const object_type = "get-ride";
-
       if (!user) {
-        return socket.emit(
-          "response",
-          failedEvent({ object_type, message: "No user found" })
-        );
+        return socket.emit("response", errorEvent({ error: "No user found" }));
       }
 
       const existingRide = await this.ride.findOne({
         user_id,
-        ride_status: {
-          $in: ["pending", "ongoing", "accepted", "arrived"]
-        }
+        ride_status: { $in: ["pending", "ongoing", "accepted", "arrived"] }
       });
 
       if (existingRide) {
         return socket.emit(
           "response",
           failedEvent({
-            object_type,
+            object_type: "ride-in-progress",
             message: "A ride is already in progress"
           })
         );
       }
 
+      // Create a new ride request
       const newRide = await this.ride.create({
         user_id,
         fare_details,
         distance_miles,
         pickup_location,
         dropoff_location,
-        stops
+        stops,
+        ride_status: "pending"
       });
 
       const ride = await this.ride
@@ -376,14 +371,13 @@ class Service {
       socket.emit(
         "response",
         successEvent({
-          object_type,
+          object_type: "ride-request-sent",
           message: "Ride request sent successfully",
           data: ride
         })
       );
 
-      // Find all available drivers (without filtering by location)
-
+      // Find available drivers
       const vehicles = await this.vehicle.find({
         vehicle_category,
         is_verified: true
@@ -398,36 +392,60 @@ class Service {
         driver_license: { $ne: null }
       });
 
-      const driversWithVehicleCategory = drivers;
+      const availableDrivers = drivers;
 
       socket.emit(
         "response",
-        failedEvent({
-          object_type,
+        successEvent({
+          object_type: "connecting-drivers",
           message: "Connecting you to nearby drivers..."
         })
       );
 
-      if (driversWithVehicleCategory.length > 0) {
+      let rideAccepted = false;
+
+      // Start a 3-minute timer to cancel the ride if no driver accepts
+      const rideTimeout = setTimeout(async () => {
+        if (!rideAccepted) {
+          await this.ride.findByIdAndDelete(ride._id);
+          socket.emit(
+            "response",
+            failedEvent({
+              object_type: "no-drivers-available",
+              message: "We are sorry! No drivers are available at the moment."
+            })
+          );
+        }
+      }, 180000); // 3 minutes (180,000 ms)
+
+      if (availableDrivers.length > 0) {
         await Promise.all(
-          driversWithVehicleCategory.map((driver) => {
+          availableDrivers.map((driver) => {
             socket.join(driver._id.toString());
             this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
-                object_type: object_type,
+                object_type: "get-ride",
                 message: "A user requested a ride",
                 data: ride
               })
             );
           })
         );
+
+        // Listen for driver acceptance to clear timeout
+        socket.on("accept-a-ride", async (rideData) => {
+          if (rideData.ride_id === ride._id.toString()) {
+            rideAccepted = true;
+            clearTimeout(rideTimeout); // Clear timeout when a driver accepts
+          }
+        });
       } else {
         await this.ride.findByIdAndDelete(ride._id);
         socket.emit(
           "response",
           failedEvent({
-            object_type,
+            object_type: "no-drivers-available",
             message: "We are sorry! No drivers are available at the moment."
           })
         );
