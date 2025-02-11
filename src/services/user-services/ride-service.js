@@ -554,6 +554,7 @@ class Service {
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
+
       const receiver_id = isPassenger ? ride.driver_id._id : ride.user_id._id;
 
       // Update ride status and cancellation details
@@ -576,7 +577,6 @@ class Service {
       );
 
       // ✅ Notify the other user (driver or passenger)
-      socket.join(receiver_id.toString());
       this.io.to(receiver_id.toString()).emit(
         "response",
         successEvent({
