@@ -126,7 +126,13 @@ io.on("connection", (socket) => {
   socket.on("request-a-ride", (data) => rideService.requestARide(socket, data));
   socket.on("cancel-a-ride", (data) => rideService.cancelARide(socket, data));
   socket.on("accept-a-ride", (data) => rideService.acceptARide(socket, data));
+  socket.on("arrived-at-pickup", (data) =>
+    rideService.arrivedAtPickup(socket, data)
+  );
 
+  socket.on("update-current-location", (data) =>
+    rideService.updateCurrentLocation(socket, data)
+  );
   socket.on("eta-to-pickup", (data) => rideService.etaToPickup(socket, data));
   socket.on("eta-to-dropoff", (data) => rideService.etaToDropOff(socket, data));
 

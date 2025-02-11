@@ -438,15 +438,17 @@ class Service {
 
   async arrivedAtPickup(socket, data) {
     try {
-      const { ride_id, driver_id } = data;
-      const object_type = "ride-update";
+      const { ride_id, user_id, driver_id } = data;
+      const user_object_type = "user-arrived";
+      const driver_object_type = "driver-arrived";
 
-      // Find the ride and ensure it's in an accepted state
-      const ride = await this.ride.findOneAndUpdate(
-        { _id: ride_id, driver_id, ride_status: "accepted" },
-        { $set: { ride_status: "arrived" } },
-        { new: true }
-      );
+      const ride = await this.ride
+        .findOneAndUpdate(
+          { _id: ride_id, driver_id, ride_status: "accepted" },
+          { $set: { ride_status: "arrived" } },
+          { new: true }
+        )
+        .populate(populateRide.populate);
 
       if (!ride) {
         return socket.emit(
@@ -462,18 +464,18 @@ class Service {
       socket.emit(
         "response",
         successEvent({
-          object_type,
-          message: "You arrived at pickup location",
+          object_type: driver_object_type,
+          message: "You have arrived at the pickup location",
           data: ride
         })
       );
 
       // Notify the user
-      socket.join(ride.user_id.toString());
-      this.io.to(ride.user_id.toString()).emit(
+      socket.join(user_id.toString());
+      this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
-          object_type: object_type,
+          object_type: user_object_type,
           message: "Your driver has arrived at the pickup location",
           data: ride
         })
@@ -532,111 +534,73 @@ class Service {
   async cancelARide(socket, data) {
     try {
       const { user_id, ride_id, cancellation } = data;
-      const object_type = "cancel-ride";
 
-      const user = await this.user.findById(user_id);
-      if (!user) {
-        return socket.emit(
-          "response",
-          failedEvent({ object_type, message: "User not found" })
-        );
-      }
-
-      const rideQuery =
-        user.role === "passenger"
-          ? {
-              user_id: user._id,
-              ride_status: { $in: ["ongoing", "accepted", "pending"] }
-            }
-          : {
-              driver_id: user._id,
-              ride_status: { $in: ["ongoing", "accepted", "pending"] }
-            };
-
-      const ride = await this.ride.findOne(rideQuery);
+      const ride = await this.ride.findOne({
+        _id: ride_id,
+        $or: [{ user_id }, { driver_id: user_id }],
+        ride_status: { $in: ["accepted", "pending"] }
+      });
 
       if (!ride) {
         return socket.emit(
           "response",
           failedEvent({
-            object_type,
+            object_type: "cancel-ride",
             message: "No active ride found to cancel"
           })
         );
       }
 
-      // Set cancellation details
+      const isPassenger = ride.user_id.toString() === user_id.toString();
+      const object_type = isPassenger
+        ? "user-cancel-ride"
+        : "driver-cancel-ride";
+
+      // Update ride status and cancellation details
       ride.ride_status = "cancelled";
       ride.cancellation = {
-        user_id: user._id,
+        user_id,
         reason: cancellation?.reason,
         description: cancellation?.description
       };
-
       await ride.save();
 
-      // If passenger cancels the ride
-      if (user.role === "passenger") {
-        const isWithinWindow = isETAWithinTwoMinutes(
-          ride.tracking?.driver?.eta_to_pickup
-        );
+      // Notify the cancelling user
+      socket.emit(
+        "response",
+        successEvent({
+          object_type,
+          message: "Ride cancelled successfully",
+          data: ride
+        })
+      );
 
-        socket.emit(
-          "response",
-          successEvent({
-            object_type,
-            message: "Your ride has been cancelled successfully",
-            data: ride
-          })
-        );
-
-        // Notify the driver
-        this.io.to(ride.driver_id.toString()).emit(
+      // Notify the other party
+      const otherPartyId = isPassenger ? ride.driver_id : ride.user_id;
+      if (otherPartyId) {
+        socket.join(otherPartyId.toString());
+        this.io.to(otherPartyId.toString()).emit(
           "response",
           failedEvent({
             object_type,
-            message: isWithinWindow
+            message: isPassenger
               ? "Ride cancelled by passenger"
-              : "Ride cancelled - full charge applied",
-            data: ride
-          })
-        );
-
-        // TODO: Implement refund or charge logic based on the cancellation window
-      } else {
-        // If the driver cancels the ride
-        socket.emit(
-          "response",
-          successEvent({
-            object_type,
-            message: "You have cancelled the ride",
-            data: ride
-          })
-        );
-
-        // Notify the passenger
-        this.io.to(ride.user_id.toString()).emit(
-          "response",
-          failedEvent({
-            object_type,
-            message: "Driver has cancelled the ride",
+              : "Driver has cancelled the ride",
             data: ride
           })
         );
       }
     } catch (error) {
       socket.emit(
-        "response",
+        "error",
         errorEvent({
-          object_type: "cancel-ride",
-          message: "Error cancelling ride",
           error
         })
       );
     }
   }
 
-  async updateLocation(socket, data) {
+  async updateCurrentLocation(socket, data) {
     try {
       const { user_id, current_location } = data;
 

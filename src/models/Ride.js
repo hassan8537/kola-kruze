@@ -62,13 +62,13 @@ const RideSchema = new mongoose.Schema(
       type: String,
       enum: [
         "pending",
-        "scheduled",
-        "reserved",
-        "ongoing",
-        "completed",
         "cancelled",
         "accepted",
-        "arrived"
+        "scheduled",
+        "arrived",
+        "reserved",
+        "ongoing",
+        "completed"
       ],
       default: "pending"
     },
