@@ -566,17 +566,18 @@ class Service {
       };
       await ride.save();
 
-      // ✅ Notify the cancelling user
-      socket.emit(
-        "response",
-        successEvent({
-          object_type: "ride-cancelled",
-          message: "Ride cancelled successfully",
-          data: ride
-        })
-      );
+      // // ✅ Notify the cancelling user
+      // socket.emit(
+      //   "response",
+      //   successEvent({
+      //     object_type: "ride-cancelled",
+      //     message: "Ride cancelled successfully",
+      //     data: ride
+      //   })
+      // );
 
       // ✅ Notify the other user (driver or passenger)
+      socket.join(receiver_id.toString());
       this.io.to(receiver_id.toString()).emit(
         "response",
         successEvent({
