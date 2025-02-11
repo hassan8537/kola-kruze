@@ -415,7 +415,7 @@ class Service {
       socket.emit(
         "response",
         successEvent({
-          object_type: "ride-accepted",
+          object_type: "user-ride-accepted",
           message: "Ride accepted successfully",
           data: ride
         })
@@ -426,7 +426,7 @@ class Service {
       this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
-          object_type: object_type,
+          object_type: "driver-ride-accepted",
           message: "Your ride has been accepted by a driver",
           data: ride
         })
