@@ -376,7 +376,6 @@ class Service {
   async acceptARide(socket, data) {
     try {
       const { ride_id, driver_id } = data;
-      const object_type = "ride-accepted";
 
       // Check if the ride exists and is pending
       const ride = await this.ride.findOneAndUpdate(
@@ -411,19 +410,17 @@ class Service {
         );
       }
 
-      // Notify the driver
-      socket.emit(
+      // Notify the user in real-time
+      this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
           object_type: "user-ride-accepted",
-          message: "Ride accepted successfully",
+          message: "Your ride has been accepted by a driver",
           data: ride
         })
       );
 
-      // Notify the user in real-time
-      socket.join(ride.user_id.toString());
-      this.io.to(ride.user_id.toString()).emit(
+      this.io.to(ride.driver_id.toString()).emit(
         "response",
         successEvent({
           object_type: "driver-ride-accepted",
