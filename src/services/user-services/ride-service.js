@@ -547,11 +547,14 @@ class Service {
         return socket.emit(
           "response",
           failedEvent({
-            object_type: "cancel-ride",
+            object_type: "ride-cancelled",
             message: "No active ride found to cancel"
           })
         );
       }
+
+      const isPassenger = ride.user_id._id.toString() === user_id.toString();
+      const receiver_id = isPassenger ? ride.driver_id._id : ride.user_id._id;
 
       // Update ride status and cancellation details
       ride.ride_status = "cancelled";
@@ -562,28 +565,23 @@ class Service {
       };
       await ride.save();
 
-      // ✅ Emit to the driver (confirmation)
+      // ✅ Notify the cancelling user
       socket.emit(
         "response",
         successEvent({
-          object_type: "user-cancel-ride",
+          object_type: "ride-cancelled",
           message: "Ride cancelled successfully",
           data: ride
         })
       );
 
-      const user = await this.user.findById(user_id);
-
-      const receiver_id =
-        user.role === "passenger" ? ride.user_id._id : ride.driver_id._id;
-
-      // ✅ Emit to the user using the correct room
+      // ✅ Notify the other user (driver or passenger)
       socket.join(receiver_id.toString());
       this.io.to(receiver_id.toString()).emit(
         "response",
         successEvent({
           object_type: "ride-cancelled",
-          message: `The ride has been cancelled by the ${user.role === "passenger" ? "passenger" : "driver"}`,
+          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
           data: ride
         })
       );
