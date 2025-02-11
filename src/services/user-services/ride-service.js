@@ -378,7 +378,14 @@ class Service {
       );
 
       // Find available drivers
-      const availableDrivers = [];
+      const availableDrivers = await this.user.find({
+        role: "driver",
+        is_available: true,
+        is_deleted: false,
+        driver_preference,
+        gender_preference,
+        driver_license: { $ne: null }
+      });
 
       socket.emit(
         "response",
