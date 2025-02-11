@@ -33,6 +33,8 @@ exports.failedEvent = ({ object_type, message }) => {
 };
 
 exports.errorEvent = ({ error }) => {
+  console.log({ error });
+
   console.log({
     code: 500,
     status: 0,

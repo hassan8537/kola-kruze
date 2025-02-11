@@ -553,6 +553,27 @@ class Service {
         );
       }
 
+      if (!ride.driver_id) {
+        // Update ride status and cancellation details
+        ride.ride_status = "cancelled";
+        ride.cancellation = {
+          user_id,
+          reason: cancellation?.reason,
+          description: cancellation?.description
+        };
+        await ride.save();
+
+        // ✅ Notify the other user (driver or passenger)
+        socket.emit(
+          "response",
+          successEvent({
+            object_type: "ride-cancelled",
+            message: `The ride has been cancelled by the passenger`,
+            data: ride
+          })
+        );
+      }
+
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
 
       const receiver_id = isPassenger ? ride.driver_id._id : ride.user_id._id;
