@@ -208,13 +208,18 @@ class Service {
   }
 
   async joinRoom(socket, data) {
-    socket.join(data.userId);
+    const { userId } = data;
+
+    socket.join(userId.toString());
+
+    console.log(`User [${userId}] joined the room.`);
+
     socket.emit(
       "response",
       successEvent({
         object_type: "room-joined",
-        message: `User ID [${data.userId}] joined the room`,
-        data: { user_id: data.userId }
+        message: `User ID [${userId}] joined the room`,
+        data: { user_id: userId }
       })
     );
   }
@@ -373,7 +378,6 @@ class Service {
     try {
       const { ride_id, driver_id } = data;
 
-      // Update ride status if it's still pending
       const ride = await this.ride
         .findOneAndUpdate(
           { _id: ride_id, ride_status: "pending" },
@@ -392,40 +396,35 @@ class Service {
         );
       }
 
-      // Check if driver is already assigned to another ride
-      const activeRide = await this.ride.findOne({
+      const ongoingRide = await this.ride.findOne({
         driver_id,
         ride_status: { $in: ["ongoing"] }
       });
 
-      if (activeRide) {
+      if (ongoingRide) {
         return socket.emit(
           "response",
           failedEvent({
             object_type: "ride-in-progress",
-            message: "You already have an active ride"
+            message: "You already have an ongoing ride"
           })
         );
       }
 
-      // Ensure user is connected before emitting
-      const userSocket = this.io.sockets.sockets.get(ride.user_id.toString());
+      // ✅ Ensure user is in the correct room before emitting
+      console.log(`User Room: ${ride.user_id.toString()}`);
 
-      if (!userSocket) {
-        console.log("User socket not found:", ride.user_id.toString());
-      } else {
-        console.log("Emitting to user:", ride.user_id.toString());
-        userSocket.emit(
-          "response",
-          successEvent({
-            object_type: "user-ride-accepted",
-            message: "Your ride has been accepted by a driver",
-            data: ride
-          })
-        );
-      }
+      // ✅ Emit to the user using the correct room
+      this.io.to(ride.user_id.toString()).emit(
+        "response",
+        successEvent({
+          object_type: "user-ride-accepted",
+          message: "Your ride has been accepted by a driver",
+          data: ride
+        })
+      );
 
-      // Notify the driver
+      // ✅ Emit to the driver (confirmation)
       socket.emit(
         "response",
         successEvent({
