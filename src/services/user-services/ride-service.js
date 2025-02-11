@@ -703,7 +703,6 @@ class Service {
 
       // Notify User
       if (ride.user_id) {
-        socket.join(ride.user_id.toString());
         this.io.to(ride.user_id.toString()).emit(
           "response",
           successEvent({
@@ -716,7 +715,6 @@ class Service {
 
       // Notify Driver
       if (ride.driver_id) {
-        socket.join(ride.driver_id.toString());
         this.io.to(ride.driver_id.toString()).emit(
           "response",
           successEvent({
