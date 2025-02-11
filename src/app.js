@@ -92,7 +92,15 @@ if (process.env.NODE_ENV === "production") {
   server = require("http").createServer(app);
 }
 
-const io = new Server(server);
+const io = require("socket.io")(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: false,
+    transports: ["websocket", "polling"],
+    allowEIO3: true
+  }
+});
 
 io.on("connection", (socket) => {
   console.log("New WebSocket connection:", socket.id);
