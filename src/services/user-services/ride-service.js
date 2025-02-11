@@ -342,7 +342,7 @@ class Service {
           availableDrivers.forEach((driver) => {
             this.io.to(driver._id.toString()).emit(
               "response",
-              failedEvent({
+              successEvent({
                 object_type: "ride-expired",
                 message: "The ride request has expired.",
                 data: ride
