@@ -373,7 +373,6 @@ class Service {
     try {
       const { ride_id, driver_id } = data;
 
-      // Check if the ride exists and is pending
       const ride = await this.ride.findOneAndUpdate(
         { _id: ride_id, ride_status: "pending" },
         { $set: { driver_id, ride_status: "accepted" } },
@@ -390,7 +389,6 @@ class Service {
         );
       }
 
-      // Check if driver is already assigned to another ride
       const activeRide = await this.ride.findOne({
         driver_id,
         ride_status: { $in: ["ongoing"] }
@@ -406,7 +404,23 @@ class Service {
         );
       }
 
-      // Notify the user in real-time
+      // Ensure user is in the correct room
+      socket.join(ride.user_id.toString());
+
+      // Debugging logs
+      console.log("Emitting to user:", ride.user_id.toString());
+      console.log("Connected sockets:", Object.keys(this.io.sockets.sockets));
+
+      socket.emit(
+        "response",
+        successEvent({
+          object_type: "user-ride-accepted",
+          message: "Your ride has been accepted by a driver",
+          data: ride
+        })
+      );
+
+      // Also try to emit using `this.io.to(...)`
       this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
@@ -416,6 +430,7 @@ class Service {
         })
       );
 
+      // Notify the driver
       this.io.to(ride.driver_id.toString()).emit(
         "response",
         successEvent({
