@@ -449,16 +449,28 @@ class Service {
       }, process.env.RIDE_REQUEST_TIMER); // 3 minutes (180,000 ms)
 
       // Listen for driver acceptance using pre-existing acceptARide functionality
-      socket.on("accept-a-ride", async (socket, data) => {
+      socket.on("accept-a-ride", async (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
         }
       });
 
-      socket.on("cancel-a-ride", async (socket, data) => {
+      socket.on("cancel-a-ride", async (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
         }
+      });
+
+      socket.on("sorry-event", (data) => {
+        availableDrivers.map((driver) => {
+          this.io.to(driver.toString()).emit(
+            "sorry-event",
+            failedEvent({
+              object_type: "ride-expired",
+              message: "Ride expired"
+            })
+          );
+        });
       });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
