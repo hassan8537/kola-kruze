@@ -411,25 +411,23 @@ class Service {
         );
       }
 
-      // ✅ Ensure user is in the correct room before emitting
-      console.log(`User Room: ${user_id.toString()}`);
-
-      // ✅ Emit to the user using the correct room
-      this.io.to(user_id.toString()).emit(
-        "response",
-        successEvent({
-          object_type: "user-ride-accepted",
-          message: "Your ride has been accepted by a driver",
-          data: ride
-        })
-      );
-
       // ✅ Emit to the driver (confirmation)
       socket.emit(
         "response",
         successEvent({
           object_type: "driver-ride-accepted",
           message: "Ride accepted successfully",
+          data: ride
+        })
+      );
+
+      // ✅ Emit to the user using the correct room
+      socket.join(user_id);
+      this.io.to(user_id.toString()).emit(
+        "response",
+        successEvent({
+          object_type: "user-ride-accepted",
+          message: "Your ride has been accepted by a driver",
           data: ride
         })
       );
