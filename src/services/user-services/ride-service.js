@@ -376,7 +376,7 @@ class Service {
 
   async acceptARide(socket, data) {
     try {
-      const { ride_id, driver_id } = data;
+      const { user_id, ride_id, driver_id } = data;
 
       const ride = await this.ride
         .findOneAndUpdate(
@@ -412,10 +412,10 @@ class Service {
       }
 
       // ✅ Ensure user is in the correct room before emitting
-      console.log(`User Room: ${ride.user_id.toString()}`);
+      console.log(`User Room: ${user_id.toString()}`);
 
       // ✅ Emit to the user using the correct room
-      this.io.to(ride.user_id.toString()).emit(
+      this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
           object_type: "user-ride-accepted",
