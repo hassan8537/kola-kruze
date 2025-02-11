@@ -347,9 +347,16 @@ class Service {
 
       const user = await this.user.findById(user_id);
       if (!user) {
-        return socket.emit("error", errorEvent({ error: "No user found" }));
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type: "user-not-found",
+            message: "User not found"
+          })
+        );
       }
 
+      // Check for existing ride
       const existingRide = await this.ride.findOne({
         user_id,
         ride_status: { $in: ["pending", "ongoing", "accepted", "arrived"] }
@@ -372,8 +379,7 @@ class Service {
         distance_miles,
         pickup_location,
         dropoff_location,
-        stops,
-        ride_status: "pending"
+        stops
       });
 
       const ride = await this.ride
@@ -394,9 +400,6 @@ class Service {
         role: "driver",
         is_available: true,
         is_deleted: false
-        // driver_preference,
-        // gender_preference,
-        // driver_license: { $ne: null }
       });
 
       socket.emit(
@@ -408,27 +411,28 @@ class Service {
       );
 
       if (availableDrivers.length > 0) {
-        await Promise.all(
-          availableDrivers.map((driver) => {
-            socket.join(driver._id.toString());
-            this.io.to(driver._id.toString()).emit(
-              "response",
-              successEvent({
-                object_type: "get-ride",
-                message: "A user requested a ride",
-                data: ride
-              })
-            );
-          })
-        );
+        availableDrivers.forEach((driver) => {
+          this.io.to(driver._id.toString()).emit(
+            "response",
+            successEvent({
+              object_type: "get-ride",
+              message: "A user requested a ride",
+              data: ride
+            })
+          );
+        });
       }
 
-      // Start a 3-minute timer to cancel the ride if no driver accepts
+      // Set a timeout to expire the ride request if no driver accepts it
       const rideTimeout = setTimeout(async () => {
         const latestRide = await this.ride.findById(ride._id);
 
         if (latestRide && latestRide.ride_status === "pending") {
-          await this.ride.findByIdAndDelete(ride._id);
+          await this.ride.findByIdAndUpdate(ride._id, {
+            ride_status: "expired"
+          });
+
+          // Notify user
           socket.emit(
             "response",
             failedEvent({
@@ -438,42 +442,45 @@ class Service {
           );
 
           this.io.to(ride.user_id.toString()).emit(
-            "sorry-event",
+            "response",
             failedEvent({
               object_type: "ride-expired",
               message:
                 "Your ride request has been canceled due to no available drivers."
             })
           );
-        }
-      }, process.env.RIDE_REQUEST_TIMER); // 3 minutes (180,000 ms)
 
-      // Listen for driver acceptance using pre-existing acceptARide functionality
-      socket.on("accept-a-ride", async (data) => {
+          // Notify drivers
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
+              "response",
+              failedEvent({
+                object_type: "ride-expired",
+                message: "The ride request has expired."
+              })
+            );
+          });
+        }
+      }, process.env.RIDE_REQUEST_TIMER || 180000); // Default to 3 minutes if env variable not set
+
+      // Clear timeout if ride is accepted or canceled
+      const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
-          clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
+          clearTimeout(rideTimeout);
         }
-      });
+      };
 
-      socket.on("cancel-a-ride", async (data) => {
-        if (data.ride_id.toString() === ride._id.toString()) {
-          clearTimeout(rideTimeout); // Cancel the timeout if a driver accepts
-        }
-      });
-
-      socket.on("sorry-event", (data) => {
-        availableDrivers.map((driver) => {
-          this.io.to(driver.toString()).emit(
-            "sorry-event",
-            failedEvent({
-              object_type: "ride-expired",
-              message: "Ride expired"
-            })
-          );
-        });
-      });
+      socket.on("accept-a-ride", clearRideTimeout);
+      socket.on("cancel-a-ride", clearRideTimeout);
     } catch (error) {
-      socket.emit("error", errorEvent({ error }));
+      socket.emit(
+        "response",
+        errorEvent({
+          object_type: "error",
+          message: error.message,
+          error
+        })
+      );
     }
   }
 
