@@ -448,9 +448,8 @@ class Service {
 
   async arrivedAtPickup(socket, data) {
     try {
-      const { ride_id, user_id, driver_id } = data;
-      const user_object_type = "user-arrived";
-      const driver_object_type = "driver-arrived";
+      const { ride_id, driver_id } = data;
+      const object_type = "ride-arrived";
 
       const ride = await this.ride
         .findOneAndUpdate(
@@ -470,23 +469,22 @@ class Service {
         );
       }
 
-      // Notify the driver
+      // ✅ Notify the driver (who triggered the event)
       socket.emit(
         "response",
         successEvent({
-          object_type: driver_object_type,
+          object_type,
           message: "You have arrived at the pickup location",
           data: ride
         })
       );
 
-      // Notify the user
-      socket.join(user_id.toString());
-      this.io.to(user_id.toString()).emit(
+      // ✅ Notify the passenger
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
-          object_type: user_object_type,
-          message: "Your driver has arrived at the pickup location",
+          object_type,
+          message: "Your driver has arrived at your pickup location",
           data: ride
         })
       );
