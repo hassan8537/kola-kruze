@@ -316,9 +316,7 @@ class Service {
         const latestRide = await this.ride.findById(ride._id);
 
         if (latestRide && latestRide.ride_status === "pending") {
-          await this.ride.findByIdAndUpdate(ride._id, {
-            ride_status: "expired"
-          });
+          await this.deleteRide(ride);
 
           // Notify user
           socket.emit(
@@ -365,8 +363,6 @@ class Service {
       socket.emit(
         "response",
         errorEvent({
-          object_type: "error",
-          message: error.message,
           error
         })
       );
@@ -397,7 +393,7 @@ class Service {
       // Check if driver is already assigned to another ride
       const activeRide = await this.ride.findOne({
         driver_id,
-        ride_status: { $in: ["accepted", "ongoing"] }
+        ride_status: { $in: ["ongoing"] }
       });
 
       if (activeRide) {
@@ -855,6 +851,10 @@ class Service {
         error
       });
     }
+  }
+
+  async deleteRide(ride) {
+    await this.ride.findByIdAndDelete(ride._id);
   }
 }
 
