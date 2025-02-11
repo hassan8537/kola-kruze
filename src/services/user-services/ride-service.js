@@ -207,6 +207,18 @@ class Service {
     }
   }
 
+  async joinRoom(socket, data) {
+    socket.join(data.userId);
+    socket.emit(
+      "response",
+      successEvent({
+        object_type: "room-joined",
+        message: `User ID [${data.userId}] joined the room`,
+        data: { user_id: data.userId }
+      })
+    );
+  }
+
   // for nearby drivers
   // async rideRequest(socket, data) {
   //   try {

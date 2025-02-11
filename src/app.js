@@ -122,6 +122,7 @@ io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
 
   // Ride Events
+  socket.on("join-room", (data) => rideService.joinRoom(socket, data));
   socket.on("request-a-ride", (data) => rideService.requestARide(socket, data));
   socket.on("cancel-a-ride", (data) => rideService.cancelARide(socket, data));
   socket.on("accept-a-ride", (data) => rideService.acceptARide(socket, data));
