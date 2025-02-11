@@ -664,10 +664,10 @@ class Service {
 
   async etaToPickup(socket, data) {
     try {
-      const { ride_id, pickup_location, driver_current_location } = data;
+      const { ride_id, driver_current_location } = data;
       const object_type = "get-eta";
 
-      if (!ride_id || !pickup_location || !driver_current_location) {
+      if (!ride_id || !driver_current_location) {
         return socket.emit(
           "response",
           failedEvent({ object_type, message: "Invalid request data" })
@@ -683,7 +683,7 @@ class Service {
       }
 
       const [pickup_longitude, pickup_latitude] =
-        pickup_location.location.coordinates;
+        ride.pickup_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
         driver_current_location.coordinates;
 
