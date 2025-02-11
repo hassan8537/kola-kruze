@@ -359,6 +359,16 @@ class Service {
       const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout);
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
+              "response",
+              successEvent({
+                object_type: "ride-cancelled",
+                message: "The ride request has been cancelled.",
+                data: ride
+              })
+            );
+          });
         }
       };
 
