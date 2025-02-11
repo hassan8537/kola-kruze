@@ -535,11 +535,13 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      const ride = await this.ride.findOne({
-        _id: ride_id,
-        $or: [{ user_id }, { driver_id: user_id }],
-        ride_status: { $in: ["accepted", "pending"] }
-      });
+      const ride = await this.ride
+        .findOne({
+          _id: ride_id,
+          $or: [{ user_id }, { driver_id: user_id }],
+          ride_status: { $in: ["accepted", "pending"] }
+        })
+        .populate(populateRide.populate);
 
       if (!ride) {
         return socket.emit(
@@ -560,24 +562,28 @@ class Service {
       };
       await ride.save();
 
-      // Notify the other party
-
-      socket.join(ride.user_id.toString());
-      this.io.to(ride.user_id.toString()).emit(
+      // ✅ Emit to the driver (confirmation)
+      socket.emit(
         "response",
         successEvent({
           object_type: "user-cancel-ride",
-          message: "The driver has cancelled your ride",
+          message: "Ride cancelled successfully",
           data: ride
         })
       );
 
-      socket.join(ride.driver_id.toString());
-      this.io.to(ride.driver_id.toString()).emit(
+      const user = await this.user.findById(user_id);
+
+      const receiver_id =
+        user.role === "passenger" ? ride.user_id._id : ride.driver_id._id;
+
+      // ✅ Emit to the user using the correct room
+      socket.join(receiver_id.toString());
+      this.io.to(receiver_id.toString()).emit(
         "response",
         successEvent({
-          object_type: "driver-cancel-ride",
-          message: "The passenger has cancelled the ride",
+          object_type: "ride-cancelled",
+          message: `The ride has been cancelled by the ${user.role === "passenger" ? "passenger" : "driver"}`,
           data: ride
         })
       );
