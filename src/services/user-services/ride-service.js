@@ -373,11 +373,13 @@ class Service {
     try {
       const { ride_id, driver_id } = data;
 
-      const ride = await this.ride.findOneAndUpdate(
-        { _id: ride_id, ride_status: "pending" },
-        { $set: { driver_id, ride_status: "accepted" } },
-        { new: true }
-      );
+      const ride = await this.ride
+        .findOneAndUpdate(
+          { _id: ride_id, ride_status: "pending" },
+          { $set: { driver_id, ride_status: "accepted" } },
+          { new: true }
+        )
+        .populate(populateRide.populate);
 
       if (!ride) {
         return socket.emit(
@@ -414,27 +416,17 @@ class Service {
       socket.emit(
         "response",
         successEvent({
-          object_type: "user-ride-accepted",
-          message: "Your ride has been accepted by a driver",
-          data: ride
-        })
-      );
-
-      // Also try to emit using `this.io.to(...)`
-      this.io.to(ride.user_id.toString()).emit(
-        "response",
-        successEvent({
-          object_type: "user-ride-accepted",
-          message: "Your ride has been accepted by a driver",
+          object_type: "driver-ride-accepted",
+          message: "Ride accepted successfully",
           data: ride
         })
       );
 
       // Notify the driver
-      this.io.to(ride.driver_id.toString()).emit(
+      this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
-          object_type: "driver-ride-accepted",
+          object_type: "user-ride-accepted",
           message: "Your ride has been accepted by a driver",
           data: ride
         })
