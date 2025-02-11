@@ -366,7 +366,7 @@ class Service {
       socket.on("cancel-a-ride", clearRideTimeout);
     } catch (error) {
       socket.emit(
-        "response",
+        "error",
         errorEvent({
           error
         })
@@ -432,7 +432,7 @@ class Service {
         })
       );
     } catch (error) {
-      socket.emit("response", errorEvent({ error }));
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
@@ -479,7 +479,7 @@ class Service {
         })
       );
     } catch (error) {
-      socket.emit("response", errorEvent({ error }));
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
@@ -488,7 +488,6 @@ class Service {
       const { ride_id, driver_id } = data;
       const object_type = "start-ride";
 
-      // Find the ride and ensure it's in the correct status before starting
       const ride = await this.ride.findOneAndUpdate(
         { _id: ride_id, driver_id, ride_status: "arrived" },
         { $set: { ride_status: "started", start_time: Date.now() } },
