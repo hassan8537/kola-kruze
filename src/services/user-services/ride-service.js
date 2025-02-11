@@ -551,11 +551,6 @@ class Service {
         );
       }
 
-      const isPassenger = ride.user_id.toString() === user_id.toString();
-      const object_type = isPassenger
-        ? "user-cancel-ride"
-        : "driver-cancel-ride";
-
       // Update ride status and cancellation details
       ride.ride_status = "cancelled";
       ride.cancellation = {
@@ -565,31 +560,27 @@ class Service {
       };
       await ride.save();
 
-      // Notify the cancelling user
-      socket.emit(
+      // Notify the other party
+
+      socket.join(ride.user_id.toString());
+      this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
-          object_type,
-          message: "Ride cancelled successfully",
+          object_type: "user-cancel-ride",
+          message: "The driver has cancelled your ride",
           data: ride
         })
       );
 
-      // Notify the other party
-      const otherPartyId = isPassenger ? ride.driver_id : ride.user_id;
-      if (otherPartyId) {
-        socket.join(otherPartyId.toString());
-        this.io.to(otherPartyId.toString()).emit(
-          "response",
-          failedEvent({
-            object_type,
-            message: isPassenger
-              ? "Ride cancelled by passenger"
-              : "Driver has cancelled the ride",
-            data: ride
-          })
-        );
-      }
+      socket.join(ride.driver_id.toString());
+      this.io.to(ride.driver_id.toString()).emit(
+        "response",
+        successEvent({
+          object_type: "driver-cancel-ride",
+          message: "The passenger has cancelled the ride",
+          data: ride
+        })
+      );
     } catch (error) {
       socket.emit(
         "error",
