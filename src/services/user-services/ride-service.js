@@ -500,7 +500,7 @@ class Service {
       const { ride_id } = data;
 
       const ride = await this.ride
-        .findById(ride_id)
+        .findOne({ _id: ride_id, ride_status: "booked" })
         .populate(populateRide.populate);
 
       if (!ride) {
@@ -799,7 +799,7 @@ class Service {
         .findOne({
           _id: ride_id,
           $or: [{ user_id }, { driver_id: user_id }],
-          ride_status: { $in: ["accepted", "pending"] }
+          ride_status: { $in: ["accepted", "booked"] }
         })
         .populate(populateRide.populate);
 
