@@ -971,6 +971,7 @@ class Service {
 
       const updatedRide = ride.toObject();
 
+      updatedRide.tracking.distance_miles_from_pickup = distance;
       updatedRide.tracking.driver_current_location = driver_current_location;
       updatedRide.tracking.eta_to_pickup = eta;
 
