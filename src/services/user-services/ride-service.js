@@ -335,6 +335,7 @@ class Service {
       }
 
       const newRide = new this.ride({
+        user_id: request.user._id,
         pickup_location,
         dropoff_location,
         stops,
