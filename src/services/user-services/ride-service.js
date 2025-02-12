@@ -375,60 +375,21 @@ class Service {
 
   async requestARide(socket, data) {
     try {
-      const {
-        user_id,
-        vehicle_category,
-        fare_details,
-        distance_miles,
-        pickup_location,
-        dropoff_location,
-        stops,
-        driver_preference,
-        gender_preference
-      } = data;
-
-      const user = await this.user.findById(user_id);
-      if (!user) {
-        return socket.emit(
-          "response",
-          failedEvent({
-            object_type: "user-not-found",
-            message: "User not found"
-          })
-        );
-      }
-
-      // Check for existing ride
-      const existingRide = await this.ride.findOne({
-        user_id,
-        ride_status: {
-          $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
-        }
-      });
-
-      if (existingRide) {
-        return socket.emit(
-          "response",
-          failedEvent({
-            object_type: "ride-in-progress",
-            message: "A ride is already in progress"
-          })
-        );
-      }
-
-      // Create a new ride request
-      const newRide = await this.ride.create({
-        user_id,
-        fare_details,
-        distance_miles,
-        pickup_location,
-        dropoff_location,
-        stops
-      });
+      const { ride_id } = data;
 
       const ride = await this.ride
-        .findById(newRide._id)
+        .findById(ride_id)
         .populate(populateRide.populate);
+
+      if (!ride) {
+        socket.emit(
+          "response",
+          failedEvent({
+            object_type: "ride-request-sent",
+            message: "No ride found"
+          })
+        );
+      }
 
       socket.emit(
         "response",
