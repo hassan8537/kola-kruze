@@ -914,16 +914,11 @@ class Service {
   async etaToPickup(socket, data) {
     try {
       const { ride_id, driver_current_location } = data;
-      const object_type = "get-eta";
+      const object_type = "get-eta-to-pickup";
 
-      if (!ride_id || !driver_current_location) {
-        return socket.emit(
-          "response",
-          failedEvent({ object_type, message: "Invalid request data" })
-        );
-      }
-
-      const ride = await this.ride.findById(ride_id);
+      const ride = await this.ride
+        .findById(ride_id)
+        .populate(populateRide.populate);
       if (!ride) {
         return socket.emit(
           "response",
@@ -931,11 +926,37 @@ class Service {
         );
       }
 
+      if (!ride.driver_id) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "No driver assigned to this ride"
+          })
+        );
+      }
+
+      // Update driver's location
+      if (driver_current_location?.coordinates) {
+        await this.user.findByIdAndUpdate(
+          ride.driver_id._id,
+          {
+            $set: {
+              "current_location.coordinates":
+                driver_current_location.coordinates
+            }
+          },
+          { new: true }
+        );
+      }
+
+      // Extract locations
       const [pickup_longitude, pickup_latitude] =
         ride.pickup_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
-        driver_current_location.coordinates;
+        driver_current_location.coordinates; // Use updated driver location
 
+      // Calculate Distance & ETA
       const distance = calculateDistance(
         driver_latitude,
         driver_longitude,
@@ -944,15 +965,18 @@ class Service {
       );
       const eta = calculateETA(distance);
 
-      const updatedRide = await this.ride.findByIdAndUpdate(
-        ride_id,
-        { $set: { "tracking.eta_to_pickup": eta } },
-        { new: true }
-      );
+      // Update ETA in ride tracking
+      const updatedRide = await this.ride
+        .findByIdAndUpdate(
+          ride_id,
+          { $set: { "tracking.eta_to_pickup": eta } },
+          { new: true }
+        )
+        .populate(populateRide.populate);
 
       // Notify User
       if (ride.user_id) {
-        this.io.to(ride.user_id.toString()).emit(
+        this.io.to(ride.user_id._id.toString()).emit(
           "response",
           successEvent({
             object_type,
@@ -964,7 +988,7 @@ class Service {
 
       // Notify Driver
       if (ride.driver_id) {
-        this.io.to(ride.driver_id.toString()).emit(
+        this.io.to(ride.driver_id._id.toString()).emit(
           "response",
           successEvent({
             object_type,
