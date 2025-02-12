@@ -133,17 +133,17 @@ router.get(
 
 // rides
 router.post(
-  "/rides",
+  "/rides/select-destination",
   controllers.ride.selectDestination.bind(controllers.ride)
 );
 
 router.post(
-  "/rides/stops",
+  "/rides/manage-stops",
   controllers.ride.manageStops.bind(controllers.ride)
 );
 
 router.post(
-  "/rides/confirm",
+  "/rides/ride-details-and-fare",
   controllers.ride.rideDetailsAndFares.bind(controllers.ride)
 );
 

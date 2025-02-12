@@ -284,56 +284,6 @@ class Service {
     }
   }
 
-  async confirmRide(request, response) {
-    try {
-      const {
-        user_id,
-        vehicle_category,
-        fare_details,
-        distance_miles,
-        pickup_location,
-        dropoff_location,
-        stops,
-        driver_preference,
-        gender_preference,
-        stripe_card_id
-      } = request.body;
-
-      const existingRide = await this.ride.findOne({
-        user_id,
-        ride_status: { $in: ["ongoing", "accepted", "arrived"] }
-      });
-
-      const category = await this.category.findById(vehicle_category);
-
-      if (!category) {
-        return failedResponse({
-          response,
-          message: "Invalid vehicle category type"
-        });
-      }
-
-      const card = await this.card.findOne({ stripe_card_id });
-
-      if (!card) {
-        return failedResponse({ response, message: "Invalid stripe card ID" });
-      }
-
-      const newRide = new this.ride({
-        user_id,
-        fare_details,
-        distance_miles,
-        pickup_location,
-        dropoff_location,
-        stops,
-        driver_preference,
-        gender_preference
-      });
-    } catch (error) {
-      return errorResponse({ response, error });
-    }
-  }
-
   async joinRoom(socket, data) {
     const { userId } = data;
 
