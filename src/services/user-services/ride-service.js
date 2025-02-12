@@ -289,7 +289,8 @@ class Service {
         distance_miles: newRide.distance_miles,
         pickup_location: newRide.pickup_location,
         dropoff_location: newRide.dropoff_location,
-        stops: newRide.stops
+        stops: newRide.stops,
+        card: cardObject
       };
 
       return successResponse({
