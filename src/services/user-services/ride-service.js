@@ -630,7 +630,7 @@ class Service {
 
       const ride = await this.ride
         .findOneAndUpdate(
-          { _id: ride_id, ride_status: "pending" },
+          { _id: ride_id, ride_status: "booked" },
           { $set: { driver_id, ride_status: "accepted" } },
           { new: true }
         )
