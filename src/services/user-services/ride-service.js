@@ -31,6 +31,9 @@ const {
 const Category = require("../../models/Vehicle-Category");
 const Vehicle = require("../../models/Vehicle");
 const Card = require("../../models/Card");
+const {
+  formatStripeList
+} = require("../../utilities/formatters/value-formatters");
 
 class Service {
   constructor(io) {
@@ -291,7 +294,7 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: cardObject
+        card: formatStripeList([cardObject.card_details])
       };
 
       return successResponse({
@@ -971,10 +974,10 @@ class Service {
 
       const ride = await this.ride.findById(request.params._id);
 
-      if (ride.fare_details.payment_status === "hold")
+      if (ride.ride_status === "booked")
         return failedResponse({
           response,
-          message: "You already have paid for this ride"
+          message: "You already have booked this ride"
         });
 
       ride.fare_details.payment_status === "pending";

@@ -70,7 +70,8 @@ const RideSchema = new mongoose.Schema(
         "ongoing",
         "completed",
         "delayed",
-        "reassigned"
+        "reassigned",
+        "booked"
       ],
       default: "pending"
     },
