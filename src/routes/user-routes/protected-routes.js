@@ -132,11 +132,19 @@ router.get(
 );
 
 // rides
-router.post("/rides", controllers.ride.createRide.bind(controllers.ride));
+router.post(
+  "/rides",
+  controllers.ride.selectDestination.bind(controllers.ride)
+);
 
 router.post(
   "/rides/stops",
   controllers.ride.manageStops.bind(controllers.ride)
+);
+
+router.post(
+  "/rides/confirm",
+  controllers.ride.rideDetailsAndFares.bind(controllers.ride)
 );
 
 router.get(

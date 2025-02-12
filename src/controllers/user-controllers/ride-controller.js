@@ -9,12 +9,16 @@ class Controller {
     return this.service.getMyRides(request, response);
   }
 
-  async createRide(request, response) {
-    return this.service.createRide(request, response);
+  async selectDestination(request, response) {
+    return this.service.selectDestination(request, response);
   }
 
   async manageStops(request, response) {
     return this.service.manageStops(request, response);
+  }
+
+  async rideDetailsAndFares(request, response) {
+    return this.service.rideDetailsAndFares(request, response);
   }
 
   async payNow(request, response) {

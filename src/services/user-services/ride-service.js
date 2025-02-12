@@ -27,6 +27,7 @@ const {
 } = require("../../utilities/handlers/event-handlers");
 const Category = require("../../models/Vehicle-Category");
 const Vehicle = require("../../models/Vehicle");
+const Card = require("../../models/Card");
 
 class Service {
   constructor(io) {
@@ -35,6 +36,7 @@ class Service {
     this.ride = Ride;
     this.category = Category;
     this.vehicle = Vehicle;
+    this.card = Card;
   }
 
   async getMyRides(request, response) {
@@ -58,7 +60,7 @@ class Service {
     }
   }
 
-  async createRide(request, response) {
+  async selectDestination(request, response) {
     try {
       const user_id = request.user._id;
 
@@ -201,6 +203,131 @@ class Service {
           dropoff_location,
           stops: stops
         }
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async rideDetailsAndFares(request, response) {
+    try {
+      const {
+        user_id,
+        vehicle_category,
+        fare_details,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        stops,
+        stripe_card_id
+      } = request.body;
+
+      const user = await this.user.findById(user_id);
+      if (!user)
+        return failedResponse({
+          response,
+          message: "No user found"
+        });
+
+      const category = await this.category.findById(vehicle_category);
+      if (!category)
+        return failedResponse({
+          response,
+          message: "No category found"
+        });
+
+      const card = await this.card.findOne({ stripe_card_id });
+      if (!card)
+        return failedResponse({
+          response,
+          message: "No card found"
+        });
+
+      // Check for existing ride
+      const existingRide = await this.ride.findOne({
+        user_id,
+        ride_status: { $in: ["pending", "ongoing", "accepted", "arrived"] }
+      });
+
+      if (existingRide) {
+        return failedResponse({
+          response,
+          message: "A ride is already in progress"
+        });
+      }
+
+      // Create a new ride request
+      const newRide = new this.ride({
+        user_id,
+        fare_details,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        stops
+      });
+
+      await newRide.populate(populateRide.populate);
+
+      const data = {
+        vehicle_category: card,
+        ride: newRide,
+        card: card
+      };
+
+      return successResponse({
+        response,
+        message: "Ride confirmed successfully",
+        data: data
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async confirmRide(request, response) {
+    try {
+      const {
+        user_id,
+        vehicle_category,
+        fare_details,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        stops,
+        driver_preference,
+        gender_preference,
+        stripe_card_id
+      } = request.body;
+
+      const existingRide = await this.ride.findOne({
+        user_id,
+        ride_status: { $in: ["ongoing", "accepted", "arrived"] }
+      });
+
+      const category = await this.category.findById(vehicle_category);
+
+      if (!category) {
+        return failedResponse({
+          response,
+          message: "Invalid vehicle category type"
+        });
+      }
+
+      const card = await this.card.findOne({ stripe_card_id });
+
+      if (!card) {
+        return failedResponse({ response, message: "Invalid stripe card ID" });
+      }
+
+      const newRide = new this.ride({
+        user_id,
+        fare_details,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        stops,
+        driver_preference,
+        gender_preference
       });
     } catch (error) {
       return errorResponse({ response, error });
