@@ -1,3 +1,6 @@
+const stripeSecretKey = require("../../config/stripe");
+const stripe = require("stripe")(stripeSecretKey);
+
 const Ride = require("../../models/Ride");
 const User = require("../../models/User");
 const {
@@ -229,7 +232,9 @@ class Service {
           message: "No user found"
         });
 
-      const category = await this.category.findById(vehicle_category);
+      const category = await this.category
+        .findById(vehicle_category)
+        .populate(populateCategory.populate);
       if (!category)
         return failedResponse({
           response,
@@ -242,6 +247,11 @@ class Service {
           response,
           message: "No card found"
         });
+
+      const stripeCardDetails =
+        await stripe.paymentMethods.retrieve(stripe_card_id);
+      const cardObject = card.toObject();
+      cardObject.card_details = stripeCardDetails;
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
@@ -269,9 +279,9 @@ class Service {
       await newRide.populate(populateRide.populate);
 
       const data = {
-        vehicle_category: card,
+        vehicle_category: category,
         ride: newRide,
-        card: card
+        card: cardObject
       };
 
       return successResponse({
