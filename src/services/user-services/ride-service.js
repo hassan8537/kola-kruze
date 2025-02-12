@@ -305,11 +305,13 @@ class Service {
   async confirmRide(request, response) {
     try {
       const {
+        vehicle_category,
         pickup_location,
         dropoff_location,
         stops,
         fare_details,
-        distance_miles
+        distance_miles,
+        stripe_card_id
       } = request.body;
 
       // Check for existing ride
@@ -334,10 +336,47 @@ class Service {
       await newRide.save();
       await newRide.populate(populateRide.populate);
 
+      const categories = await this.category
+        .find()
+        .populate(populateCategory.populate);
+      if (!categories.length)
+        return failedResponse({
+          response,
+          message: "No categories found"
+        });
+
+      const card = await this.card.findOne({ stripe_card_id });
+      if (!card)
+        return failedResponse({
+          response,
+          message: "No card found"
+        });
+
+      const stripeCardDetails =
+        await stripe.paymentMethods.retrieve(stripe_card_id);
+      const cardObject = card.toObject();
+      cardObject.card_details = stripeCardDetails;
+
+      const admin = await this.user.findOne({ role: "admin" });
+
+      const data = {
+        selected_category: categories.filter(
+          (cat) => cat._id.toString() === vehicle_category.toString()
+        ),
+        vehicle_categories: categories,
+        rate_per_stop: admin.rate_per_stop,
+        distance_miles: newRide.distance_miles,
+        pickup_location: newRide.pickup_location,
+        dropoff_location: newRide.dropoff_location,
+        fare_details: newRide.fare_details,
+        stops: newRide.stops,
+        card: formatStripeList([cardObject.card_details])
+      };
+
       return successResponse({
         response,
         message: "Ride confirmed successfully",
-        data: newRide
+        data: data
       });
     } catch (error) {
       return errorResponse({ response, error });
