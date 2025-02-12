@@ -315,7 +315,7 @@ class Service {
 
           const rideObject = ride.toObject();
 
-          rideObject.tracking.arrival_time = eta;
+          rideObject.tracking.eta_to_arrive = eta;
 
           this.io.to(driver._id.toString()).emit(
             "response",
