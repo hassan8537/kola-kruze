@@ -321,7 +321,7 @@ class Service {
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
-        user_id,
+        user_id: request.params._id,
         ride_status: {
           $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
         }
