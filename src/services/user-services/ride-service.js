@@ -322,7 +322,7 @@ class Service {
         }
       });
 
-      await this.ride.findByIdAndDelete(existingRide._id);
+      if (existingRide) await this.ride.findByIdAndDelete(existingRide._id);
 
       const newRide = new this.ride({
         user_id: request.user._id,
@@ -1000,42 +1000,6 @@ class Service {
         message: "Error updating ride location",
         error
       });
-    }
-  }
-
-  async payNow(request, response) {
-    try {
-      if (!request.params._id)
-        return failedResponse({
-          response,
-          message: "Ride ID is required"
-        });
-
-      const ride = await this.ride.findById(request.params._id);
-
-      if (!ride)
-        return unavailableResponse({
-          response,
-          message: "No ride found"
-        });
-
-      if (ride.ride_status === "booked")
-        return failedResponse({
-          response,
-          message: "You already have booked this ride"
-        });
-
-      ride.ride_status === "booked";
-      await ride.save();
-      await ride.populate();
-
-      return successResponse({
-        response,
-        message: "Thank you for booking",
-        data: ride
-      });
-    } catch (error) {
-      return errorResponse({ response, error });
     }
   }
 
