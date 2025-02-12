@@ -259,7 +259,9 @@ class Service {
       // Check for existing ride
       const existingRide = await this.ride.findOne({
         user_id,
-        ride_status: { $in: ["pending", "ongoing", "accepted", "arrived"] }
+        ride_status: {
+          $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
+        }
       });
 
       if (existingRide) {
@@ -301,6 +303,52 @@ class Service {
         response,
         message: "Ride confirmed successfully",
         data: data
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async confirmRide(request, response) {
+    try {
+      const {
+        pickup_location,
+        dropoff_location,
+        stops,
+        fare_details,
+        distance_miles
+      } = request.body;
+
+      // Check for existing ride
+      const existingRide = await this.ride.findOne({
+        user_id,
+        ride_status: {
+          $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
+        }
+      });
+
+      if (existingRide) {
+        return failedResponse({
+          response,
+          message: "A ride is already in progress"
+        });
+      }
+
+      const newRide = new this.ride({
+        pickup_location,
+        dropoff_location,
+        stops,
+        fare_details,
+        distance_miles
+      });
+
+      await newRide.save();
+      await newRide.populate(populateRide.populate);
+
+      return successResponse({
+        response,
+        message: "Ride confirmed successfully",
+        data: newRide
       });
     } catch (error) {
       return errorResponse({ response, error });
@@ -352,7 +400,9 @@ class Service {
       // Check for existing ride
       const existingRide = await this.ride.findOne({
         user_id,
-        ride_status: { $in: ["pending", "ongoing", "accepted", "arrived"] }
+        ride_status: {
+          $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
+        }
       });
 
       if (existingRide) {

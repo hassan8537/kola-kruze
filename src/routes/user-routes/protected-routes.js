@@ -147,6 +147,11 @@ router.post(
   controllers.ride.rideDetailsAndFares.bind(controllers.ride)
 );
 
+router.post(
+  "/rides/confirm",
+  controllers.ride.confirmRide.bind(controllers.ride)
+);
+
 router.get(
   "/rides/pay-now/:_id",
   controllers.ride.payNow.bind(controllers.ride)

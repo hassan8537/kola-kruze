@@ -21,6 +21,10 @@ class Controller {
     return this.service.rideDetailsAndFares(request, response);
   }
 
+  async confirmRide(request, response) {
+    return this.service.confirmRide(request, response);
+  }
+
   async payNow(request, response) {
     return this.service.payNow(request, response);
   }
