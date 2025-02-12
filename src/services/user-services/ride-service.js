@@ -470,7 +470,7 @@ class Service {
       return successResponse({
         response,
         message: "Payment authorized and ride booked",
-        data: { ride, payment_intent: paymentIntent.id }
+        data: ride
       });
     } catch (error) {
       return errorResponse({ response, error });
