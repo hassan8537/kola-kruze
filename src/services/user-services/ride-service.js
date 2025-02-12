@@ -466,6 +466,7 @@ class Service {
 
       ride.ride_status = "booked";
       await ride.save();
+      await ride.populate(populateRide.populate);
 
       return successResponse({
         response,
