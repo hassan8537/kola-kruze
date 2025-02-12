@@ -366,6 +366,7 @@ class Service {
       const admin = await this.user.findOne({ role: "admin" });
 
       const data = {
+        _id: newRide._id,
         selected_category: categories.filter(
           (cat) => cat._id.toString() === vehicle_category.toString()
         ),
