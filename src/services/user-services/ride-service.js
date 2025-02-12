@@ -34,6 +34,7 @@ const Card = require("../../models/Card");
 const {
   formatStripeList
 } = require("../../utilities/formatters/value-formatters");
+const { successLog } = require("../../utilities/handlers/log-handler");
 
 class Service {
   constructor(io) {
@@ -322,7 +323,12 @@ class Service {
         }
       });
 
-      if (existingRide) await this.ride.findByIdAndDelete(existingRide._id);
+      if (existingRide) {
+        const deletedRide = await this.ride.findByIdAndDelete(existingRide._id);
+        if (deletedRide) {
+          successLog({ message: "Previous ride deleted successfully" });
+        }
+      }
 
       const newRide = new this.ride({
         user_id: request.user._id,
