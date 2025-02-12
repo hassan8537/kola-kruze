@@ -383,6 +383,93 @@ class Service {
     }
   }
 
+  // async payNow(request, response) {
+  //   try {
+  //     if (!request.params._id)
+  //       return failedResponse({ response, message: "Ride ID is required" });
+
+  //     const ride = await this.ride
+  //       .findById(request.params._id)
+  //       .populate("user_id");
+
+  //     if (!ride)
+  //       return unavailableResponse({ response, message: "No ride found" });
+
+  //     if (ride.ride_status === "booked")
+  //       return failedResponse({
+  //         response,
+  //         message: "You already have booked this ride"
+  //       });
+
+  //     if (!ride.fare_details || !ride.fare_details.amount)
+  //       return failedResponse({ response, message: "Invalid fare details" });
+
+  //     if (!ride.user_id.stripe_customer_id)
+  //       return failedResponse({
+  //         response,
+  //         message: "User has no Stripe account linked"
+  //       });
+
+  //     if (!ride.stripe_card_id)
+  //       return failedResponse({
+  //         response,
+  //         message: "No payment method provided"
+  //       });
+
+  //     // Create a PaymentIntent to HOLD the payment (not capture)
+  //     const charge = await stripe.charges.create({
+  //       amount: sub_total * 100,
+  //       currency: "usd",
+  //       source: selected_card_detail.id,
+  //       customer: selected_card_detail.customer // Add the customer field here
+  //     });
+
+  //     // Save the PaymentIntent ID in the ride details
+  //     ride.fare_details.stripe_payment_intent = paymentIntent.id;
+  //     ride.ride_status = "booked"; // Mark ride as booked
+  //     await ride.save();
+
+  //     return successResponse({
+  //       response,
+  //       message: "Payment authorized and ride booked",
+  //       data: { ride, payment_intent: paymentIntent.id }
+  //     });
+  //   } catch (error) {
+  //     return errorResponse({ response, error });
+  //   }
+  // }
+
+  async payNow(request, response) {
+    try {
+      if (!request.params._id)
+        return failedResponse({ response, message: "Ride ID is required" });
+
+      const ride = await this.ride
+        .findById(request.params._id)
+        .populate("user_id");
+
+      if (!ride)
+        return unavailableResponse({ response, message: "No ride found" });
+
+      if (ride.ride_status === "booked")
+        return failedResponse({
+          response,
+          message: "You already have booked this ride"
+        });
+
+      ride.ride_status = "booked";
+      await ride.save();
+
+      return successResponse({
+        response,
+        message: "Payment authorized and ride booked",
+        data: { ride, payment_intent: paymentIntent.id }
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
   async joinRoom(socket, data) {
     const { userId } = data;
 
