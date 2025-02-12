@@ -232,13 +232,13 @@ class Service {
           message: "No user found"
         });
 
-      const category = await this.category
-        .findById(vehicle_category)
+      const categories = await this.category
+        .find()
         .populate(populateCategory.populate);
-      if (!category)
+      if (!categories.length)
         return failedResponse({
           response,
-          message: "No category found"
+          message: "No categories found"
         });
 
       const card = await this.card.findOne({ stripe_card_id });
@@ -278,10 +278,18 @@ class Service {
 
       await newRide.populate(populateRide.populate);
 
+      const admin = await this.user.findOne({ role: "admin" });
+
       const data = {
-        vehicle_category: category,
-        ride: newRide,
-        card: cardObject
+        selected_category: categories.filter(
+          (cat) => cat._id.toString() === vehicle_category.toString()
+        ),
+        vehicle_categories: categories,
+        rate_per_stop: admin.rate_per_stop,
+        distance_miles: newRide.distance_miles,
+        pickup_location: newRide.pickup_location,
+        dropoff_location: newRide.dropoff_location,
+        stops: newRide.stops
       };
 
       return successResponse({
