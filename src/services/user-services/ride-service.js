@@ -264,13 +264,6 @@ class Service {
         }
       });
 
-      if (existingRide) {
-        return failedResponse({
-          response,
-          message: "A ride is already in progress"
-        });
-      }
-
       // Create a new ride request
       const newRide = new this.ride({
         user_id,
@@ -327,12 +320,7 @@ class Service {
         }
       });
 
-      if (existingRide) {
-        return failedResponse({
-          response,
-          message: "A ride is already in progress"
-        });
-      }
+      await this.ride.findByIdAndDelete(existingRide._id);
 
       const newRide = new this.ride({
         user_id: request.user._id,
