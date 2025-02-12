@@ -73,6 +73,7 @@ const RideSchema = new mongoose.Schema(
       default: "pending"
     },
 
+    arrival_time: { type: Date, required: false },
     scheduled_time: { type: Date, default: null },
     reserved_at: { type: Date, default: null },
     start_time: { type: Date, default: null },
@@ -82,9 +83,10 @@ const RideSchema = new mongoose.Schema(
       amount: { type: Number, required: true },
       payment_status: {
         type: String,
-        enum: ["pending", "paid"],
-        default: "pending"
-      }
+        enum: ["hold", "pending", "paid"]
+      },
+      stripe_payment_intent: { type: String, default: null }, // Holds funds in admin’s account
+      stripe_transfer_id: { type: String, default: null } // Transfers payment to driver
     },
 
     cancellation: {
@@ -100,10 +102,23 @@ const RideSchema = new mongoose.Schema(
     tracking: {
       eta_to_pickup: { type: String, default: null },
       eta_to_dropoff: { type: String, default: null }
-    }
+    },
+
+    // Multi-rider (Ride Sharing)
+    share_with: [
+      {
+        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        split_amount: { type: Number, required: true }
+      }
+    ]
   },
   { timestamps: true }
 );
+
+// Indexes for faster queries
+RideSchema.index({ user_id: 1, driver_id: 1, ride_status: 1 });
+RideSchema.index({ "pickup_location.location": "2dsphere" });
+RideSchema.index({ "dropoff_location.location": "2dsphere" });
 
 const Ride = mongoose.model("Ride", RideSchema);
 module.exports = Ride;

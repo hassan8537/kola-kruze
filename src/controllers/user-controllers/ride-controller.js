@@ -16,6 +16,10 @@ class Controller {
   async manageStops(request, response) {
     return this.service.manageStops(request, response);
   }
+
+  async payNow(request, response) {
+    return this.service.payNow(request, response);
+  }
 }
 
 module.exports = new Controller();

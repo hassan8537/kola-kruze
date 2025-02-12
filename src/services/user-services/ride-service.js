@@ -846,6 +846,25 @@ class Service {
     }
   }
 
+  async payNow(request, response) {
+    try {
+      const ride = await this.ride.findById(request.params._id);
+
+      if (ride.fare_details.payment_status === "hold")
+        return failedResponse({
+          message: "You already have paid for this ride"
+        });
+
+      ride.fare_details.payment_status === "pending";
+      await ride.save();
+      await ride.populate();
+
+      return successResponse({ message: "Thank you for booking", data: ride });
+    } catch (error) {
+      return errorResponse({ error });
+    }
+  }
+
   async deleteRide(ride) {
     await this.ride.findByIdAndDelete(ride._id);
   }
