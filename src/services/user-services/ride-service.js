@@ -539,7 +539,7 @@ class Service {
 
       if (availableDrivers.length > 0) {
         availableDrivers.forEach(async (driver) => {
-          const [pLat, pLon] = pickup_location.location.coordinates;
+          const [pLat, pLon] = ride.pickup_location.location.coordinates;
           const [dLat, dLon] = driver.current_location.coordinates;
           const distance = calculateDistance(pLat, pLon, dLat, dLon);
           const eta = calculateETA(distance);
