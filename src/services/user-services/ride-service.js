@@ -289,6 +289,7 @@ class Service {
         distance_miles: newRide.distance_miles,
         pickup_location: newRide.pickup_location,
         dropoff_location: newRide.dropoff_location,
+        fare_details: newRide.fare_details,
         stops: newRide.stops,
         card: cardObject
       };
