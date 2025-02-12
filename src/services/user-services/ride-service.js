@@ -986,13 +986,19 @@ class Service {
 
       const ride = await this.ride.findById(request.params._id);
 
+      if (!ride)
+        return unavailableResponse({
+          response,
+          message: "No ride found"
+        });
+
       if (ride.ride_status === "booked")
         return failedResponse({
           response,
           message: "You already have booked this ride"
         });
 
-      ride.fare_details.payment_status === "pending";
+      ride.ride_status === "booked";
       await ride.save();
       await ride.populate();
 
