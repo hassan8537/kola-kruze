@@ -848,10 +848,17 @@ class Service {
 
   async payNow(request, response) {
     try {
+      if (!request.params._id)
+        return failedResponse({
+          response,
+          message: "Ride ID is required"
+        });
+
       const ride = await this.ride.findById(request.params._id);
 
       if (ride.fare_details.payment_status === "hold")
         return failedResponse({
+          response,
           message: "You already have paid for this ride"
         });
 
@@ -859,9 +866,13 @@ class Service {
       await ride.save();
       await ride.populate();
 
-      return successResponse({ message: "Thank you for booking", data: ride });
+      return successResponse({
+        response,
+        message: "Thank you for booking",
+        data: ride
+      });
     } catch (error) {
-      return errorResponse({ error });
+      return errorResponse({ response, error });
     }
   }
 

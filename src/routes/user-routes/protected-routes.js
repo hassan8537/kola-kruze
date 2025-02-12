@@ -139,6 +139,9 @@ router.post(
   controllers.ride.manageStops.bind(controllers.ride)
 );
 
-router.get("/rides/pay-now", controllers.ride.payNow.bind(controllers.ride));
+router.get(
+  "/rides/pay-now/:_id",
+  controllers.ride.payNow.bind(controllers.ride)
+);
 
 module.exports = router;

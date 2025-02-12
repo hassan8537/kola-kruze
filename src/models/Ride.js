@@ -83,7 +83,8 @@ const RideSchema = new mongoose.Schema(
       amount: { type: Number, required: true },
       payment_status: {
         type: String,
-        enum: ["hold", "pending", "paid"]
+        enum: ["hold", "pending", "paid"],
+        default: "pending"
       },
       stripe_payment_intent: { type: String, default: null }, // Holds funds in admin’s account
       stripe_transfer_id: { type: String, default: null } // Transfers payment to driver
