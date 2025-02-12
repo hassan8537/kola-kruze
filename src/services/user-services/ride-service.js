@@ -27,9 +27,6 @@ const {
 } = require("../../utilities/handlers/event-handlers");
 const Category = require("../../models/Vehicle-Category");
 const Vehicle = require("../../models/Vehicle");
-const {
-  sendNotificationToUser
-} = require("../../utilities/notifications/notification-utilities");
 
 class Service {
   constructor(io) {
@@ -325,14 +322,6 @@ class Service {
               data: rideObject
             })
           );
-
-          await sendNotificationToUser({
-            user_id: driver._id,
-            message: "A user has requested a ride",
-            type: "ride",
-            model_type: "Ride",
-            model_id: ride._id
-          });
         });
       }
 
@@ -352,14 +341,6 @@ class Service {
             })
           );
 
-          await sendNotificationToUser({
-            user_id: ride.user_id,
-            message: "We are sorry! No drivers accepted the ride request",
-            type: "ride",
-            model_type: "Ride",
-            model_id: ride._id
-          });
-
           this.io.to(ride.user_id.toString()).emit(
             "response",
             failedEvent({
@@ -369,33 +350,16 @@ class Service {
             })
           );
 
-          await sendNotificationToUser({
-            user_id: ride.user_id,
-            message:
-              "Your ride request has been canceled due to no available drivers",
-            type: "ride",
-            model_type: "Ride",
-            model_id: ride._id
-          });
-
           // Notify drivers
-          availableDrivers.forEach(async (driver) => {
+          availableDrivers.forEach((driver) => {
             this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-expired",
-                message: "The ride request has expired",
+                message: "The ride request has expired.",
                 data: ride
               })
             );
-
-            await sendNotificationToUser({
-              user_id: driver._id,
-              message: "The ride request has expired",
-              type: "ride",
-              model_type: "Ride",
-              model_id: ride._id
-            });
           });
         }
       }, process.env.RIDE_REQUEST_TIMER); // Default to 3 minutes if env variable not set
@@ -486,14 +450,6 @@ class Service {
           data: ride
         })
       );
-
-      await sendNotificationToUser({
-        user_id: user_id,
-        message: "Your ride has been accepted by a driver",
-        type: "ride",
-        model_type: "Ride",
-        model_id: ride._id
-      });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
@@ -541,14 +497,6 @@ class Service {
           data: ride
         })
       );
-
-      await sendNotificationToUser({
-        user_id: ride.user_id,
-        message: "Your driver has arrived at your pickup location",
-        type: "ride",
-        model_type: "Ride",
-        model_id: ride._id
-      });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
@@ -650,14 +598,6 @@ class Service {
             data: ride
           })
         );
-
-        await sendNotificationToUser({
-          user_id: ride.driver_id,
-          message: `The ride has been cancelled by the passenger`,
-          type: "ride",
-          model_type: "Ride",
-          model_id: ride._id
-        });
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
@@ -673,6 +613,16 @@ class Service {
       };
       await ride.save();
 
+      // // ✅ Notify the cancelling user
+      // socket.emit(
+      //   "response",
+      //   successEvent({
+      //     object_type: "ride-cancelled",
+      //     message: "Ride cancelled successfully",
+      //     data: ride
+      //   })
+      // );
+
       // ✅ Notify the other user (driver or passenger)
       socket.join(receiver_id.toString());
       this.io.to(receiver_id.toString()).emit(
@@ -683,14 +633,6 @@ class Service {
           data: ride
         })
       );
-
-      await sendNotificationToUser({
-        user_id: receiver_id,
-        message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-        type: "ride",
-        model_type: "Ride",
-        model_id: ride._id
-      });
     } catch (error) {
       socket.emit(
         "error",
