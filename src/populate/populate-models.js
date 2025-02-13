@@ -83,8 +83,8 @@ module.exports = {
       },
       {
         path: "vehicle_id",
-        select: "make model year color profile_picture",
-        populate: { path: "profile_picture", select: "file_url" }
+        select: "make model year color vehicle_images",
+        populate: { path: "vehicle_images", select: "file_url" }
       }
     ],
     sort: { createdAt: -1 }
