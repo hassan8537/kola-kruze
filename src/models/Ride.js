@@ -104,6 +104,18 @@ const RideSchema = new mongoose.Schema(
     },
 
     tracking: {
+      driver_current_location: {
+        type: {
+          type: String,
+          enum: ["Point"],
+          default: "Point"
+        },
+        coordinates: { type: [Number], index: "2dsphere", default: null }
+      },
+      distance_miles_from_pickup: {
+        type: Number,
+        default: null
+      },
       eta_to_pickup: { type: String, default: null },
       eta_to_dropoff: { type: String, default: null }
     },

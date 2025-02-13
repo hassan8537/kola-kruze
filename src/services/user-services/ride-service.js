@@ -934,9 +934,17 @@ class Service {
       const { ride_id, driver_current_location } = data;
       const object_type = "get-eta-to-pickup";
 
-      const ride = await this.ride
-        .findById(ride_id)
-        .populate(populateRide.populate);
+      if (!driver_current_location?.coordinates) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "Driver location is required"
+          })
+        );
+      }
+
+      const ride = await this.ride.findById(ride_id);
       if (!ride) {
         return socket.emit(
           "response",
@@ -958,7 +966,7 @@ class Service {
       const [pickup_longitude, pickup_latitude] =
         ride.pickup_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
-        driver_current_location.coordinates; // Use updated driver location
+        driver_current_location.coordinates;
 
       // Calculate Distance & ETA
       const distance = calculateDistance(
@@ -969,34 +977,38 @@ class Service {
       );
       const eta = calculateETA(distance);
 
-      const updatedRide = ride.toObject();
-
-      updatedRide.tracking.distance_miles_from_pickup = distance;
-      updatedRide.tracking.driver_current_location = driver_current_location;
-      updatedRide.tracking.eta_to_pickup = eta;
+      // Construct response data
+      const responseData = {
+        ride_id,
+        tracking: {
+          distance_miles_from_pickup: distance,
+          driver_current_location,
+          eta_to_pickup: eta
+        }
+      };
 
       // Notify User
       if (ride.user_id) {
-        socket.join(ride.user_id._id.toString());
-        this.io.to(ride.user_id._id.toString()).emit(
+        socket.join(ride.user_id.toString());
+        this.io.to(ride.user_id.toString()).emit(
           "response",
           successEvent({
             object_type,
             message: `The driver will reach you in ${eta} minutes`,
-            data: updatedRide
+            data: responseData
           })
         );
       }
 
       // Notify Driver
       if (ride.driver_id) {
-        socket.join(ride.driver_id._id.toString());
-        this.io.to(ride.driver_id._id.toString()).emit(
+        socket.join(ride.driver_id.toString());
+        this.io.to(ride.driver_id.toString()).emit(
           "response",
           successEvent({
             object_type,
             message: `You will reach the passenger in ${eta} minutes`,
-            data: updatedRide
+            data: responseData
           })
         );
       }
