@@ -1019,13 +1019,16 @@ class Service {
 
   async etaToDropOff(socket, data) {
     try {
-      const { ride_id, dropoff_location, driver_current_location } = data;
-      const object_type = "get-eta";
+      const { ride_id, driver_current_location } = data;
+      const object_type = "get-eta-to-dropoff";
 
-      if (!ride_id || !dropoff_location || !driver_current_location) {
+      if (!driver_current_location?.coordinates) {
         return socket.emit(
           "response",
-          failedEvent({ object_type, message: "Invalid request data" })
+          failedEvent({
+            object_type,
+            message: "Driver location is required"
+          })
         );
       }
 
@@ -1037,11 +1040,23 @@ class Service {
         );
       }
 
+      if (!ride.driver_id) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "No driver assigned to this ride"
+          })
+        );
+      }
+
+      // Extract locations
       const [dropoff_longitude, dropoff_latitude] =
-        dropoff_location.location.coordinates;
+        ride.dropoff_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
         driver_current_location.coordinates;
 
+      // Calculate Distance & ETA
       const distance = calculateDistance(
         driver_latitude,
         driver_longitude,
@@ -1050,11 +1065,15 @@ class Service {
       );
       const eta = calculateETA(distance);
 
-      const updatedRide = await this.ride.findByIdAndUpdate(
+      // Construct response data
+      const responseData = {
         ride_id,
-        { $set: { "tracking.eta_to_dropoff": eta } },
-        { new: true }
-      );
+        tracking: {
+          distance_miles_from_dropoff: distance,
+          driver_current_location,
+          eta_to_dropoff: eta
+        }
+      };
 
       // Notify User
       if (ride.user_id) {
@@ -1063,8 +1082,8 @@ class Service {
           "response",
           successEvent({
             object_type,
-            message: `You will reach your destination in ${eta} minutes`,
-            data: updatedRide
+            message: `The driver will reach your drop-off location in ${eta} minutes`,
+            data: responseData
           })
         );
       }
@@ -1076,8 +1095,8 @@ class Service {
           "response",
           successEvent({
             object_type,
-            message: `You will reach your destination in ${eta} minutes`,
-            data: updatedRide
+            message: `You will reach the drop-off location in ${eta} minutes`,
+            data: responseData
           })
         );
       }
