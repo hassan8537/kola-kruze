@@ -58,6 +58,8 @@ class Service {
         stripe_card_id: card.id
       });
 
+      console.log({ card });
+
       return successResponse({
         response,
         message: "Card added successfully.",
