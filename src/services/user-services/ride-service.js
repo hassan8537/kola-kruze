@@ -396,6 +396,7 @@ class Service {
       if (!ride) return failedResponse({ response, message: "Invalid OTP" });
 
       ride.ride_otp = null;
+      ride.is_verified = true;
       await ride.save();
       await ride.populate(populateRide.populate);
 
@@ -749,7 +750,7 @@ class Service {
         );
       }
 
-      if (ride && ride.is_verified) {
+      if (ride && !ride.is_verified) {
         return socket.emit(
           "response",
           failedEvent({
