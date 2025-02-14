@@ -747,14 +747,24 @@ class Service {
         );
       }
 
-      // If ride is verified, update the status to 'arrived'
+      // Update ride status to 'arrived' if it's currently 'accepted'
       const ride = await this.ride
-        .findByIdAndUpdate(
-          ride_id,
+        .findOneAndUpdate(
+          { _id: ride_id, ride_status: "accepted" },
           { $set: { ride_status: "arrived", ride_otp: 123456 } },
           { new: true }
         )
         .populate(populateRide.populate);
+
+      if (!ride) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "Ride status could not be updated"
+          })
+        );
+      }
 
       // Notify the driver (who triggered the event)
       socket.emit(
@@ -768,7 +778,7 @@ class Service {
 
       // Notify the passenger
       socket.join(ride.user_id._id.toString());
-      this.io.to(ride.user_id.toString()).emit(
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
