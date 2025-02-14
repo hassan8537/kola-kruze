@@ -157,4 +157,9 @@ router.post(
   controllers.ride.payNow.bind(controllers.ride)
 );
 
+router.post(
+  "/rides/verify-otp",
+  controllers.ride.payNow.bind(controllers.ride)
+);
+
 module.exports = router;

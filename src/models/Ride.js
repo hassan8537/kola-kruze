@@ -126,7 +126,18 @@ const RideSchema = new mongoose.Schema(
         user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         split_amount: { type: Number, required: true }
       }
-    ]
+    ],
+
+    ride_otp: {
+      type: Number,
+      trim: true
+    },
+
+    is_verified: {
+      type: Boolean,
+      trim: true,
+      default: false
+    }
   },
   { timestamps: true }
 );

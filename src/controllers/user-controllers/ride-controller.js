@@ -28,6 +28,10 @@ class Controller {
   async payNow(request, response) {
     return this.service.payNow(request, response);
   }
+
+  async verifyOtp(request, response) {
+    return this.service.verifyOtp(request, response);
+  }
 }
 
 module.exports = new Controller();

@@ -387,6 +387,28 @@ class Service {
     }
   }
 
+  async verifyOtp(request, response) {
+    try {
+      const { _id, ride_otp } = request.body;
+
+      const ride = await this.ride.findOne({ _id, ride_otp });
+
+      if (!ride) return failedResponse({ response, message: "Invalid OTP" });
+
+      ride.ride_otp = null;
+      await ride.save();
+      await ride.populate(populateRide.populate);
+
+      return successResponse({
+        response,
+        message: "OTP verified successfully",
+        data: ride
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
   // async payNow(request, response) {
   //   try {
   //     if (!request.params._id)
@@ -712,7 +734,7 @@ class Service {
       const ride = await this.ride
         .findOneAndUpdate(
           { _id: ride_id, ride_status: "accepted" },
-          { $set: { ride_status: "arrived" } },
+          { $set: { ride_status: "arrived", ride_otp: 123456 } },
           { new: true }
         )
         .populate(populateRide.populate);
@@ -723,6 +745,16 @@ class Service {
           failedEvent({
             object_type,
             message: "Ride not found or cannot be updated"
+          })
+        );
+      }
+
+      if (ride && ride.is_verified) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "Verify the ride"
           })
         );
       }
