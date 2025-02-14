@@ -755,14 +755,15 @@ class Service {
 
         socket.emit(
           "response",
-          failedEvent({
+          successEvent({
             object_type,
             message: "Verify the ride",
-            ride: updatedRide
+            data: updatedRide
           })
         );
 
         // Notify Passenger
+        socket.join(existingRide.user_id._id.toString());
         this.io.to(existingRide.user_id._id.toString()).emit(
           "response",
           successEvent({
