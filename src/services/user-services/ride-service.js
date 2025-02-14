@@ -485,6 +485,7 @@ class Service {
         });
 
       ride.ride_status = "booked";
+      ride.fare_details.payment_status = "paid";
       await ride.save();
       await ride.populate(populateRide.populate);
 
@@ -766,7 +767,7 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event)
+      // Notify the driver (who triggered the event) only once
       socket.emit(
         "response",
         successEvent({
@@ -776,7 +777,7 @@ class Service {
         })
       );
 
-      // Notify the passenger
+      // Notify the passenger only once
       socket.join(ride.user_id._id.toString());
       this.io.to(ride.user_id._id.toString()).emit(
         "response",
@@ -814,16 +815,14 @@ class Service {
         );
       }
 
-      if (ride.fare_details.payment_status === "pending")
+      if (ride.fare_details.payment_status === "pending") {
         return socket.emit(
           "response",
-          failedEvent({
-            object_type,
-            message: "This ride is not booked yet."
-          })
+          failedEvent({ object_type, message: "This ride is not booked yet." })
         );
+      }
 
-      // Notify the driver
+      // Notify the driver (who triggered the event) only once
       socket.emit(
         "response",
         successEvent({
@@ -833,7 +832,7 @@ class Service {
         })
       );
 
-      // Notify the user
+      // Notify the user only if they haven't already received it
       socket.join(ride.user_id._id.toString());
       this.io.to(ride.user_id._id.toString()).emit(
         "response",
