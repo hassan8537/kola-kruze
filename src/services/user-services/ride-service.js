@@ -747,35 +747,6 @@ class Service {
         );
       }
 
-      // If ride is NOT verified, send OTP & notify passenger
-      if (!existingRide.is_verified) {
-        const updatedRide = await this.ride
-          .findByIdAndUpdate(ride_id, { ride_otp: 123456 }, { new: true })
-          .populate(populateRide.populate);
-
-        socket.emit(
-          "response",
-          successEvent({
-            object_type,
-            message: "Verify the ride",
-            data: updatedRide
-          })
-        );
-
-        // Notify Passenger
-        socket.join(existingRide.user_id._id.toString());
-        this.io.to(existingRide.user_id._id.toString()).emit(
-          "response",
-          successEvent({
-            object_type,
-            message: "This is your OTP",
-            data: updatedRide
-          })
-        );
-
-        return;
-      }
-
       // If ride is verified, update the status to 'arrived'
       const ride = await this.ride
         .findByIdAndUpdate(
@@ -796,6 +767,7 @@ class Service {
       );
 
       // Notify the passenger
+      socket.join(ride.user_id._id.toString());
       this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
@@ -816,7 +788,7 @@ class Service {
 
       const ride = await this.ride
         .findOneAndUpdate(
-          { _id: ride_id, ride_status: "arrived" },
+          { _id: ride_id, ride_status: "arrived", is_verified: true },
           { $set: { ride_status: "started", start_time: Date.now() } },
           { new: true }
         )
