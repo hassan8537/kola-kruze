@@ -769,9 +769,8 @@ class Service {
         })
       );
 
-      // ✅ Notify the passenger
-      socket.join(ride.user_id._id.toString());
-      this.io.to(ride.user_id._id.toString()).emit(
+      // ✅ Notify the passenger (only to the user)
+      this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
           object_type,
