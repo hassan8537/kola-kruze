@@ -754,12 +754,12 @@ class Service {
 
   async startARide(socket, data) {
     try {
-      const { ride_id, driver_id } = data;
+      const { ride_id } = data;
       const object_type = "ride-started";
 
       const ride = await this.ride
         .findOneAndUpdate(
-          { _id: ride_id, driver_id, ride_status: "arrived" },
+          { _id: ride_id, ride_status: "arrived" },
           { $set: { ride_status: "started", start_time: Date.now() } },
           { new: true }
         )
@@ -811,12 +811,12 @@ class Service {
 
   async endARide(socket, data) {
     try {
-      const { ride_id, driver_id } = data;
+      const { ride_id } = data;
       const object_type = "ride-ended";
 
       const ride = await this.ride
         .findOneAndUpdate(
-          { _id: ride_id, driver_id, ride_status: "started" },
+          { _id: ride_id, ride_status: "started" },
           { $set: { ride_status: "ended", end_time: Date.now() } },
           { new: true }
         )
