@@ -732,8 +732,9 @@ class Service {
       const { ride_id } = data;
       const object_type = "ride-arrived";
 
+      // Fetch ride without updating
       const existingRide = await this.ride
-        .findOneAndUpdate({ _id: ride_id, ride_status: "accepted" })
+        .findById(ride_id)
         .populate(populateRide.populate);
 
       if (!existingRide) {
@@ -746,23 +747,23 @@ class Service {
         );
       }
 
-      if (existingRide && !existingRide.is_verified) {
+      // If ride is NOT verified, send OTP & notify passenger
+      if (!existingRide.is_verified) {
+        const updatedRide = await this.ride
+          .findByIdAndUpdate(ride_id, { ride_otp: 123456 }, { new: true })
+          .populate(populateRide.populate);
+
         socket.emit(
           "response",
           failedEvent({
             object_type,
             message: "Verify the ride",
-            ride: existingRide
+            ride: updatedRide
           })
         );
 
-        // ✅ Notify the passenger (only to the user)
-        const updatedRide = await this.ride
-          .findByIdAndUpdate(_id, { ride_otp: 123456 }, { new: true })
-          .populate(populateRide.populate);
-
-        socket.join(ride.user_id._id.toString());
-        return this.io.to(ride.user_id._id.toString()).emit(
+        // Notify Passenger
+        this.io.to(existingRide.user_id.toString()).emit(
           "response",
           successEvent({
             object_type,
@@ -770,17 +771,20 @@ class Service {
             data: updatedRide
           })
         );
+
+        return;
       }
 
+      // If ride is verified, update the status to 'arrived'
       const ride = await this.ride
-        .findOneAndUpdate(
-          { _id: ride_id, ride_status: "accepted" },
+        .findByIdAndUpdate(
+          ride_id,
           { $set: { ride_status: "arrived", ride_otp: 123456 } },
           { new: true }
         )
         .populate(populateRide.populate);
 
-      // ✅ Notify the driver (who triggered the event)
+      // Notify the driver (who triggered the event)
       socket.emit(
         "response",
         successEvent({
@@ -790,7 +794,7 @@ class Service {
         })
       );
 
-      // ✅ Notify the passenger (only to the user)
+      // Notify the passenger
       this.io.to(ride.user_id.toString()).emit(
         "response",
         successEvent({
