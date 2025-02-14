@@ -732,15 +732,11 @@ class Service {
       const { ride_id } = data;
       const object_type = "ride-arrived";
 
-      const ride = await this.ride
-        .findOneAndUpdate(
-          { _id: ride_id, ride_status: "accepted" },
-          { $set: { ride_status: "arrived", ride_otp: 123456 } },
-          { new: true }
-        )
+      const existingRide = await this.ride
+        .findOneAndUpdate({ _id: ride_id, ride_status: "accepted" })
         .populate(populateRide.populate);
 
-      if (!ride) {
+      if (!existingRide) {
         return socket.emit(
           "response",
           failedEvent({
@@ -750,7 +746,7 @@ class Service {
         );
       }
 
-      if (ride && !ride.is_verified) {
+      if (existingRide && !existingRide.is_verified) {
         return socket.emit(
           "response",
           failedEvent({
@@ -759,6 +755,14 @@ class Service {
           })
         );
       }
+
+      const ride = await this.ride
+        .findOneAndUpdate(
+          { _id: ride_id, ride_status: "accepted" },
+          { $set: { ride_status: "arrived", ride_otp: 123456 } },
+          { new: true }
+        )
+        .populate(populateRide.populate);
 
       // ✅ Notify the driver (who triggered the event)
       socket.emit(
