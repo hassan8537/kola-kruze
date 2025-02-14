@@ -129,6 +129,8 @@ io.on("connection", (socket) => {
   socket.on("arrived-at-pickup", (data) =>
     rideService.arrivedAtPickup(socket, data)
   );
+  socket.on("start-a-ride", (data) => rideService.startARide(socket, data));
+  socket.on("end-a-ride", (data) => rideService.endARide(socket, data));
 
   socket.on("update-current-location", (data) =>
     rideService.updateCurrentLocation(socket, data)
@@ -136,18 +138,12 @@ io.on("connection", (socket) => {
   socket.on("eta-to-pickup", (data) => rideService.etaToPickup(socket, data));
   socket.on("eta-to-dropoff", (data) => rideService.etaToDropOff(socket, data));
 
-  socket.on("ride-request-response", (data) =>
-    rideService.rideRequestResponse(socket, data)
-  );
-  socket.on("ride-status-update", (data) =>
-    rideService.rideStatusUpdate(socket, data)
-  );
   socket.on("share-ride", (data) => rideService.shareRide(socket, data));
   socket.on("ride-location-update", (data) =>
     rideService.rideLocationUpdate(socket, data)
   );
 
-  // Driver Events
+  // Driver Events Not In Use
   socket.on("driver-availability", (data) =>
     driverService.driverAvailability(socket, data)
   );
@@ -162,7 +158,6 @@ io.on("connection", (socket) => {
   socket.on("get-chats", (data) => chatService.getChats(socket, data));
   socket.on("chat-message", (data) => chatService.chatMessage(socket, data));
   socket.on("chat-typing", (data) => chatService.chatTyping(socket, data));
-  socket.on("chat-seen", (data) => chatService.chatSeen(socket, data));
 
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
