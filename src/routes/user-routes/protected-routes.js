@@ -159,7 +159,7 @@ router.post(
 
 router.post(
   "/rides/verify-otp",
-  controllers.ride.payNow.bind(controllers.ride)
+  controllers.ride.verifyOtp.bind(controllers.ride)
 );
 
 module.exports = router;
