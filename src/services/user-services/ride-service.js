@@ -747,11 +747,27 @@ class Service {
       }
 
       if (existingRide && !existingRide.is_verified) {
-        return socket.emit(
+        socket.emit(
           "response",
           failedEvent({
             object_type,
-            message: "Verify the ride"
+            message: "Verify the ride",
+            ride: existingRide
+          })
+        );
+
+        // ✅ Notify the passenger (only to the user)
+        const updatedRide = await this.ride
+          .findByIdAndUpdate(_id, { ride_otp: 123456 }, { new: true })
+          .populate(populateRide.populate);
+
+        socket.join(ride.user_id._id.toString());
+        return this.io.to(ride.user_id._id.toString()).emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "This is your OTP",
+            data: updatedRide
           })
         );
       }
