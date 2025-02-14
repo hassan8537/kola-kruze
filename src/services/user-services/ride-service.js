@@ -763,7 +763,7 @@ class Service {
         );
 
         // Notify Passenger
-        this.io.to(existingRide.user_id.toString()).emit(
+        this.io.to(existingRide.user_id._id.toString()).emit(
           "response",
           successEvent({
             object_type,
