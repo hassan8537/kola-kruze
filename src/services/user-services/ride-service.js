@@ -920,6 +920,10 @@ class Service {
         );
       }
 
+      const isPassenger = ride.user_id._id.toString() === user_id.toString();
+
+      const receiver_id = isPassenger ? ride.driver_id._id : ride.user_id._id;
+
       if (!ride.driver_id) {
         // Update ride status and cancellation details
         ride.ride_status = "cancelled";
@@ -934,16 +938,14 @@ class Service {
         socket.emit(
           "response",
           successEvent({
-            object_type: "ride-cancelled",
-            message: `The ride has been cancelled by the passenger`,
+            object_type: isPassenger
+              ? passenger_object_type
+              : driver_object_type,
+            message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
             data: ride
           })
         );
       }
-
-      const isPassenger = ride.user_id._id.toString() === user_id.toString();
-
-      const receiver_id = isPassenger ? ride.driver_id._id : ride.user_id._id;
 
       // Update ride status and cancellation details
       ride.ride_status = "cancelled";
