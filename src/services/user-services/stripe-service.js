@@ -55,39 +55,29 @@ class Service {
   async setupStripeMerchant(request, response) {
     try {
       const user_id = request.user._id;
-      const user = await this.user.findById(user_id);
-
-      if (user.is_merchant_setup) {
-        return failedResponse({ response, message: "Merchant already setup." });
-      }
+      let user = await this.user.findById(user_id);
 
       if (!user.stripe_merchant_id) {
-        console.log("Creating new Stripe account...");
         const account = await stripe.accounts.create({
           type: "express",
           email: request.user.email_address,
-          capabilities: { transfers: { requested: true } }
+          capabilities: {
+            transfers: { requested: true }
+          }
         });
 
         user.stripe_merchant_id = account.id;
+        user.stripe_account_id = account.id;
+        user.is_merchant_setup = true;
         await user.save();
       }
 
       const account = await stripe.accounts.retrieve(user.stripe_merchant_id);
-      console.log("Stripe Account Details:", account);
 
-      if (account.capabilities?.transfers === "active") {
-        user.is_merchant_setup = true;
-        await user.save();
-
-        return successResponse({
-          response,
-          message: "Merchant setup successfully.",
-          data: { is_merchant_setup: true }
-        });
+      if (account.capabilities.transfers === "active") {
+        return failedResponse({ response, message: "Merchant already setup" });
       }
 
-      console.log("Generating Stripe onboarding link...");
       const accountLink = await stripe.accountLinks.create({
         account: user.stripe_merchant_id,
         refresh_url: `${process.env.BASE_URL}/merchant/setup`,
@@ -97,11 +87,10 @@ class Service {
 
       return successResponse({
         response,
-        message: "Complete your Stripe merchant setup.",
+        message: "Please complete your Stripe merchant setup.",
         data: accountLink.url
       });
     } catch (error) {
-      console.error("Stripe Setup Error:", error);
       return errorResponse({ response, error });
     }
   }
