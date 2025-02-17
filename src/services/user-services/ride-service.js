@@ -922,29 +922,6 @@ class Service {
 
       const isPassenger =
         ride.user_id && ride.user_id._id.toString() === user_id.toString();
-      const receiver_id = isPassenger ? ride.driver_id?._id : ride.user_id?._id;
-
-      if (!ride.driver_id) {
-        ride.ride_status = "cancelled";
-        ride.cancellation = {
-          user_id,
-          reason: cancellation?.reason,
-          description: cancellation?.description
-        };
-        await ride.save();
-
-        socket.join(ride.user_id._id.toString());
-        this.io.to(ride.user_id._id.toString()).emit(
-          "response",
-          successEvent({
-            object_type: isPassenger
-              ? passenger_object_type
-              : driver_object_type,
-            message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-            data: ride
-          })
-        );
-      }
 
       ride.ride_status = "cancelled";
       ride.cancellation = {
@@ -954,8 +931,21 @@ class Service {
       };
       await ride.save();
 
-      socket.join(receiver_id?.toString());
-      this.io.to(receiver_id?.toString()).emit(
+      // Join both the driver and passenger to their respective rooms
+
+      // Emit cancellation notification to both driver and passenger
+      socket.join(ride.user_id._id.toString()); // join the driver
+      this.io.to(ride.user_id._id.toString()).emit(
+        "response",
+        successEvent({
+          object_type: isPassenger ? passenger_object_type : driver_object_type,
+          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
+          data: ride
+        })
+      );
+
+      socket.join(ride.driver_id._id.toString()); // join the driver
+      this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type: isPassenger ? passenger_object_type : driver_object_type,
