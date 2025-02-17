@@ -14,7 +14,8 @@ const controllers = {
   stripe: require("../../controllers/user-controllers/stripe-controller"),
   chat: require("../../controllers/user-controllers/chat-controller"),
   category: require("../../controllers/user-controllers/category-controller"),
-  ride: require("../../controllers/user-controllers/ride-controller")
+  ride: require("../../controllers/user-controllers/ride-controller"),
+  rating: require("../../controllers/user-controllers/rating-controller")
 };
 
 // session
@@ -161,5 +162,10 @@ router.post(
   "/rides/verify-otp",
   controllers.ride.verifyOtp.bind(controllers.ride)
 );
+
+// rating
+router.post("/ratings", controllers.rating.addRating.bind(controllers.rating));
+
+router.get("/ratings", controllers.rating.getRatings.bind(controllers.rating));
 
 module.exports = router;

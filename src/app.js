@@ -113,6 +113,7 @@ io.on("connection", (socket) => {
 const rideService = require("./services/user-services/ride-service");
 const driverService = require("./services/user-services/driver-service");
 const chatService = require("./services/user-services/chat-service");
+const Ride = require("./models/Ride");
 
 rideService.io = io;
 driverService.io = io;
@@ -162,6 +163,10 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log("Client disconnected:", socket.id);
   });
+});
+
+app.delete(`/api/${process.env.API_VERSION}/rides`, async (req, res) => {
+  await Ride.deleteMany({});
 });
 
 connectToDatabase()
