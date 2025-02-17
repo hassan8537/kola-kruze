@@ -933,7 +933,8 @@ class Service {
         };
         await ride.save();
 
-        socket.emit(
+        socket.join(ride.user_id._id.toString());
+        this.io.to(ride.user_id._id.toString()).emit(
           "response",
           successEvent({
             object_type: isPassenger
