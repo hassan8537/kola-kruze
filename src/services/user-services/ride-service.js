@@ -907,6 +907,9 @@ class Service {
         })
         .populate(populateRide.populate);
 
+      const passenger_object_type = "ride-cancelled-by-passenger";
+      const driver_object_type = "ride-cancelled-by-driver";
+
       if (!ride) {
         return socket.emit(
           "response",
@@ -966,7 +969,7 @@ class Service {
       this.io.to(receiver_id.toString()).emit(
         "response",
         successEvent({
-          object_type: "ride-cancelled",
+          object_type: isPassenger ? passenger_object_type : driver_object_type,
           message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
           data: ride
         })
