@@ -149,7 +149,7 @@ const RideSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Report",
       trim: true,
-      default: false
+      default: null
     }
   },
   { timestamps: true }
