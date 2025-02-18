@@ -174,6 +174,8 @@ router.get("/ratings", controllers.rating.getRatings.bind(controllers.rating));
 // report
 router.post(
   "/reports",
+  upload.fields([{ name: "image" }]),
+  uploadFiles,
   controllers.report.submitReport.bind(controllers.report)
 );
 
