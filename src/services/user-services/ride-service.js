@@ -877,11 +877,13 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      const ride = await this.ride.findOne({
-        _id: ride_id,
-        $or: [{ user_id }, { driver_id: user_id }],
-        ride_status: { $in: ["accepted", "booked"] }
-      });
+      const ride = await this.ride
+        .findOne({
+          _id: ride_id,
+          $or: [{ user_id }, { driver_id: user_id }],
+          ride_status: { $in: ["accepted", "booked"] }
+        })
+        .populate(populateRide.populate);
 
       if (!ride) {
         return socket.emit(
