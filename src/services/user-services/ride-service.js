@@ -896,9 +896,7 @@ class Service {
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
-      const receiver_id = isPassenger
-        ? ride.user_id._id.toString()
-        : ride.driver_id._id.toString();
+      const receiver_id = isPassenger ? ride.user_id._id : ride.driver_id._id;
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
