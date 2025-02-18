@@ -49,7 +49,13 @@ class Service {
   async getMyRides(request, response) {
     try {
       const { _id } = request.query;
-      const filters = { user_id: request.user._id };
+
+      const user_id =
+        request.user.role === "driver"
+          ? { driver_id: request.user._id }
+          : { user_id: request.user._id };
+
+      const filters = { user_id };
       if (_id) filters._id = _id;
       const { page, limit, sort } = request.query;
       await pagination({
