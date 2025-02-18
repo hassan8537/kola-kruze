@@ -877,13 +877,11 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      const ride = await this.ride
-        .findOne({
-          _id: ride_id,
-          $or: [{ user_id }, { driver_id: user_id }],
-          ride_status: { $in: ["accepted", "booked"] }
-        })
-        .populate(populateRide.populate);
+      const ride = await this.ride.findOne({
+        _id: ride_id,
+        $or: [{ user_id }, { driver_id: user_id }],
+        ride_status: { $in: ["accepted", "booked"] }
+      });
 
       if (!ride) {
         return socket.emit(
@@ -896,7 +894,10 @@ class Service {
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
-      const receiver_id = isPassenger ? ride.user_id._id : ride.driver_id._id;
+
+      const passenger_id = ride.user_id._id.toString();
+      const driver_id = ride.driver_id._id.toString();
+
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
@@ -911,8 +912,8 @@ class Service {
       await ride.save();
 
       // ✅ Emit to the user using the correct room
-      socket.join(ride.user_id._id);
-      this.io.to(ride.user_id._id).emit(
+      socket.join(passenger_id);
+      this.io.to(passenger_id).emit(
         "response",
         successEvent({
           object_type,
@@ -922,8 +923,8 @@ class Service {
       );
 
       // ✅ Emit to the user using the correct room
-      socket.join(ride.driver_id._id);
-      this.io.to(ride.driver_id._id).emit(
+      socket.join(driver_id);
+      this.io.to(driver_id).emit(
         "response",
         successEvent({
           object_type,
