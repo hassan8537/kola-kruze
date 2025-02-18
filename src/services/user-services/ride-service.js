@@ -876,7 +876,7 @@ class Service {
   async cancelARide(socket, data) {
     try {
       const { user_id, ride_id, cancellation } = data;
-
+      // Fetch the ride
       const ride = await this.ride.findOne({
         _id: ride_id,
         $or: [{ user_id }, { driver_id: user_id }],
@@ -894,14 +894,12 @@ class Service {
       }
 
       const isPassenger = ride.user_id.toString() === user_id.toString();
-      const passenger_id = ride.user_id.toString();
-      const driver_id = ride.driver_id.toString();
-
+      const { user_id: passenger_id, driver_id } = ride;
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
 
-      // Update ride status
+      // Update ride status and cancellation details
       ride.ride_status = "cancelled";
       ride.cancellation = {
         user_id,
@@ -909,9 +907,13 @@ class Service {
         description: cancellation?.description
       };
       await ride.save();
-      await ride.populate(populateRide.populate);
 
-      // Helper function to emit to the user if they exist
+      // Populate and send the current ride details
+      const currentRide = await this.ride
+        .findById(ride_id)
+        .populate(populateRide.populate);
+
+      // Emit function for both passenger and driver
       const emitToUser = (user_id, message) => {
         if (user_id) {
           socket.join(user_id);
@@ -922,14 +924,12 @@ class Service {
       const message = successEvent({
         object_type,
         message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-        data: ride
+        data: currentRide
       });
 
-      // Emit to the passenger if they exist
-      emitToUser(passenger_id, message);
-
-      // Emit to the driver if they exist
-      emitToUser(driver_id, message);
+      // Emit the message to both the passenger and driver
+      emitToUser(passenger_id.toString(), message);
+      emitToUser(driver_id.toString(), message);
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
