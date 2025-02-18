@@ -733,22 +733,6 @@ class Service {
       const { ride_id } = data;
       const object_type = "ride-arrived";
 
-      // Fetch ride without updating
-      const existingRide = await this.ride
-        .findById(ride_id)
-        .populate(populateRide.populate);
-
-      if (!existingRide) {
-        return socket.emit(
-          "response",
-          failedEvent({
-            object_type,
-            message: "Ride not found or cannot be updated"
-          })
-        );
-      }
-
-      // Update ride status to 'arrived' if it's currently 'accepted'
       const ride = await this.ride
         .findOneAndUpdate(
           { _id: ride_id, ride_status: "accepted" },
@@ -767,7 +751,7 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event) only once
+      // Notify the driver (who triggered the event)
       socket.emit(
         "response",
         successEvent({
@@ -777,9 +761,8 @@ class Service {
         })
       );
 
-      // Notify the passenger only once
-      socket.join(ride.user_id._id.toString());
-      this.io.to(ride.user_id._id.toString()).emit(
+      // Notify the user
+      socket.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -822,7 +805,7 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event) only once
+      // Notify the driver (who triggered the event)
       socket.emit(
         "response",
         successEvent({
@@ -832,12 +815,11 @@ class Service {
         })
       );
 
-      // Notify the user only if they haven't already received it
-      socket.join(ride.user_id._id.toString());
-      this.io.to(ride.user_id._id.toString()).emit(
+      // Notify the user
+      socket.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
-          object_type: object_type,
+          object_type,
           message: "Your ride has started",
           data: ride
         })
@@ -870,7 +852,7 @@ class Service {
         );
       }
 
-      // Notify the driver
+      // Notify the driver (who triggered the event)
       socket.emit(
         "response",
         successEvent({
@@ -881,11 +863,10 @@ class Service {
       );
 
       // Notify the user
-      socket.join(ride.user_id._id.toString());
-      this.io.to(ride.user_id._id.toString()).emit(
+      socket.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
-          object_type: object_type,
+          object_type,
           message: "Your ride has ended",
           data: ride
         })
@@ -907,9 +888,6 @@ class Service {
         })
         .populate(populateRide.populate);
 
-      const passenger_object_type = "ride-cancelled-by-passenger";
-      const driver_object_type = "ride-cancelled-by-driver";
-
       if (!ride) {
         return socket.emit(
           "response",
@@ -920,9 +898,12 @@ class Service {
         );
       }
 
-      const isPassenger =
-        ride.user_id && ride.user_id._id.toString() === user_id.toString();
+      const isPassenger = ride.user_id._id.toString() === user_id.toString();
+      const object_type = isPassenger
+        ? "ride-cancelled-by-passenger"
+        : "ride-cancelled-by-driver";
 
+      // Update ride status
       ride.ride_status = "cancelled";
       ride.cancellation = {
         user_id,
@@ -931,35 +912,36 @@ class Service {
       };
       await ride.save();
 
-      // Join both the driver and passenger to their respective rooms
-
-      // Emit cancellation notification to both driver and passenger
-      socket.join(ride.user_id._id.toString()); // join the driver
-      this.io.to(ride.user_id._id.toString()).emit(
+      // Emit to the respective rooms
+      socket.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
-          object_type: isPassenger ? passenger_object_type : driver_object_type,
+          object_type,
           message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
           data: ride
         })
       );
 
-      socket.join(ride.driver_id._id.toString()); // join the driver
-      this.io.to(ride.driver_id._id.toString()).emit(
+      socket.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
-          object_type: isPassenger ? passenger_object_type : driver_object_type,
+          object_type,
           message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
           data: ride
         })
       );
+
+      // // Send confirmation to the user who triggered cancellation
+      // socket.emit(
+      //   "response",
+      //   successEvent({
+      //     object_type,
+      //     message: "Ride has been cancelled successfully",
+      //     data: ride
+      //   })
+      // );
     } catch (error) {
-      socket.emit(
-        "error",
-        errorEvent({
-          error
-        })
-      );
+      socket.emit("error", errorEvent({ error }));
     }
   }
 
