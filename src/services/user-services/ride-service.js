@@ -910,16 +910,8 @@ class Service {
       await ride.save();
 
       // Emit to the respective rooms
-      this.io.to(ride.user_id._id.toString()).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-          data: ride
-        })
-      );
-
-      this.io.to(ride.driver_id._id.toString()).emit(
+      socket.join(user_id.toString());
+      this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
           object_type,
