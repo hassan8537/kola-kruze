@@ -921,7 +921,6 @@ class Service {
         })
       );
 
-      socket.join(receiver_id);
       this.io.to(receiver_id).emit(
         "response",
         successEvent({
