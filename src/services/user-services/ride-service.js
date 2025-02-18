@@ -896,6 +896,9 @@ class Service {
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
+      const receiver_id = isPassenger
+        ? ride.user_id._id.toString()
+        : ride.driver_id._id.toString();
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
@@ -909,10 +912,8 @@ class Service {
       };
       await ride.save();
 
-      socket.join(ride_id.toString()); // Make sure the socket joins the ride room
-
-      // Emit event to the ride room (both users get this notification)
-      this.io.to(ride_id.toString()).emit(
+      // ✅ Emit to the driver (confirmation)
+      socket.emit(
         "response",
         successEvent({
           object_type,
@@ -921,20 +922,16 @@ class Service {
         })
       );
 
-      // Optionally, emit event to the user that initiated the cancellation
-      socket.emit(
+      // ✅ Emit to the user using the correct room
+      socket.join(receiver_id);
+      this.io.to(receiver_id).emit(
         "response",
         successEvent({
           object_type,
-          message: `You have cancelled the ride`,
+          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
           data: ride
         })
       );
-
-      // await this.notificationManagement({
-      //   type: "ride",
-      //   ride
-      // });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
