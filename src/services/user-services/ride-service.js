@@ -913,7 +913,7 @@ class Service {
       await ride.save();
 
       // Emit to the respective rooms
-      socket.to(ride.user_id._id.toString()).emit(
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -922,7 +922,7 @@ class Service {
         })
       );
 
-      socket.to(ride.driver_id._id.toString()).emit(
+      this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
