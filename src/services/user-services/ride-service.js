@@ -912,7 +912,8 @@ class Service {
       };
       await ride.save();
 
-      socket.emit(
+      socket.join(user_id.toString());
+      this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
           object_type,
