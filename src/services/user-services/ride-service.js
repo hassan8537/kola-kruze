@@ -895,9 +895,8 @@ class Service {
 
       const isPassenger = ride.user_id.toString() === user_id.toString();
 
-      const receiver_id = isPassenger
-        ? ride.user_id.toString()
-        : ride.driver_id.toString();
+      const driver_id = ride.driver_id.toString();
+      const passenger_id = ride.user_id.toString();
 
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
@@ -923,10 +922,9 @@ class Service {
         data: currentRide
       });
 
-      socket.emit("response", message);
-
       // Emit message only to the receiver (other party in the ride)
-      return await this.io.to(receiver_id).emit("response", message);
+      await this.io.to(passenger_id).emit("response", message);
+      await this.io.to(driver_id).emit("response", message);
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
