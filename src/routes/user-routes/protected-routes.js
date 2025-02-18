@@ -15,7 +15,8 @@ const controllers = {
   chat: require("../../controllers/user-controllers/chat-controller"),
   category: require("../../controllers/user-controllers/category-controller"),
   ride: require("../../controllers/user-controllers/ride-controller"),
-  rating: require("../../controllers/user-controllers/rating-controller")
+  rating: require("../../controllers/user-controllers/rating-controller"),
+  report: require("../../controllers/user-controllers/report-controller")
 };
 
 // session
@@ -169,5 +170,11 @@ router.post(
 router.post("/ratings", controllers.rating.addRating.bind(controllers.rating));
 
 router.get("/ratings", controllers.rating.getRatings.bind(controllers.rating));
+
+// report
+router.post(
+  "/reports",
+  controllers.report.submitReport.bind(controllers.report)
+);
 
 module.exports = router;

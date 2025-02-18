@@ -137,6 +137,19 @@ const RideSchema = new mongoose.Schema(
       type: Boolean,
       trim: true,
       default: false
+    },
+
+    is_reported: {
+      type: Boolean,
+      trim: true,
+      default: false
+    },
+
+    report_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Report",
+      trim: true,
+      default: false
     }
   },
   { timestamps: true }

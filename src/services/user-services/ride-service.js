@@ -892,6 +892,7 @@ class Service {
         ride_status: { $in: ["accepted", "booked"] }
       });
 
+      // If no ride is found, return early
       if (!ride) {
         return socket.emit(
           "response",
@@ -902,10 +903,10 @@ class Service {
         );
       }
 
-      const isPassenger = ride.user_id.toString() === user_id.toString();
-
-      const driver_id = ride.driver_id.toString();
-      const passenger_id = ride.user_id.toString();
+      // Ensure user_id, driver_id, and passenger_id are valid
+      const isPassenger = ride.user_id?.toString() === user_id?.toString();
+      const driver_id = ride.driver_id?.toString() || null;
+      const passenger_id = ride.user_id?.toString() || null;
 
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
@@ -915,8 +916,8 @@ class Service {
       ride.ride_status = "cancelled";
       ride.cancellation = {
         user_id,
-        reason: cancellation?.reason,
-        description: cancellation?.description
+        reason: cancellation?.reason || null,
+        description: cancellation?.description || null
       };
       await ride.save();
 
@@ -931,11 +932,12 @@ class Service {
         data: currentRide
       });
 
-      // Emit message only to the receiver (other party in the ride)
-      await this.io.to(passenger_id).emit("response", message);
-      await this.io.to(driver_id).emit("response", message);
+      // Emit message only to the receiver (the other party in the ride)
+      if (passenger_id)
+        await this.io.to(passenger_id).emit("response", message);
+      if (driver_id) await this.io.to(driver_id).emit("response", message);
     } catch (error) {
-      socket.emit("error", errorEvent({ error }));
+      socket.emit("error", errorEvent({ error: error.message }));
     }
   }
 

@@ -140,5 +140,21 @@ module.exports = {
       }
     ],
     sort: { createdAt: -1 }
+  },
+  populateReport: {
+    populate: [
+      {
+        path: "ride_id"
+      },
+      {
+        path: "user_id",
+        populate: { path: "profile_picture", select: "file_path" }
+      },
+      {
+        path: "image",
+        select: "file_path"
+      }
+    ],
+    sort: { createdAt: -1 }
   }
 };
