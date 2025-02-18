@@ -568,7 +568,7 @@ class Service {
           const rideObject = ride.toObject();
 
           rideObject.tracking.eta_to_arrive = eta;
-
+          socket.join(driver._id.toString());
           this.io.to(driver._id.toString()).emit(
             "response",
             successEvent({
@@ -714,7 +714,7 @@ class Service {
       );
 
       // ✅ Emit to the user using the correct room
-      socket.join(user_id);
+      socket.join(user_id.toString());
       this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
@@ -893,9 +893,9 @@ class Service {
         );
       }
 
-      const isPassenger = ride.user_id._id.toString() === user_id.toString();
-      const passenger_id = ride.user_id?._id.toString();
-      const driver_id = ride.driver_id?._id.toString();
+      const isPassenger = ride.user_id.toString() === user_id.toString();
+      const passenger_id = ride.user_id.toString();
+      const driver_id = ride.driver_id.toString();
 
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
