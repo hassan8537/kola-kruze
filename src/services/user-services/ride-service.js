@@ -894,7 +894,6 @@ class Service {
       }
 
       const isPassenger = ride.user_id._id.toString() === user_id.toString();
-
       const passenger_id = ride.user_id?._id.toString();
       const driver_id = ride.driver_id?._id.toString();
 
@@ -911,27 +910,25 @@ class Service {
       };
       await ride.save();
 
-      // ✅ Emit to the user using the correct room
-      socket.join(passenger_id);
-      this.io.to(passenger_id).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-          data: ride
-        })
-      );
+      // Helper function to emit to the user if they exist
+      const emitToUser = (user_id, message) => {
+        if (user_id) {
+          socket.join(user_id);
+          this.io.to(user_id).emit("response", message);
+        }
+      };
 
-      // ✅ Emit to the user using the correct room
-      socket.join(driver_id);
-      this.io.to(driver_id).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-          data: ride
-        })
-      );
+      const message = successEvent({
+        object_type,
+        message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
+        data: ride
+      });
+
+      // Emit to the passenger if they exist
+      emitToUser(passenger_id, message);
+
+      // Emit to the driver if they exist
+      emitToUser(driver_id, message);
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
