@@ -534,7 +534,7 @@ class Service {
         .populate(populateRide.populate);
 
       if (!ride) {
-        socket.emit(
+        return socket.emit(
           "response",
           failedEvent({
             object_type: "ride-request-sent",
@@ -553,11 +553,22 @@ class Service {
       );
 
       // Find available drivers
-      const availableDrivers = await this.user.find({
-        role: "driver",
-        is_available: true,
-        is_deleted: false
-      });
+      const availableDrivers =
+        (await this.user.find({
+          role: "driver",
+          is_available: true,
+          is_deleted: false
+        })) || [];
+
+      if (!Array.isArray(availableDrivers) || availableDrivers.length === 0) {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type: "no-drivers-available",
+            message: "No available drivers found."
+          })
+        );
+      }
 
       socket.emit(
         "response",
@@ -605,7 +616,7 @@ class Service {
             })
           );
 
-          this.io.to(ride.user_id.toString()).emit(
+          await this.io.to(ride.user_id.toString()).emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
@@ -615,8 +626,8 @@ class Service {
           );
 
           // Notify drivers
-          availableDrivers.forEach((driver) => {
-            this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach(async (driver) => {
+            await this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-expired",
@@ -626,14 +637,14 @@ class Service {
             );
           });
         }
-      }, process.env.RIDE_REQUEST_TIMER); // Default to 3 minutes if env variable not set
+      }, process.env.RIDE_REQUEST_TIMER || 10000); // Default to 3 minutes if env variable not set
 
       // Clear timeout if ride is accepted or canceled
       const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout);
-          availableDrivers.forEach((driver) => {
-            this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach(async (driver) => {
+            await this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-cancelled",
@@ -699,7 +710,7 @@ class Service {
 
       const ongoingRide = await this.ride.findOne({
         driver_id,
-        ride_status: { $in: ["ongoing"] }
+        ride_status: { $in: ["accept", "start"] }
       });
 
       if (ongoingRide) {
@@ -731,6 +742,8 @@ class Service {
           data: ride
         })
       );
+
+      await this.user.findByIdAndUpdate(driver_id, { is_available: false });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
