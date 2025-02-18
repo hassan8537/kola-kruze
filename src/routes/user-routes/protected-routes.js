@@ -133,6 +133,8 @@ router.get(
 );
 
 // rides
+router.get("/rides", controllers.ride.getMyRides.bind(controllers.ride));
+
 router.post(
   "/rides/select-destination",
   controllers.ride.selectDestination.bind(controllers.ride)

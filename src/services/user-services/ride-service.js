@@ -51,7 +51,7 @@ class Service {
       const { _id } = request.query;
       const filters = { user_id: request.user._id };
       if (_id) filters._id = _id;
-      const { page, limit, sort } = query;
+      const { page, limit, sort } = request.query;
       await pagination({
         response,
         table: "Rides",
@@ -321,7 +321,10 @@ class Service {
       });
 
       if (existingRide) {
-        const deletedRide = await this.ride.findByIdAndDelete(existingRide._id);
+        const deletedRide = await this.ride.findByIdAndDelete({
+          _id: existingRide._id,
+          ride_status: "pending"
+        });
         if (deletedRide) {
           successLog({ message: "Previous ride deleted successfully" });
         }
