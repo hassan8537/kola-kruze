@@ -909,7 +909,10 @@ class Service {
       };
       await ride.save();
 
-      this.io.to(user_id.toString()).emit(
+      socket.join(ride_id.toString()); // Make sure the socket joins the ride room
+
+      // Emit event to the ride room (both users get this notification)
+      this.io.to(ride_id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -918,13 +921,12 @@ class Service {
         })
       );
 
-      // Join the ride room and emit a single event to notify both parties
-      socket.join(ride_id.toString());
-      this.io.to(ride_id.toString()).emit(
+      // Optionally, emit event to the user that initiated the cancellation
+      socket.emit(
         "response",
         successEvent({
           object_type,
-          message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
+          message: `You have cancelled the ride`,
           data: ride
         })
       );
