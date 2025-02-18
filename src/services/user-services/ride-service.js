@@ -568,8 +568,8 @@ class Service {
           const rideObject = ride.toObject();
 
           rideObject.tracking.eta_to_arrive = eta;
-          socket.join(driver._id.toString());
-          this.io.to(driver._id.toString()).emit(
+
+          await this.io.to(driver._id.toString()).emit(
             "response",
             successEvent({
               object_type: "get-ride",
@@ -714,8 +714,7 @@ class Service {
       );
 
       // ✅ Emit to the user using the correct room
-      socket.join(user_id.toString());
-      this.io.to(user_id.toString()).emit(
+      await this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
           object_type: "user-ride-accepted",
@@ -752,7 +751,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -761,7 +760,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -805,7 +804,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -814,7 +813,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -851,7 +850,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -860,7 +859,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -914,10 +913,9 @@ class Service {
         .populate(populateRide.populate);
 
       // Emit function for both passenger and driver
-      const emitToUser = (user_id, message) => {
+      const emitToUser = async (user_id, message) => {
         if (user_id) {
-          socket.join(user_id);
-          this.io.to(user_id).emit("response", message);
+          await this.io.to(user_id).emit("response", message);
         }
       };
 
@@ -928,8 +926,8 @@ class Service {
       });
 
       // Emit the message to both the passenger and driver
-      emitToUser(passenger_id.toString(), message);
-      emitToUser(driver_id.toString(), message);
+      await emitToUser(passenger_id.toString(), message);
+      return await emitToUser(driver_id.toString(), message);
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
