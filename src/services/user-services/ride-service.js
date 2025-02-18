@@ -751,22 +751,21 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event)
-      socket.emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "You have arrived at the pickup location",
-          data: ride
-        })
-      );
-
-      // Notify the user
-      socket.to(ride.user_id._id.toString()).emit(
+      // Emit to both driver and user
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
           message: "Your driver has arrived at your pickup location",
+          data: ride
+        })
+      );
+
+      this.io.to(ride.driver_id._id.toString()).emit(
+        "response",
+        successEvent({
+          object_type,
+          message: "You have arrived at the pickup location",
           data: ride
         })
       );
@@ -805,22 +804,21 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event)
-      socket.emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Ride has started",
-          data: ride
-        })
-      );
-
-      // Notify the user
-      socket.to(ride.user_id._id.toString()).emit(
+      // Emit to both driver and user
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
           message: "Your ride has started",
+          data: ride
+        })
+      );
+
+      this.io.to(ride.driver_id._id.toString()).emit(
+        "response",
+        successEvent({
+          object_type,
+          message: "Ride has started",
           data: ride
         })
       );
@@ -852,22 +850,21 @@ class Service {
         );
       }
 
-      // Notify the driver (who triggered the event)
-      socket.emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Ride has ended",
-          data: ride
-        })
-      );
-
-      // Notify the user
-      socket.to(ride.user_id._id.toString()).emit(
+      // Emit to both driver and user
+      this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
           message: "Your ride has ended",
+          data: ride
+        })
+      );
+
+      this.io.to(ride.driver_id._id.toString()).emit(
+        "response",
+        successEvent({
+          object_type,
+          message: "Ride has ended",
           data: ride
         })
       );
