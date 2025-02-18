@@ -875,6 +875,7 @@ class Service {
   async cancelARide(socket, data) {
     try {
       const { user_id, ride_id, cancellation } = data;
+
       // Fetch the ride
       const ride = await this.ride.findOne({
         _id: ride_id,
@@ -893,7 +894,11 @@ class Service {
       }
 
       const isPassenger = ride.user_id.toString() === user_id.toString();
-      const { user_id: passenger_id, driver_id } = ride;
+
+      const receiver_id = isPassenger
+        ? ride.driver_id.toString()
+        : ride.user_id.toString();
+
       const object_type = isPassenger
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
@@ -912,22 +917,16 @@ class Service {
         .findById(ride_id)
         .populate(populateRide.populate);
 
-      // Emit function for both passenger and driver
-      const emitToUser = async (user_id, message) => {
-        if (user_id) {
-          await this.io.to(user_id).emit("response", message);
-        }
-      };
-
       const message = successEvent({
         object_type,
         message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
         data: currentRide
       });
 
-      // Emit the message to both the passenger and driver
-      await emitToUser(passenger_id.toString(), message);
-      return await emitToUser(driver_id.toString(), message);
+      socket.emit("response", message);
+
+      // Emit message only to the receiver (other party in the ride)
+      return await this.io.to(receiver_id).emit("response", message);
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
