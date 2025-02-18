@@ -909,6 +909,7 @@ class Service {
         description: cancellation?.description
       };
       await ride.save();
+      await ride.populate(populateRide.populate);
 
       // Helper function to emit to the user if they exist
       const emitToUser = (user_id, message) => {
