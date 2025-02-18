@@ -12,6 +12,10 @@ const RatingSchema = new mongoose.Schema(
       required: true,
       enum: ["user-to-driver", "driver-to-user"]
     },
+    drive_again: {
+      type: Boolean,
+      default: false
+    },
     reviewer_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

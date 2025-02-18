@@ -15,7 +15,7 @@ class Service {
 
   async addRating(request, response) {
     try {
-      const { ride_id, rating, feedback, type } = request.body;
+      const { ride_id, drive_again, rating, feedback, type } = request.body;
       const reviewer_id = request.user._id;
 
       const ride = await this.ride.findById(ride_id).lean();
@@ -34,7 +34,16 @@ class Service {
 
       const ratingDoc = await this.rating.findOneAndUpdate(
         { ride_id, type, reviewer_id, recipient_id },
-        { $set: { type, reviewer_id, recipient_id, rating, feedback } },
+        {
+          $set: {
+            type,
+            drive_again,
+            reviewer_id,
+            recipient_id,
+            rating,
+            feedback
+          }
+        },
         { upsert: true, new: true }
       );
 
