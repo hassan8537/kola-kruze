@@ -910,8 +910,9 @@ class Service {
       };
       await ride.save();
 
-      // ✅ Emit to the driver (confirmation)
-      socket.emit(
+      // ✅ Emit to the user using the correct room
+      socket.join(ride.user_id._id);
+      this.io.to(ride.user_id._id).emit(
         "response",
         successEvent({
           object_type,
@@ -921,8 +922,8 @@ class Service {
       );
 
       // ✅ Emit to the user using the correct room
-      socket.join(receiver_id);
-      this.io.to(receiver_id).emit(
+      socket.join(ride.driver_id._id);
+      this.io.to(ride.driver_id._id).emit(
         "response",
         successEvent({
           object_type,
