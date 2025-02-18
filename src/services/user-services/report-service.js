@@ -16,7 +16,7 @@ class Service {
 
   async submitReport(request, response) {
     try {
-      const { ride_id, description, delivery_charges } = request.body;
+      const { ride_id, description, cleaning_charges } = request.body;
 
       const ride = await this.ride.findById(ride_id);
 
@@ -38,7 +38,7 @@ class Service {
         user_id: user_id,
         image: image,
         description: description,
-        delivery_charges: delivery_charges
+        delivery_charges: cleaning_charges
       });
 
       await newReport.save();

@@ -29,7 +29,7 @@ const ReportSchema = new mongoose.Schema(
       default: null,
       trim: true
     },
-    delivery_charges: {
+    cleaning_charges: {
       type: Number,
       required: true,
       default: 0,
