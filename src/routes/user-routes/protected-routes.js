@@ -16,7 +16,8 @@ const controllers = {
   category: require("../../controllers/user-controllers/category-controller"),
   ride: require("../../controllers/user-controllers/ride-controller"),
   rating: require("../../controllers/user-controllers/rating-controller"),
-  report: require("../../controllers/user-controllers/report-controller")
+  report: require("../../controllers/user-controllers/report-controller"),
+  toggle: require("../../controllers/user-controllers/toggle-controller")
 };
 
 // session
@@ -177,6 +178,12 @@ router.post(
   upload.fields([{ name: "image" }]),
   uploadFiles,
   controllers.report.submitReport.bind(controllers.report)
+);
+
+// toggles
+router.get(
+  "/toggles/driver-availability",
+  controllers.toggle.toggleDriverAvailability.bind(controllers.toggle)
 );
 
 module.exports = router;
