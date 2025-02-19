@@ -8,6 +8,10 @@ class Controller {
   async getRatings(req, res) {
     return service.getRatings(req, res);
   }
+
+  async getMyRatings(req, res) {
+    return service.getMyRatings(req, res);
+  }
 }
 
 module.exports = new Controller();

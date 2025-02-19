@@ -168,9 +168,14 @@ router.post(
 );
 
 // rating
-router.post("/ratings", controllers.rating.addRating.bind(controllers.rating));
+router.get(
+  "/ratings/user",
+  controllers.rating.getMyRatings.bind(controllers.rating)
+);
 
 router.get("/ratings", controllers.rating.getRatings.bind(controllers.rating));
+
+router.post("/ratings", controllers.rating.addRating.bind(controllers.rating));
 
 // report
 router.post(

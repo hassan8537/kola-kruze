@@ -156,5 +156,21 @@ module.exports = {
       }
     ],
     sort: { createdAt: -1 }
+  },
+  populateRating: {
+    populate: [
+      {
+        path: "ride_id"
+      },
+      {
+        path: "reviewer_id",
+        populate: { path: "profile_picture", select: "file_path" }
+      },
+      {
+        path: "recipient_id",
+        populate: { path: "profile_picture", select: "file_path" }
+      }
+    ],
+    sort: { createdAt: -1 }
   }
 };

@@ -1,5 +1,6 @@
 const Rating = require("../../models/Rating");
 const Ride = require("../../models/Ride");
+const { populateRating } = require("../../populate/populate-models");
 const {
   successResponse,
   failedResponse,
@@ -59,16 +60,20 @@ class Service {
 
   async getRatings(request, response) {
     try {
-      const { ride_id, type, reviewer_id, recipient_id } = request.query;
+      const { ride_id, drive_again, type, reviewer_id, recipient_id } =
+        request.query;
 
       const query = {};
 
       if (ride_id) query.ride_id = ride_id;
       if (type) query.type = type;
+      if (drive_again) query.drive_again = drive_again;
       if (reviewer_id) query.reviewer_id = reviewer_id;
       if (recipient_id) query.recipient_id = recipient_id;
 
-      const ratings = await this.rating.find(query);
+      const ratings = await this.rating
+        .find(query)
+        .populate(populateRating.populate);
       if (!ratings.length) {
         return failedResponse({
           response,
@@ -80,6 +85,50 @@ class Service {
         response,
         message: "User ratings fetched successfully",
         data: ratings
+      });
+    } catch (error) {
+      return errorResponse({ response, error });
+    }
+  }
+
+  async getMyRatings(request, response) {
+    try {
+      const user_id = request.user._id;
+
+      if (!user_id) {
+        return failedResponse({
+          response,
+          message: "User ID is required"
+        });
+      }
+
+      const ratings = await this.rating
+        .find({ recipient_id: user_id })
+        .populate(populateRating);
+
+      if (!ratings.length) {
+        return failedResponse({
+          response,
+          message: "No ratings found for this user"
+        });
+      }
+
+      // Calculate the total average rating
+      const totalRatings = ratings.length;
+      const totalScore = ratings.reduce(
+        (sum, rating) => sum + rating.rating,
+        0
+      );
+      const averageRating = totalScore / totalRatings;
+
+      return successResponse({
+        response,
+        message: "User ratings fetched successfully",
+        data: {
+          ratings,
+          total_ratings: totalRatings,
+          average_rating: parseFloat(averageRating.toFixed(2))
+        }
       });
     } catch (error) {
       return errorResponse({ response, error });
