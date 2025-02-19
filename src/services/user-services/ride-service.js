@@ -603,7 +603,7 @@ class Service {
         rideObject.tracking.eta_to_arrive = eta;
 
         socket.join(driver._id.toString());
-        await this.io.to(driver._id.toString()).emit(
+        this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
             object_type: "get-ride",
@@ -631,7 +631,7 @@ class Service {
             })
           );
 
-          await this.io.to(ride.user_id.toString()).emit(
+          this.io.to(ride.user_id.toString()).emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
@@ -640,8 +640,8 @@ class Service {
             })
           );
 
-          availableDrivers.forEach(async (driver) => {
-            await this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-expired",
@@ -657,8 +657,8 @@ class Service {
       const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout);
-          availableDrivers.forEach(async (driver) => {
-            await this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-cancelled",
