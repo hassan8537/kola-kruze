@@ -104,7 +104,7 @@ class Service {
 
       const ratings = await this.rating
         .find({ recipient_id: user_id })
-        .populate(populateRating);
+        .populate(populateRating.populate);
 
       if (!ratings.length) {
         return failedResponse({
