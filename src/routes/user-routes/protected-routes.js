@@ -170,7 +170,7 @@ router.post(
 // rating
 router.get(
   "/ratings/user",
-  controllers.rating.getMyRatings.bind(controllers.rating)
+  controllers.rating.getUserRatings.bind(controllers.rating)
 );
 
 router.get("/ratings", controllers.rating.getRatings.bind(controllers.rating));

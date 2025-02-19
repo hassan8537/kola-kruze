@@ -9,8 +9,8 @@ class Controller {
     return service.getRatings(req, res);
   }
 
-  async getMyRatings(req, res) {
-    return service.getMyRatings(req, res);
+  async getUserRatings(req, res) {
+    return service.getUserRatings(req, res);
   }
 }
 

@@ -91,9 +91,9 @@ class Service {
     }
   }
 
-  async getMyRatings(request, response) {
+  async getUserRatings(request, response) {
     try {
-      const user_id = request.user._id;
+      const user_id = request.query._id;
 
       if (!user_id) {
         return failedResponse({
