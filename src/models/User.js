@@ -37,14 +37,14 @@ const UserSchema = new mongoose.Schema(
       default: ""
     },
     current_location: {
-      address: { type: String, required: true },
+      address: { type: String },
       location: {
         type: {
           type: String,
           enum: ["Point"],
           default: "Point"
         },
-        coordinates: { type: [Number], index: "2dsphere", required: true }
+        coordinates: { type: [Number], index: "2dsphere" }
       }
     },
     state: {
