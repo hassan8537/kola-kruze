@@ -602,6 +602,7 @@ class Service {
         const rideObject = ride.toObject();
         rideObject.tracking.eta_to_arrive = eta;
 
+        socket.join(driver._id.toString());
         await this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
