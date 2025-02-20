@@ -600,18 +600,16 @@ class Service {
       socket.on("cancel-a-ride", clearRideTimeout);
 
       // Handle new connections listening to the ride request
-      socket.on("join-ride-request", (joinData) => {
-        if (joinData.ride_id === ride_id) {
-          socket.join(ride_id);
-          this.io.to(socket.id).emit(
-            "response",
-            successEvent({
-              object_type: "ride-request-update",
-              message: "You're now listening to this ride request.",
-              data: ride
-            })
-          );
-        }
+      socket.on("join-room", (joinData) => {
+        socket.join(ride_id);
+        this.io.to(socket.id).emit(
+          "response",
+          successEvent({
+            object_type: "get-ride",
+            message: "A user requested a ride",
+            data: ride
+          })
+        );
       });
     } catch (error) {
       console.error("Error in requestARide:", error);
