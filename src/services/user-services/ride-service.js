@@ -327,7 +327,7 @@ class Service {
       });
 
       if (existingRide) {
-        const deletedRide = await this.ride.findOneAndDelete({
+        const deletedRide = await this.ride.deleteMany({
           ride_status: "pending"
         });
         if (deletedRide) {
