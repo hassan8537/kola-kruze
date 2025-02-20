@@ -537,7 +537,7 @@ class Service {
           successEvent({
             object_type: "get-ride",
             message: "A user has requested a ride",
-            data: rideObject
+            data: ride
           })
         );
         console.log(
