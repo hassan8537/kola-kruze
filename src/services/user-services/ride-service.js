@@ -472,11 +472,9 @@ class Service {
     try {
       const { ride_id } = data;
 
-      // Find booked ride and populate details
       const ride = await this.ride
         .findOne({ _id: ride_id, ride_status: "booked" })
-        .populate(populateRide.populate)
-        .lean();
+        .populate(populateRide.populate);
 
       if (!ride) {
         return socket.emit(
@@ -488,10 +486,6 @@ class Service {
         );
       }
 
-      // Join the ride room so any connected user can listen
-      socket.join(ride_id);
-
-      // Send ride request confirmation to the user
       socket.emit(
         "response",
         successEvent({
@@ -502,10 +496,11 @@ class Service {
       );
 
       // Find available drivers
-      const availableDrivers = await this.user
-        .find({ role: "driver", is_available: true, is_deleted: false })
-        .select("_id")
-        .lean();
+      const availableDrivers = await this.user.find({
+        role: "driver",
+        is_available: true, // Fixed to correctly fetch available drivers
+        is_deleted: false
+      });
 
       if (!availableDrivers.length) {
         return socket.emit(
@@ -530,9 +525,14 @@ class Service {
         availableDrivers.map((d) => d._id.toString())
       );
 
-      // Broadcast ride request to all available drivers and ride room
-      availableDrivers.forEach(({ _id }) => {
-        this.io.to(_id.toString()).emit(
+      availableDrivers.forEach((driver) => {
+        console.log(
+          `Attempting to emit to driver room: ${driver._id.toString()}`
+        );
+        console.log(`Rooms:`, this.io.sockets.adapter.rooms);
+
+        socket.join(driver._id.toString());
+        this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
             object_type: "get-ride",
@@ -540,33 +540,37 @@ class Service {
             data: ride
           })
         );
+        console.log(
+          `Ride request emitted successfully to driver ${driver._id}`
+        );
       });
 
-      this.io.to(ride_id).emit(
-        "response",
-        successEvent({
-          object_type: "ride-request-broadcast",
-          message: "A ride request is active",
-          data: ride
-        })
-      );
-
-      // Ride request timeout handler
+      // Set a timeout to expire the ride request if no driver accepts it
       const rideTimeout = setTimeout(async () => {
-        const latestRide = await this.ride.findById(ride._id).lean();
+        const latestRide = await this.ride.findById(ride._id);
 
-        if (latestRide?.ride_status === "booked") {
-          this.io.to(ride_id).emit(
+        if (latestRide && latestRide.ride_status === "booked") {
+          // await this.deleteRide(ride);
+
+          socket.emit(
+            "response",
+            failedEvent({
+              object_type: "no-drivers-available",
+              message: "We are sorry! No drivers accepted the ride request."
+            })
+          );
+
+          this.io.to(ride.user_id.toString()).emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
               message:
-                "Your ride request has expired due to no available drivers."
+                "Your ride request has been canceled due to no available drivers."
             })
           );
 
-          availableDrivers.forEach(({ _id }) => {
-            this.io.to(_id.toString()).emit(
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-expired",
@@ -578,30 +582,26 @@ class Service {
         }
       }, process.env.RIDE_REQUEST_TIMER || 10000);
 
-      // Clear timeout when ride is accepted or canceled
+      // Clear timeout if ride is accepted or canceled
       const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout);
-          socket.off("accept-a-ride", clearRideTimeout);
-          socket.off("cancel-a-ride", clearRideTimeout);
-
-          this.io.to(ride_id).emit(
-            "response",
-            successEvent({
-              object_type: "ride-cancelled",
-              message: "The ride request has been cancelled.",
-              data: ride
-            })
-          );
+          availableDrivers.forEach((driver) => {
+            this.io.to(driver._id.toString()).emit(
+              "response",
+              successEvent({
+                object_type: "ride-cancelled",
+                message: "The ride request has been cancelled.",
+                data: ride
+              })
+            );
+          });
         }
       };
 
-      socket.on("accept-a-ride", clearRideTimeout);
-      socket.on("cancel-a-ride", clearRideTimeout);
-
       // Handle new connections listening to the ride request
-      socket.on("join-room", (joinData) => {
-        socket.join(ride_id);
+      socket.on("join-room", async (data) => {
+        await this.joinRoom(socket, data);
         this.io.to(socket.id).emit(
           "response",
           successEvent({
@@ -611,9 +611,17 @@ class Service {
           })
         );
       });
+
+      socket.on("accept-a-ride", clearRideTimeout);
+      socket.on("cancel-a-ride", clearRideTimeout);
     } catch (error) {
       console.error("Error in requestARide:", error);
-      socket.emit("error", errorEvent({ error }));
+      socket.emit(
+        "error",
+        errorEvent({
+          error
+        })
+      );
     }
   }
 
