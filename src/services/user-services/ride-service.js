@@ -526,16 +526,12 @@ class Service {
       );
 
       availableDrivers.forEach((driver) => {
-        if (!driver.current_location || !driver.current_location.coordinates) {
-          console.warn(`Driver ${driver._id} has no valid location.`);
-          return;
-        }
-
         console.log(
           `Attempting to emit to driver room: ${driver._id.toString()}`
         );
         console.log(`Rooms:`, this.io.sockets.adapter.rooms);
 
+        socket.join(driver._id.toString());
         this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
