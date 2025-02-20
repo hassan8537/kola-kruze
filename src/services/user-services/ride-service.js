@@ -531,7 +531,7 @@ class Service {
         );
         console.log(`Rooms:`, this.io.sockets.adapter.rooms);
 
-        // socket.join(driver._id.toString());
+        socket.join(driver._id.toString());
         this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
