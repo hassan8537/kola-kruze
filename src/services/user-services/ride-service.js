@@ -602,7 +602,7 @@ class Service {
       // Handle new connections listening to the ride request
       socket.on("join-room", async (data) => {
         await this.joinRoom(socket, data);
-        this.io.to(socket.id).emit(
+        this.io.to(data.userId.toString()).emit(
           "response",
           successEvent({
             object_type: "get-ride",
@@ -700,7 +700,7 @@ class Service {
         })
       );
 
-      await this.user.findByIdAndUpdate(driver_id, { is_available: false });
+      // await this.user.findByIdAndUpdate(driver_id, { is_available: false });
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
