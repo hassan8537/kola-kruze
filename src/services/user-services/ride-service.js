@@ -327,7 +327,7 @@ class Service {
       });
 
       if (existingRide) {
-        const deletedRide = await this.ride.findOneAndUpdate({
+        const deletedRide = await this.ride.findOneAndDelete({
           _id: existingRide._id,
           ride_status: "pending"
         });
@@ -916,7 +916,7 @@ class Service {
       const ride = await this.ride.findOne({
         _id: ride_id,
         $or: [{ user_id }, { driver_id: user_id }],
-        ride_status: { $in: ["accepted", "booked"] }
+        ride_status: { $in: ["booked", "accepted"] }
       });
 
       // If no ride is found, return early
