@@ -525,14 +525,14 @@ class Service {
         availableDrivers.map((d) => d._id.toString())
       );
 
-      availableDrivers.forEach((driver) => {
+      availableDrivers.forEach(async (driver) => {
         console.log(
           `Attempting to emit to driver room: ${driver._id.toString()}`
         );
         console.log(`Rooms:`, this.io.sockets.adapter.rooms);
 
         socket.join(driver._id.toString());
-        this.io.to(driver._id.toString()).emit(
+        await this.io.to(driver._id.toString()).emit(
           "response",
           successEvent({
             object_type: "get-ride",
@@ -560,7 +560,7 @@ class Service {
             })
           );
 
-          this.io.to(ride.user_id.toString()).emit(
+          await this.io.to(ride.user_id.toString()).emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
@@ -569,8 +569,8 @@ class Service {
             })
           );
 
-          availableDrivers.forEach((driver) => {
-            this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach(async (driver) => {
+            await this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-expired",
@@ -586,8 +586,8 @@ class Service {
       const clearRideTimeout = (data) => {
         if (data.ride_id.toString() === ride._id.toString()) {
           clearTimeout(rideTimeout);
-          availableDrivers.forEach((driver) => {
-            this.io.to(driver._id.toString()).emit(
+          availableDrivers.forEach(async (driver) => {
+            await this.io.to(driver._id.toString()).emit(
               "response",
               successEvent({
                 object_type: "ride-cancelled",
@@ -602,7 +602,7 @@ class Service {
       // Handle new connections listening to the ride request
       socket.on("join-room", async (data) => {
         await this.joinRoom(socket, data);
-        this.io.to(data.userId.toString()).emit(
+        await this.io.to(data.userId.toString()).emit(
           "response",
           successEvent({
             object_type: "get-ride",
@@ -691,7 +691,7 @@ class Service {
       );
 
       // ✅ Emit to the user using the correct room
-      this.io.to(user_id.toString()).emit(
+      await this.io.to(user_id.toString()).emit(
         "response",
         successEvent({
           object_type: "user-ride-accepted",
@@ -730,7 +730,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -739,7 +739,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -783,7 +783,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -792,7 +792,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -829,7 +829,7 @@ class Service {
       }
 
       // Emit to both driver and user
-      this.io.to(ride.user_id._id.toString()).emit(
+      await this.io.to(ride.user_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -838,7 +838,7 @@ class Service {
         })
       );
 
-      this.io.to(ride.driver_id._id.toString()).emit(
+      await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
           object_type,
@@ -903,8 +903,9 @@ class Service {
       });
 
       // Emit message only to the receiver (the other party in the ride)
-      if (passenger_id) this.io.to(passenger_id).emit("response", message);
-      if (driver_id) this.io.to(driver_id).emit("response", message);
+      if (passenger_id)
+        await this.io.to(passenger_id).emit("response", message);
+      if (driver_id) await this.io.to(driver_id).emit("response", message);
     } catch (error) {
       socket.emit("error", errorEvent({ error: error.message }));
     }
@@ -971,7 +972,7 @@ class Service {
       // Notify User
       if (ride.user_id) {
         socket.join(ride.user_id.toString());
-        this.io.to(ride.user_id.toString()).emit(
+        await this.io.to(ride.user_id.toString()).emit(
           "response",
           successEvent({
             object_type,
@@ -984,7 +985,7 @@ class Service {
       // Notify Driver
       if (ride.driver_id) {
         socket.join(ride.driver_id.toString());
-        this.io.to(ride.driver_id.toString()).emit(
+        await this.io.to(ride.driver_id.toString()).emit(
           "response",
           successEvent({
             object_type,
@@ -1059,7 +1060,7 @@ class Service {
       // Notify User
       if (ride.user_id) {
         socket.join(ride.user_id.toString());
-        this.io.to(ride.user_id.toString()).emit(
+        await this.io.to(ride.user_id.toString()).emit(
           "response",
           successEvent({
             object_type,
@@ -1072,7 +1073,7 @@ class Service {
       // Notify Driver
       if (ride.driver_id) {
         socket.join(ride.driver_id.toString());
-        this.io.to(ride.driver_id.toString()).emit(
+        await this.io.to(ride.driver_id.toString()).emit(
           "response",
           successEvent({
             object_type,
