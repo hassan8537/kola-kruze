@@ -164,13 +164,17 @@ module.exports = {
       },
       {
         path: "reviewer_id",
-        populate: { path: "profile_picture", select: "file_url" },
-        populate: { path: "driver_license", select: "file_url" }
+        populate: [
+          { path: "profile_picture", select: "file_url" },
+          { path: "driver_license", select: "file_url" }
+        ]
       },
       {
         path: "recipient_id",
-        populate: { path: "profile_picture", select: "file_url" },
-        populate: { path: "driver_license", select: "file_url" }
+        populate: [
+          { path: "profile_picture", select: "file_url" },
+          { path: "driver_license", select: "file_url" }
+        ]
       }
     ],
     sort: { createdAt: -1 }
