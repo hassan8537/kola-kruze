@@ -72,13 +72,13 @@ module.exports = {
       {
         path: "user_id",
         select:
-          "first_name last_name legal_name email_address profile_picture gender",
+          "first_name last_name legal_name email_address profile_picture gender driver_preference gender_preference",
         populate: { path: "profile_picture", select: "file_url" }
       },
       {
         path: "driver_id",
         select:
-          "first_name last_name legal_name email_address profile_picture gender",
+          "first_name last_name legal_name email_address profile_picture gender driver_preference gender_preference",
         populate: { path: "profile_picture", select: "file_url" }
       },
       {
