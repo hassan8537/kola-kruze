@@ -148,11 +148,11 @@ module.exports = {
       },
       {
         path: "user_id",
-        populate: { path: "profile_picture", select: "file_path" }
+        populate: { path: "profile_picture", select: "file_url" }
       },
       {
         path: "image",
-        select: "file_path"
+        select: "file_url"
       }
     ],
     sort: { createdAt: -1 }
@@ -164,11 +164,11 @@ module.exports = {
       },
       {
         path: "reviewer_id",
-        populate: { path: "profile_picture", select: "file_path" }
+        populate: { path: "profile_picture", select: "file_url" }
       },
       {
         path: "recipient_id",
-        populate: { path: "profile_picture", select: "file_path" }
+        populate: { path: "profile_picture", select: "file_url" }
       }
     ],
     sort: { createdAt: -1 }
