@@ -2,10 +2,9 @@ const sendEmail = require("../../config/nodemailer");
 const Otp = require("../../models/Otp");
 const User = require("../../models/User");
 const userSchema = require("../../schemas/user-schema");
-const generateOtp = require("../../utilities/generators/otp-generator");
-const generateToken = require("../../utilities/generators/token-generator");
+const { generateOTP } = require("../../utilities/generators/otp-generator");
+const { generateToken } = require("../../utilities/generators/token-generator");
 const { handlers } = require("../../utilities/handlers/handlers");
-const otpExpirationMinutes = process.env.OTP_EXPIRATION_MINUTES;
 
 class Service {
   constructor() {
@@ -15,20 +14,9 @@ class Service {
 
   async generateAndSendOtp(user, device_token, res) {
     try {
-      const otpCode = generateOtp();
-      const expiresIn = new Date(Date.now() + otpExpirationMinutes * 60 * 1000);
+      const otpCode = await generateOTP({ user_id: user._id });
+      const token = generateToken({ res, user_id: user._id });
 
-      await Promise.all([
-        this.otp.deleteOne({ userId: user._id }),
-        this.otp.create({
-          userId: user._id,
-          code: otpCode,
-          expiresIn,
-          type: "email-verification"
-        })
-      ]);
-
-      const token = generateToken({ _id: user._id, res });
       user.session_token = token;
       user.device_token = device_token;
       await user.save();
