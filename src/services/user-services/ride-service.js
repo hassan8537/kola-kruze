@@ -3,38 +3,29 @@ const stripe = require("stripe")(stripeSecretKey);
 
 const Ride = require("../../models/Ride");
 const User = require("../../models/User");
-const {
-  populateRide,
-  populateCategory
-} = require("../../populate/populate-models");
-const {
-  errorResponse,
-  failedResponse,
-  unavailableResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
+const { failedResponse } = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
 const notification = require("../../services/user-services/notification-service");
 const {
-  getDistanceBetweenSourceAndDestination,
-  isETAWithinTwoMinutes,
-  calculateDistance,
-  calculateETA
-} = require("../../utilities/calculators/calculators");
+  calculateDistance
+} = require("../../utilities/calculators/distance-calculator");
 const {
   failedEvent,
   successEvent,
   errorEvent
 } = require("../../utilities/handlers/event-handlers");
-const Category = require("../../models/Vehicle-Category");
+const Category = require("../../models/Category");
 const Vehicle = require("../../models/Vehicle");
 const Card = require("../../models/Card");
+const rideSchema = require("../../schemas/ride-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
+const categorySchema = require("../../schemas/category-schema");
 const {
   formatStripeList
-} = require("../../utilities/formatters/value-formatters");
-const { successLog } = require("../../utilities/handlers/log-handler");
+} = require("../../utilities/formatters/stripe-card-list-formatter");
+const { calculateETA } = require("../../utilities/calculators/eta-calculator");
 
 class Service {
   constructor(io) {
@@ -46,36 +37,37 @@ class Service {
     this.card = Card;
   }
 
-  async getMyRides(request, response) {
+  async getMyRides(req, res) {
     try {
-      const { _id } = request.query;
+      const { _id } = req.query;
 
       const user_id =
-        request.user.role === "driver"
-          ? { driver_id: request.user._id }
-          : { user_id: request.user._id };
+        req.user.role === "driver"
+          ? { driver_id: req.user._id }
+          : { user_id: req.user._id };
 
       const filters = { user_id };
       if (_id) filters._id = _id;
-      const { page, limit, sort } = request.query;
+      const { page, limit, sort } = req.query;
       await pagination({
-        response,
+        response: res,
         table: "Rides",
         model: this.ride,
         filters,
         page,
         limit,
         sort,
-        populate: populateRide.populate
+        populate: rideSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type: "get-rides", message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async selectDestination(request, response) {
+  async selectDestination(req, res) {
     try {
-      const user_id = request.user._id;
+      const user_id = req.user._id;
 
       const existingRide = await this.ride
         .findOne(
@@ -85,14 +77,18 @@ class Service {
         .lean();
 
       if (existingRide) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "select-destinations",
+          message: "A ride is already in progress"
+        });
+        return handlers.response.failed({
+          res,
           message: "A ride is already in progress"
         });
       }
 
       try {
-        const { pickup_location, dropoff_location, stops = [] } = request.body;
+        const { pickup_location, dropoff_location, stops = [] } = req.body;
 
         const admin = await this.user.findOne({ role: "admin" });
 
@@ -106,7 +102,7 @@ class Service {
         if (!stops.length) {
           for (const stop of stops) {
             const stopCoords = stop.location.coordinates;
-            totalMiles += getDistanceBetweenSourceAndDestination(
+            totalMiles += calculateDistance(
               prevCoords[1],
               prevCoords[0],
               stopCoords[1],
@@ -117,7 +113,7 @@ class Service {
         }
 
         // Add final segment from last stop to dropoff
-        totalMiles += getDistanceBetweenSourceAndDestination(
+        totalMiles += calculateDistance(
           prevCoords[1],
           prevCoords[0],
           dropoffCoords[1],
@@ -126,17 +122,33 @@ class Service {
 
         const categories = await this.category
           .find()
-          .populate(populateCategory.populate)
+          .populate(categorySchema.populate)
           .lean();
         if (!categories.length) {
-          return unavailableResponse({
-            response,
-            message: "No categories found."
+          handlers.logger.failed({
+            object_type: "select-destinations",
+            message: "No categories found"
+          });
+          return handlers.response.failed({
+            res,
+            message: "No categories found"
           });
         }
 
-        return successResponse({
-          response,
+        handlers.logger.success({
+          object_type: "select-destinations",
+          message: "Stop(s) managed successfully.",
+          data: {
+            vehicle_categories: categories,
+            rate_per_stop: admin.rate_per_stop,
+            distance_miles: Number(totalMiles.toFixed(2)),
+            pickup_location,
+            dropoff_location,
+            stops: stops
+          }
+        });
+        return handlers.response.success({
+          res,
           message: "Stop(s) managed successfully.",
           data: {
             vehicle_categories: categories,
@@ -148,20 +160,38 @@ class Service {
           }
         });
       } catch (error) {
-        return errorResponse({ response, error });
+        handlers.logger.error({
+          object_type: "select-destinations",
+          message: error
+        });
+        return handlers.response.error({
+          res,
+          message: error.message
+        });
       }
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "select-destinations",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async manageStops(request, response) {
+  async manageStops(req, res) {
     try {
-      const { pickup_location, dropoff_location, stops = [] } = request.body;
+      const { pickup_location, dropoff_location, stops = [] } = req.body;
 
       if (!stops.length) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "manage-stops",
+          message: "No new stops provided."
+        });
+        return handlers.response.failed({
+          res,
           message: "No new stops provided."
         });
       }
@@ -177,7 +207,7 @@ class Service {
 
       for (const stop of stops) {
         const stopCoords = stop.location.coordinates;
-        totalMiles += getDistanceBetweenSourceAndDestination(
+        totalMiles += calculateDistance(
           prevCoords[1],
           prevCoords[0],
           stopCoords[1],
@@ -187,7 +217,7 @@ class Service {
       }
 
       // Add final segment from last stop to dropoff
-      totalMiles += getDistanceBetweenSourceAndDestination(
+      totalMiles += calculateDistance(
         prevCoords[1],
         prevCoords[0],
         dropoffCoords[1],
@@ -196,17 +226,33 @@ class Service {
 
       const categories = await this.category
         .find()
-        .populate(populateCategory.populate)
+        .populate(categorySchema.populate)
         .lean();
       if (!categories.length) {
-        return unavailableResponse({
-          response,
-          message: "No categories found."
+        handlers.logger.unavailable({
+          object_type: "manage-stops",
+          message: "No categories found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No categories found"
         });
       }
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "select-destinations",
+        message: "Stop(s) managed successfully.",
+        data: {
+          vehicle_categories: categories,
+          rate_per_stop: admin.rate_per_stop,
+          distance_miles: Number(totalMiles.toFixed(2)),
+          pickup_location,
+          dropoff_location,
+          stops: stops
+        }
+      });
+      return handlers.response.success({
+        res,
         message: "Stop(s) managed successfully.",
         data: {
           vehicle_categories: categories,
@@ -218,11 +264,18 @@ class Service {
         }
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "manage-stops",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async rideDetailsAndFares(request, response) {
+  async rideDetailsAndFares(req, res) {
     try {
       const {
         user_id,
@@ -233,31 +286,45 @@ class Service {
         dropoff_location,
         stops,
         stripe_card_id
-      } = request.body;
+      } = req.body;
 
       const user = await this.user.findById(user_id);
-      if (!user)
-        return failedResponse({
-          response,
+      if (!user) {
+        handlers.logger.unavailable({
+          object_type: "ride-details-and-fares",
           message: "No user found"
         });
+        return handlers.response.unavailable({
+          res,
+          message: "No user found"
+        });
+      }
 
       const categories = await this.category
         .find()
-        .populate(populateCategory.populate);
-      if (!categories.length)
-        return failedResponse({
-          response,
+        .populate(categorySchema.populate);
+      if (!categories.length) {
+        handlers.logger.unavailable({
+          object_type: "ride-details-and-fares",
           message: "No categories found"
         });
+        return handlers.response.unavailable({
+          res,
+          message: "No categories found"
+        });
+      }
 
       const card = await this.card.findOne({ stripe_card_id });
-      if (!card)
-        return failedResponse({
-          response,
-          message: "No card found"
+      if (!card) {
+        handlers.logger.unavailable({
+          object_type: "ride-details-and-fares",
+          message: "No cards found"
         });
-
+        return handlers.response.unavailable({
+          res,
+          message: "No cards found"
+        });
+      }
       const stripeCardDetails =
         await stripe.paymentMethods.retrieve(stripe_card_id);
       const cardObject = card.toObject();
@@ -281,7 +348,7 @@ class Service {
         stops
       });
 
-      await newRide.populate(populateRide.populate);
+      await newRide.populate(rideSchema.populate);
 
       const admin = await this.user.findOne({ role: "admin" });
 
@@ -299,17 +366,29 @@ class Service {
         card: formatStripeList([cardObject.card_details])
       };
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "ride-details-and-fares",
+        message: "Ride confirmed successfully",
+        data: data
+      });
+      return handlers.response.success({
+        res,
         message: "Ride confirmed successfully",
         data: data
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "ride-details-and-fares",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async confirmRide(request, response) {
+  async confirmRide(req, res) {
     try {
       const {
         vehicle_category,
@@ -319,11 +398,11 @@ class Service {
         fare_details,
         distance_miles,
         stripe_card_id
-      } = request.body;
+      } = req.body;
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
-        user_id: request.user._id
+        user_id: req.user._id
       });
 
       if (existingRide) {
@@ -331,12 +410,15 @@ class Service {
           ride_status: "pending"
         });
         if (deletedRide) {
-          successLog({ message: "Previous ride deleted successfully" });
+          handlers.logger.error({
+            object_type: "confirm-ride",
+            message: "Previous ride deleted successfully"
+          });
         }
       }
 
       const newRide = new this.ride({
-        user_id: request.user._id,
+        user_id: req.user._id,
         pickup_location,
         dropoff_location,
         stops,
@@ -345,23 +427,33 @@ class Service {
       });
 
       await newRide.save();
-      await newRide.populate(populateRide.populate);
+      await newRide.populate(rideSchema.populate);
 
       const categories = await this.category
         .find()
-        .populate(populateCategory.populate);
-      if (!categories.length)
-        return failedResponse({
-          response,
+        .populate(categorySchema.populate);
+      if (!categories.length) {
+        handlers.logger.unavailable({
+          object_type: "confirm-ride",
           message: "No categories found"
         });
+        handlers.logger.unavailable({
+          res,
+          message: "No categories found"
+        });
+      }
 
       const card = await this.card.findOne({ stripe_card_id });
-      if (!card)
-        return failedResponse({
-          response,
-          message: "No card found"
+      if (!card) {
+        handlers.logger.unavailable({
+          object_type: "confirm-ride",
+          message: "No cards found"
         });
+        handlers.logger.unavailable({
+          res,
+          message: "No cards found"
+        });
+      }
 
       const stripeCardDetails =
         await stripe.paymentMethods.retrieve(stripe_card_id);
@@ -385,69 +477,134 @@ class Service {
         card: formatStripeList([cardObject.card_details])
       };
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "confirm-ride",
+        message: "Ride confirmed successfully",
+        data: data
+      });
+      handlers.logger.success({
+        res,
         message: "Ride confirmed successfully",
         data: data
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "confirm-ride",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async verifyOtp(request, response) {
+  async verifyOtp(req, res) {
     try {
-      const { _id, ride_otp } = request.body;
+      const { _id, ride_otp } = req.body;
 
       const ride = await this.ride.findOne({ _id, ride_otp });
 
-      if (!ride) return failedResponse({ response, message: "Invalid OTP" });
+      if (!ride) {
+        handlers.logger.failed({
+          object_type: "verify-otp",
+          message: "Invalid OTP"
+        });
+        return handlers.response.failed({
+          res,
+          message: "Invalid OTP"
+        });
+      }
 
       ride.ride_otp = null;
       ride.is_verified = true;
       await ride.save();
-      await ride.populate(populateRide.populate);
+      await ride.populate(rideSchema.populate);
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "verify-otp",
+        message: "OTP verified successfully",
+        data: ride
+      });
+      return handlers.response.success({
+        res,
         message: "OTP verified successfully",
         data: ride
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "verify-otp",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async payNow(request, response) {
+  async payNow(req, res) {
     try {
-      if (!request.params._id)
-        return failedResponse({ response, message: "Ride ID is required" });
+      if (!req.params._id) {
+        handlers.logger.failed({
+          object_type: "pay-now",
+          message: "Ride ID is required"
+        });
+        return handlers.response.failed({
+          res,
+          message: "Ride ID is required"
+        });
+      }
 
-      const ride = await this.ride
-        .findById(request.params._id)
-        .populate("user_id");
+      const ride = await this.ride.findById(req.params._id).populate("user_id");
 
-      if (!ride)
-        return unavailableResponse({ response, message: "No ride found" });
+      if (!ride) {
+        handlers.logger.unavailable({
+          object_type: "pay-now",
+          message: "No rides found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No rides found"
+        });
+      }
 
       if (ride.ride_status === "booked")
         return failedResponse({
-          response,
+          response: res,
           message: "You already have booked this ride"
         });
+
+      const stripe_default_card = ride.user_id.stripe_default_card;
+
+      const card = await this.card.findOne({
+        stripe_card_id: stripe_default_card
+      });
 
       ride.ride_status = "booked";
       ride.fare_details.payment_status = "paid";
       await ride.save();
-      await ride.populate(populateRide.populate);
+      await ride.populate(rideSchema.populate);
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "pay-now",
+        message: "Payment authorized and ride booked",
+        data: ride
+      });
+      return handlers.response.success({
+        res,
         message: "Payment authorized and ride booked",
         data: ride
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "pay-now",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
@@ -474,7 +631,7 @@ class Service {
 
       const ride = await this.ride
         .findOne({ _id: ride_id, ride_status: "booked" })
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -655,7 +812,7 @@ class Service {
           },
           { new: true }
         )
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -719,7 +876,7 @@ class Service {
           { $set: { ride_status: "arrived", ride_otp: 123456 } },
           { new: true }
         )
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -765,7 +922,7 @@ class Service {
           { $set: { ride_status: "started", start_time: Date.now() } },
           { new: true }
         )
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -818,7 +975,7 @@ class Service {
           { $set: { ride_status: "ended", end_time: Date.now() } },
           { new: true }
         )
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -896,7 +1053,7 @@ class Service {
       // Populate and send the current ride details
       const currentRide = await this.ride
         .findById(ride_id)
-        .populate(populateRide.populate);
+        .populate(rideSchema.populate);
 
       const message = successEvent({
         object_type,

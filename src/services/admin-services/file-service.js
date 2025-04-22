@@ -1,6 +1,6 @@
 const File = require("../../models/File");
-const { populateFile } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const fileSchema = require("../../schemas/file-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -10,9 +10,9 @@ class Service {
     this.file = File;
   }
 
-  async getFiles(request, response) {
+  async getFiles(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
 
       const filters = {};
 
@@ -24,17 +24,19 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Files",
         model: this.file,
         filters,
         page,
         limit,
         sort,
-        populate: populateFile.populate
+        populate: fileSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type: "fetch-files", message: error });
+
+      return handlers.response.error({ res, message: error });
     }
   }
 }

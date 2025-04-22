@@ -1,31 +1,42 @@
 const User = require("../../models/User");
-const {
-  errorResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
+const { handlers } = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
     this.user = User;
   }
 
-  async updateRatePerStop(request, response) {
+  async updateRatePerStop(req, res) {
     try {
-      const user_id = request.user._id;
+      const user_id = req.user._id;
 
-      const { rate_per_stop } = request.body;
+      const { rate_per_stop } = req.body;
 
       await this.user.findByIdAndUpdate(user_id, {
         rate_per_stop
       });
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "update-rate-per-stop",
+        message: "Rate per stop updated successfully.",
+        data: { rate_per_stop: Number(rate_per_stop) }
+      });
+
+      return handlers.response.success({
+        res,
         message: "Rate per stop updated successfully.",
         data: { rate_per_stop: Number(rate_per_stop) }
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "update-rate-per-stop",
+        message: error
+      });
+
+      return handlers.response.error({
+        res: res,
+        message: error.message
+      });
     }
   }
 }

@@ -5,12 +5,12 @@ class Controller {
     this.service = service;
   }
 
-  async emailAuthentication(request, response) {
-    return this.service.emailAuthentication(request, response);
+  async signUpOrSignIn(request, response) {
+    return this.service.signUpOrSignIn(request, response);
   }
 
-  async socialAuthentication(request, response) {
-    return this.service.socialAuthentication(request, response);
+  async socialSignUpOrSignIn(request, response) {
+    return this.service.socialSignUpOrSignIn(request, response);
   }
 
   async logout(request, response) {

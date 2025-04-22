@@ -1,132 +1,281 @@
-const Student = require("../../models/Student");
+const sendEmail = require("../../config/nodemailer");
+const Otp = require("../../models/Otp");
 const User = require("../../models/User");
-const { populateUser } = require("../../populate/populate-models");
-const { generateOTP } = require("../../utilities/generators/otp-generator");
-const {
-  errorResponse,
-  successResponse,
-  failedResponse
-} = require("../../utilities/handlers/response-handler");
-const { createSession } = require("../../utilities/handlers/session-handler");
+const userSchema = require("../../schemas/user-schema");
+const generateOtp = require("../../utilities/generators/otp-generator");
+const generateToken = require("../../utilities/generators/token-generator");
+const { handlers } = require("../../utilities/handlers/handlers");
+const otpExpirationMinutes = process.env.OTP_EXPIRATION_MINUTES;
 
 class Service {
   constructor() {
     this.user = User;
-    this.student = Student;
+    this.otp = Otp;
   }
 
-  async emailAuthentication(request, response) {
+  async generateAndSendOtp(user, device_token, res) {
     try {
-      const { email_address, role, device_token } = request.body;
+      const otpCode = generateOtp();
+      const expiresIn = new Date(Date.now() + otpExpirationMinutes * 60 * 1000);
 
-      let user = await this.user.findOne({ email_address });
+      await Promise.all([
+        this.otp.deleteOne({ userId: user._id }),
+        this.otp.create({
+          userId: user._id,
+          code: otpCode,
+          expiresIn,
+          type: "email-verification"
+        })
+      ]);
 
-      if (user && user.role !== role)
-        return failedResponse({
-          response,
-          message: "Email address already in use"
-        });
-
-      if (user) {
-        user.device_token = device_token;
-        user.is_verified = false;
-      } else {
-        user = new this.user({ email_address, role, device_token });
-      }
-
+      const token = generateToken({ _id: user._id, res });
+      user.session_token = token;
+      user.device_token = device_token;
       await user.save();
-      await user.populate(populateUser.populate);
+      await user.populate(userSchema.populate);
 
-      await createSession({ response, user });
-      await generateOTP({ response, user_id: user._id });
+      sendEmail({
+        to: user.email_address,
+        subject: "Account Verification",
+        text: `Your verification code is: ${otpCode}`
+      });
+
+      handlers.logger.success({
+        object_type: "user-authentication -> generate and send OTP",
+        message: "OTP generated and email sent successfully",
+        data: { user_id: user._id }
+      });
+
+      return { user, token };
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "user-authentication -> generate and send OTP",
+        message: "Failed to generate or send OTP",
+        data: { user_id: user?._id }
+      });
+      throw error;
     }
   }
 
-  async socialAuthentication(request, response) {
+  async signUpOrSignIn(req, res) {
     try {
       const {
+        legal_name,
         first_name,
         last_name,
+        email_address,
         phone_number,
-        social_token,
-        role,
-        auth_provider,
-        device_token
-      } = request.body;
+        device_token,
+        role
+      } = req.body;
 
-      let user = await this.user.findOne({ social_token });
-
-      if (user && user.role !== role)
-        return failedResponse({
-          response,
-          message: "Invalid social token."
+      const emailUsed = await this.user.findOne({ email: email_address });
+      if (emailUsed && emailUsed.role !== role) {
+        handlers.logger.failed({
+          object_type: "user-authentication",
+          message: "Email already registered with a different role",
+          data: {
+            email: email_address,
+            existing_role: emailUsed.role,
+            attempted_role: role
+          }
         });
 
-      if (user && user.auth_provider !== auth_provider)
-        return failedResponse({
-          response,
-          message: "You are trying to login with incorrect platform."
+        return handlers.response.failed({
+          res,
+          message: "This email is already registered with a different role."
         });
-
-      if (!user) {
-        const newUserData = {
-          first_name,
-          last_name,
-          social_token,
-          role,
-          auth_provider,
-          device_token,
-          is_verified: true
-        };
-
-        if (auth_provider === "phone") newUserData.phone_number = phone_number;
-
-        user = new this.user(newUserData);
-        await user.save();
       }
 
-      await user.populate(populateUser.populate);
-      await createSession({ response, user });
+      let user = await this.user.findOne({ email: email_address, role });
 
-      return successResponse({
-        response,
-        message: "Authentication successful",
+      if (!user) {
+        user = await this.user.create({
+          role,
+          legal_name,
+          first_name,
+          last_name,
+          email_address,
+          phone_number,
+          device_token
+        });
+
+        handlers.logger.success({
+          object_type: "user-authentication",
+          message: "New user created",
+          data: { user_id: user._id }
+        });
+      }
+
+      const { user: updatedUser } = await this.generateAndSendOtp(
+        user,
+        device_token,
+        res
+      );
+
+      const message = updatedUser.isVerified
+        ? "Signed in"
+        : "User is not verified. A verification OTP has been sent to your email.";
+
+      handlers.logger.success({
+        object_type: "user-authentication",
+        message,
+        data: { user_id: updatedUser._id }
+      });
+
+      return handlers.response.success({
+        res,
+        message,
+        data: updatedUser
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "user-authentication",
+        message: error
+      });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
+
+  async socialSignUpOrSignIn(req, res) {
+    try {
+      const {
+        legal_name,
+        first_name,
+        last_name,
+        email,
+        provider,
+        social_token,
+        phone_number,
+        device_token,
+        role
+      } = req.body;
+
+      if (email) {
+        const emailConflict = await this.user.findOne({ email });
+        if (emailConflict && emailConflict.role !== role) {
+          handlers.logger.failed({
+            object_type: "social-authentication",
+            message: "Email already in use with different role",
+            data: {
+              email,
+              existing_role: emailConflict.role,
+              attempted_role: role
+            }
+          });
+
+          return handlers.response.success({
+            res,
+            message: "Email already in use"
+          });
+        }
+
+        if (emailConflict && emailConflict.provider !== provider) {
+          handlers.logger.failed({
+            object_type: "social-authentication",
+            message: "Email already in use with different provider",
+            data: {
+              email,
+              existing_provider: emailConflict.provider,
+              attempted_provider: provider
+            }
+          });
+
+          return handlers.response.success({
+            res,
+            message: "Email already in use"
+          });
+        }
+      }
+
+      if (social_token) {
+        const socialTokenConflict = await this.user.findOne({ social_token });
+        if (socialTokenConflict && socialTokenConflict.role !== role) {
+          handlers.logger.failed({
+            object_type: "social-authentication",
+            message: "Social token already in use with different role",
+            data: { user_id: socialTokenConflict._id, attempted_role: role }
+          });
+
+          return handlers.response.success({
+            res,
+            message: "Social token already in use"
+          });
+        }
+
+        if (socialTokenConflict && socialTokenConflict.provider !== provider) {
+          handlers.logger.failed({
+            object_type: "social-authentication",
+            message: "Social token already in use with different provider",
+            data: {
+              user_id: socialTokenConflict._id,
+              existing_provider: socialTokenConflict.provider,
+              attempted_provider: provider
+            }
+          });
+
+          return handlers.response.success({
+            res,
+            message: "Social token already in use"
+          });
+        }
+      }
+
+      let user = await this.user.findOne({ social_token, role, provider });
+
+      if (!user) {
+        user = await this.user.create({
+          legal_name,
+          first_name,
+          last_name,
+          email,
+          provider,
+          social_token,
+          phone_number,
+          device_token,
+          role
+        });
+
+        handlers.logger.success({
+          object_type: "social-authentication",
+          message: "New social user created",
+          data: { user_id: user._id }
+        });
+      } else {
+        user.social_token = social_token;
+        user.device_token = device_token;
+        user.role = role;
+        await user.save();
+
+        handlers.logger.success({
+          object_type: "social-authentication",
+          message: "Existing social user updated",
+          data: { user_id: user._id }
+        });
+      }
+
+      const token = generateToken({ _id: user._id, res });
+      user.session_token = token;
+      await user.populate(userSchema.populate);
+
+      handlers.logger.success({
+        object_type: "social-authentication",
+        message: "Signed in!",
+        data: user
+      });
+
+      return handlers.response.success({
+        res,
+        message: "Signed in!",
         data: user
       });
     } catch (error) {
-      return errorResponse({ response, error });
-    }
-  }
-
-  async logout(request, response) {
-    try {
-      const user_id = request.user._id;
-
-      await this.user.findByIdAndUpdate(
-        user_id,
-        { session_token: null },
-        { new: true }
-      );
-
-      response.clearCookie("authentication");
-
-      request.session.destroy((error) => {
-        if (error) {
-          return failedResponse({
-            response,
-            message: "Something went wrong while logging out. Please try again."
-          });
-        }
+      handlers.logger.error({
+        object_type: "social-authentication",
+        message: error
       });
 
-      return successResponse({
-        response,
-        message: "You have successfully logged out."
-      });
-    } catch (error) {
-      return errorResponse({ response, error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 }

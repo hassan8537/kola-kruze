@@ -1,5 +1,7 @@
 const { sendNotification } = require("../../config/firebase");
 const User = require("../../models/User");
+const { handlers } = require("../../helpers/handlers");
+const notificationService = require("../services/notificationService");
 
 exports.sendNotificationToUser = async ({
   user_id,
@@ -10,54 +12,63 @@ exports.sendNotificationToUser = async ({
 }) => {
   try {
     const user = await User.findById(user_id).lean();
-    if (!user) return;
-
-    await notificationManagement({ user, type, model_type, model_id, message });
+    if (user) {
+      await exports.notificationManagement({
+        user,
+        type,
+        model_type,
+        model_id,
+        message
+      });
+    }
   } catch (error) {
-    return errorLog({ error });
+    handlers.logger.error({
+      object_type: "Notification",
+      message: error.message
+    });
   }
 };
 
 exports.notificationManagement = async ({
   user,
-  type,
-  model_type,
+  type = "general",
+  model_type = "general",
   model_id,
-  message
+  message = "New notification"
 }) => {
   try {
     const notificationBody = {
       user_id: user._id.toString(),
-      message: message || "New notification",
-      type: type || "general",
-      model_id: model_id?.toString() || null,
-      model_type: model_type || "general"
+      message,
+      type,
+      model_type,
+      model_id: model_id?.toString() || null
     };
 
     const fcmPayload = JSON.stringify({
       message: {
         token: user.device_token,
         notification: {
-          title: message || "Notification",
-          body: `You have a new ${type || "update"}`
+          title: message,
+          body: `You have a new ${type}`
         },
         data: {
-          notificationType: type || "general",
+          notificationType: type,
           title: "Scheduled Ride",
           body: JSON.stringify(notificationBody)
         }
       }
     });
 
-    await User.findByIdAndUpdate(
-      user._id,
-      { $inc: { notification_count: 1 } },
-      { new: true }
-    );
-
-    await sendNotification(fcmPayload);
-    await notificationService.createNotification({ body: notificationBody });
+    await Promise.all([
+      User.findByIdAndUpdate(user._id, { $inc: { notification_count: 1 } }),
+      sendNotification(fcmPayload),
+      notificationService.createNotification({ body: notificationBody })
+    ]);
   } catch (error) {
-    return errorLog({ error });
+    handlers.logger.error({
+      object_type: "Notification",
+      message: error.message
+    });
   }
 };

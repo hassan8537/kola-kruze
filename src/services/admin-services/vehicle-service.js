@@ -1,6 +1,6 @@
 const Vehicle = require("../../models/Vehicle");
-const { populateVehicle } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const vehicleSchema = require("../../schemas/vehicle-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -10,9 +10,9 @@ class Service {
     this.vehicle = Vehicle;
   }
 
-  async getVehicles(request, response) {
+  async getVehicles(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
 
       const filters = {};
 
@@ -37,17 +37,25 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Vehicles",
         model: this.vehicle,
         filters,
         page,
         limit,
         sort,
-        populate: populateVehicle.populate
+        populate: vehicleSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "fetch-vehicles",
+        message: error
+      });
+
+      return handlers.response.error({
+        res: res,
+        message: error.message
+      });
     }
   }
 }

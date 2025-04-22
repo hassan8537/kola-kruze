@@ -19,40 +19,40 @@ const RideSchema = new mongoose.Schema(
     },
 
     pickup_location: {
-      address: { type: String, required: true },
+      address: { type: String, required: true, default: "" },
       location: {
         type: {
           type: String,
           enum: ["Point"],
           default: "Point"
         },
-        coordinates: { type: [Number], index: "2dsphere", required: true } // [longitude, latitude]
+        coordinates: { type: [Number], index: "2dsphere", default: [0, 0] }
       }
     },
 
     stops: [
       {
-        address: { type: String, required: true },
+        address: { type: String, required: true, default: "" },
         location: {
           type: {
             type: String,
             enum: ["Point"],
             default: "Point"
           },
-          coordinates: { type: [Number], index: "2dsphere", required: true }
+          coordinates: { type: [Number], index: "2dsphere", default: [0, 0] }
         }
       }
     ],
 
     dropoff_location: {
-      address: { type: String, required: true },
+      address: { type: String, required: true, default: "" },
       location: {
         type: {
           type: String,
           enum: ["Point"],
           default: "Point"
         },
-        coordinates: { type: [Number], index: "2dsphere", required: true }
+        coordinates: { type: [Number], index: "2dsphere", default: [0, 0] }
       }
     },
 
@@ -76,21 +76,21 @@ const RideSchema = new mongoose.Schema(
       default: "pending"
     },
 
-    arrival_time: { type: Date, required: false },
+    arrival_time: { type: Date, default: null },
     scheduled_time: { type: Date, default: null },
     reserved_at: { type: Date, default: null },
     start_time: { type: Date, default: null },
     end_time: { type: Date, default: null },
 
     fare_details: {
-      amount: { type: Number, required: true },
+      amount: { type: Number, default: 0 },
       payment_status: {
         type: String,
         enum: ["hold", "pending", "paid"],
         default: "pending"
       },
-      stripe_payment_intent: { type: String, default: null }, // Holds funds in admin’s account
-      stripe_transfer_id: { type: String, default: null } // Transfers payment to driver
+      stripe_payment_intent: { type: String, default: null },
+      stripe_transfer_id: { type: String, default: null }
     },
 
     cancellation: {
@@ -110,45 +110,45 @@ const RideSchema = new mongoose.Schema(
           enum: ["Point"],
           default: "Point"
         },
-        coordinates: { type: [Number], index: "2dsphere", default: null }
+        coordinates: { type: [Number], index: "2dsphere", default: [0, 0] }
       },
       distance_miles_from_pickup: {
         type: Number,
-        default: null
+        default: 0
       },
       eta_to_pickup: { type: String, default: null },
       eta_to_dropoff: { type: String, default: null }
     },
 
-    // Multi-rider (Ride Sharing)
-    share_with: [
+    // Ride Sharing (Multi-Rider)
+    shared_with: [
       {
-        user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        split_amount: { type: Number, required: true }
+        user_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          default: null
+        },
+        phone: { type: String, default: null },
+        status: {
+          type: String,
+          enum: ["invited", "accepted", "declined", "cancelled", "expired"],
+          default: "invited"
+        },
+        split_amount: { type: Number, default: 0 }
       }
     ],
 
-    ride_otp: {
-      type: Number,
-      trim: true
+    split_fare: {
+      total_riders: { type: Number, default: 1, min: 1, max: 4 },
+      per_rider_amount: { type: Number, default: 0 }
     },
 
-    is_verified: {
-      type: Boolean,
-      trim: true,
-      default: false
-    },
-
-    is_reported: {
-      type: Boolean,
-      trim: true,
-      default: false
-    },
-
+    ride_otp: { type: Number, default: null },
+    is_verified: { type: Boolean, default: false },
+    is_reported: { type: Boolean, default: false },
     report_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Report",
-      trim: true,
       default: null
     }
   },

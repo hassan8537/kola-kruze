@@ -1,10 +1,6 @@
-const Category = require("../../models/Vehicle-Category");
-const { populateCategory } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  failedResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
+const Category = require("../../models/Category");
+const categorySchema = require("../../schemas/category-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -14,40 +10,47 @@ class Service {
     this.category = Category;
   }
 
-  async getCategories(request, response) {
+  async getCategories(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
       const filters = {};
-
       if (query._id) filters._id = query._id;
 
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Categories",
         model: this.category,
         filters,
         page,
         limit,
         sort,
-        populate: populateCategory.populate
+        populate: categorySchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "fetch-categories",
+        message: error
+      });
+
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async createCategory(request, response) {
+  async createCategory(req, res) {
     try {
-      const image = request.files.image?.[0] ?? null;
-      const { name, rate_per_mile, passenger_limit } = request.body;
+      const { name, image, rate_per_mile, passenger_limit } = req.body;
 
       const existingCategory = await this.category.findOne({ name });
-
       if (existingCategory) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "create-category",
+          message: "Category name already exists."
+        });
+
+        return handlers.response.failed({
+          res: res,
           message: "Category name already exists."
         });
       }
@@ -60,39 +63,58 @@ class Service {
       });
 
       await newCategory.save();
-      await newCategory.populate(populateCategory.populate);
+      await newCategory.populate(categorySchema.populate);
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "create-category",
+        message: "Category created successfully.",
+        data: newCategory
+      });
+
+      return handlers.response.success({
+        res: res,
         message: "Category created successfully.",
         data: newCategory
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "create-category",
+        message: error
+      });
+
+      return handlers.response.error({ res: res, message: error.message });
     }
   }
 
-  async updateCategory(request, response) {
+  async updateCategory(req, res) {
     try {
-      const { _id } = request.params;
-      const { name, rate_per_mile, passenger_limit } = request.body;
-      const image = request.files?.image?.[0] ?? null;
+      const { _id } = req.params;
+      const { name } = req.body;
 
       const category = await this.category.findById(_id);
 
       if (!category) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "update-category",
+          message: "Category not found."
+        });
+
+        return handlers.response.failed({
+          res: res,
           message: "Category not found."
         });
       }
 
       if (name && name !== category.name) {
         const existingCategory = await this.category.findOne({ name });
-
         if (existingCategory) {
-          return failedResponse({
-            response,
+          handlers.logger.failed({
+            object_type: "update-category",
+            message: "Category name already exists."
+          });
+
+          return handlers.response.failed({
+            res: res,
             message: "Category name already exists."
           });
         }
@@ -100,42 +122,65 @@ class Service {
         category.name = name;
       }
 
-      category.rate_per_mile = rate_per_mile ?? category.rate_per_mile;
-      category.passenger_limit = passenger_limit ?? category.passenger_limit;
-      if (image) category.image = image;
+      const updatedCategory = await this.category
+        .findByIdAndUpdate(category._id, req.body, { new: true })
+        .populate(categorySchema.populate);
 
-      await category.save();
-      await category.populate(populateCategory.populate);
+      handlers.logger.success({
+        object_type: "update-category",
+        message: "Category updated successfully",
+        data: updatedCategory
+      });
 
-      return successResponse({
-        response,
-        message: "Category updated successfully.",
-        data: category
+      return handlers.response.success({
+        res: res,
+        message: "Category updated successfully",
+        data: updatedCategory
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "update-category",
+        message: error
+      });
+
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async deleteCategory(request, response) {
+  async deleteCategory(req, res) {
     try {
-      const { _id } = request.params;
+      const { _id } = req.params;
 
       const category = await this.category.findByIdAndDelete(_id);
 
       if (!category) {
-        return failedResponse({
-          response,
-          message: "Category not found."
+        handlers.logger.failed({
+          object_type: "delete-category",
+          message: "No categories found"
+        });
+
+        return handlers.response.failed({
+          res: res,
+          message: "No categories found"
         });
       }
 
-      return successResponse({
-        response,
-        message: "Category deleted successfully."
+      handlers.logger.success({
+        object_type: "delete-category",
+        message: "Category deleted successfully"
+      });
+
+      return handlers.response.success({
+        res: res,
+        message: "Category deleted successfully"
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "delete-category",
+        message: error
+      });
+
+      return handlers.response.error({ res: res, message: error.message });
     }
   }
 }

@@ -1,11 +1,16 @@
-const mongoose = require("mongoose");
+const { Schema, model } = require("mongoose");
 
-const OTPSchema = new mongoose.Schema(
+const otpSchema = new Schema(
   {
     user_id: {
       type: String,
       required: true,
       ref: "User"
+    },
+    type: {
+      type: String,
+      enum: ["email-verification"],
+      required: true
     },
     otp_code: {
       type: Number,
@@ -26,5 +31,6 @@ const OTPSchema = new mongoose.Schema(
   }
 );
 
-const OTP = mongoose.model("OTP", OTPSchema);
-module.exports = OTP;
+const Otp = model("Otp", otpSchema);
+
+module.exports = Otp;

@@ -1,32 +1,31 @@
-const { errorResponse, failedResponse } = require("./response-handler");
 const jwt = require("jsonwebtoken");
+const { handlers } = require("./handlers");
 
 exports.createSession = async ({ response, user }) => {
   try {
-    const COOKIE_OPTIONS = {
-      httpOnly: process.env.HTTP_ONLY,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.SAME_SITE,
-      maxAge: process.env.MAX_AGE
-    };
-
-    const sessionToken = jwt.sign(
+    const token = jwt.sign(
       { user_id: user._id },
       process.env.SESSION_SECRET_KEY,
-      {
-        expiresIn: process.env.TOKEN_EXPIRATION
-      }
+      { expiresIn: process.env.TOKEN_EXPIRATION }
     );
 
-    if (!sessionToken) {
-      return failedResponse({ response, message: "Failed to create session" });
+    if (!token) {
+      return handlers.response.failed({
+        res: response,
+        message: "Session creation failed"
+      });
     }
 
-    response.cookie("authorization", sessionToken, COOKIE_OPTIONS);
+    response.cookie("authorization", token, {
+      httpOnly: process.env.HTTP_ONLY === "true",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.SAME_SITE || "Lax",
+      maxAge: +process.env.MAX_AGE || 86400000
+    });
 
-    user.session_token = sessionToken;
+    user.session_token = token;
     return await user.save();
   } catch (error) {
-    return errorResponse({ response, error });
+    return handlers.response.error({ res: response, message: error.message });
   }
 };

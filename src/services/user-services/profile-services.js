@@ -1,18 +1,13 @@
 const Student = require("../../models/Student");
 const User = require("../../models/User");
-const {
-  populateUser,
-  populateStudent
-} = require("../../populate/populate-models");
+const userSchema = require("../../schemas/user-schema");
 const {
   sanitizeNumber
-} = require("../../utilities/formatters/value-formatters");
+} = require("../../utilities/formatters/sanitize-number");
+
 const {
-  errorResponse,
-  failedResponse,
-  successResponse,
-  unavailableResponse
-} = require("../../utilities/handlers/response-handler");
+  handlers: { logger, response }
+} = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
@@ -20,42 +15,63 @@ class Service {
     this.student = Student;
   }
 
-  async getProfile(request, response) {
+  async getProfile(req, res) {
+    const object_type = "fetch-profiles";
     try {
-      const user_id = request.user._id;
+      const user_id = req.user._id;
 
       const profile = await this.user
         .findById(user_id)
-        .populate(populateUser.populate);
+        .populate(userSchema.populate);
 
       if (!profile) {
-        return unavailableResponse({ response, message: "No profile found." });
+        logger.unavailable({
+          object_type,
+          message: "No profile found."
+        });
+        return response.unavailable({ res, message: "No profile found." });
       }
 
-      return successResponse({
-        response,
+      logger.success({
+        object_type,
+        message: "Profile retrieved successfully.",
+        data: profile
+      });
+
+      return response.success({
+        res,
         message: "Profile retrieved successfully.",
         data: profile
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      logger.error({
+        object_type,
+        message: error
+      });
+
+      return response.error({
+        res,
+        message: error.message
+      });
     }
   }
 
-  async createProfile(request, response) {
+  async createProfile(req, res) {
+    const object_type = "create-profile";
     try {
-      const user_id = request.user._id;
-      const body = request.body;
-
-      const profile_picture = request.files.profile_picture?.[0] ?? null;
-      const driver_license = request.files.driver_license?.[0] ?? null;
+      const user_id = req.user._id;
+      const body = req.body;
 
       const user = await this.user
         .findById(user_id)
-        .populate(populateUser.populate);
+        .populate(userSchema.populate);
 
       if (!user) {
-        return unavailableResponse({ response, message: "No profile found." });
+        logger.unavailable({
+          object_type,
+          message: "No profile found."
+        });
+        return response.unavailable({ res, message: "No profile found." });
       }
 
       const usedEmail = await this.user.findOne({
@@ -63,86 +79,13 @@ class Service {
         email_address: user.email_address
       });
 
-      if (!usedEmail)
-        return failedResponse({ response, message: "Email already in use" });
-
-      user.profile_picture = profile_picture;
-
-      if (user.role === "passenger") {
-        const sanitizedPhoneNumber = sanitizeNumber({
-          field: "phone number",
-          value: body.phone_number
+      if (!usedEmail) {
+        logger.failed({
+          object_type,
+          message: "Email already in use"
         });
-
-        const sanitizedEmergencyContact = sanitizeNumber({
-          field: "emergency contact",
-          value: body.emergency_contact
-        });
-
-        if (sanitizedPhoneNumber === sanitizedEmergencyContact)
-          return failedResponse({
-            response,
-            message: "Phone number and Emergency contact cannot be same."
-          });
-
-        user.legal_name = body.legal_name;
-        user.phone_number = body.phone_number;
-        user.email = body.email;
-        user.emergency_contact = body.emergency_contact;
-        user.current_location = body.current_location;
-        user.gender = body.gender;
+        return response.failed({ res, message: "Email already in use" });
       }
-
-      if (user.role === "driver") {
-        user.first_name = body.first_name;
-        user.last_name = body.last_name;
-        user.gender = body.gender;
-        user.driver_license = driver_license;
-      }
-
-      if (body.is_student) {
-        const identity_document = request.files.identity_document?.[0] ?? null;
-
-        user.identity_document = identity_document;
-        return await this.studentManagement({ response, user, body });
-      }
-
-      user.is_profile_completed = true;
-      await user.save();
-      await user.populate(populateUser.populate);
-
-      return successResponse({
-        response,
-        message: "Profile created successfully.",
-        data: user
-      });
-    } catch (error) {
-      return errorResponse({ response, error });
-    }
-  }
-
-  async editProfile(request, response) {
-    try {
-      const user_id = request.user._id;
-      const body = request.body;
-      const profile_picture = request.files.profile_picture?.[0] ?? null;
-      const driver_license = request.files.driver_license?.[0] ?? null;
-
-      const user = await this.user.findById(user_id);
-
-      if (!user) {
-        return unavailableResponse({ response, message: "No profile found." });
-      }
-
-      const usedEmail = await this.user.findOne({
-        _id: user._id,
-        email_address: user.email_address
-      });
-
-      if (!usedEmail)
-        return failedResponse({ response, message: "Email already in use" });
-
-      if (profile_picture) user.profile_picture = profile_picture;
 
       const sanitizedPhoneNumber = sanitizeNumber({
         field: "phone number",
@@ -154,90 +97,185 @@ class Service {
         value: body.emergency_contact
       });
 
-      if (sanitizedPhoneNumber === sanitizedEmergencyContact)
-        return failedResponse({
-          response,
+      if (sanitizedPhoneNumber === sanitizedEmergencyContact) {
+        logger.failed({
+          object_type,
           message: "Phone number and Emergency contact cannot be same."
         });
-
-      if (body.legal_name) user.legal_name = body.legal_name;
-      if (body.phone_number) user.phone_number = body.phone_number;
-      if (body.email_address) user.email_address = body.email_address;
-      if (body.emergency_contact)
-        user.emergency_contact = body.emergency_contact;
-      if (body.current_location) user.current_location = body.current_location;
-      if (body.gender) user.gender = body.gender;
-      if (body.driver_preference)
-        user.driver_preference = body.driver_preference;
-      if (body.gender_preference)
-        user.gender_preference = body.gender_preference;
-
-      if (body.first_name) user.first_name = body.first_name;
-      if (body.last_name) user.last_name = body.last_name;
-      if (body.gender) user.gender = body.gender;
-      if (driver_license) user.driver_license = driver_license;
-
-      if (body.state) user.state = body.state;
-      if (body.ssn_number) user.ssn_number = body.ssn_number;
-
-      if (typeof body.is_notification_enabled !== "undefined") {
-        user.is_notification_enabled = body.is_notification_enabled;
-      }
-      if (typeof body.is_merchant_setup !== "undefined") {
-        user.is_merchant_setup = body.is_merchant_setup;
-      }
-      if (typeof body.is_vehicle_setup !== "undefined") {
-        user.is_vehicle_setup = body.is_vehicle_setup;
+        return response.failed({
+          res,
+          message: "Phone number and Emergency contact cannot be same."
+        });
       }
 
+      Object.assign(user, {
+        profile_picture: body.profile_picture,
+        email: body.email,
+        first_name: body.first_name,
+        last_name: body.last_name,
+        gender: body.gender,
+        driver_license: body.driver_license,
+        phone_number: body.phone_number,
+        emergency_contact: body.emergency_contact,
+        current_location: body.current_location
+      });
+
+      if (body.is_student) {
+        user.identity_document = body.identity_document;
+        return await this.studentManagement({ res, user, body });
+      }
+
+      user.is_profile_completed = true;
       await user.save();
+      await user.populate(userSchema.populate);
 
-      await user.populate(populateUser.populate);
-
-      return successResponse({
-        response,
-        message: "Profile edited successfully.",
+      logger.success({
+        object_type,
+        message: "Profile created successfully.",
+        data: user
+      });
+      return response.success({
+        res,
+        message: "Profile created successfully.",
         data: user
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      logger.error({ object_type, message: error });
+      return response.error({ res, message: error.message });
     }
   }
 
-  async deleteAccount(request, response) {
+  async updateProfile(req, res) {
+    const object_type = "create-profile";
+
+    try {
+      const user_id = req.user._id;
+      const body = req.body;
+
+      const user = await this.user.findById(user_id);
+      if (!user) {
+        logger.unavailable({
+          object_type,
+          message: "No profile found."
+        });
+        return response.unavailable({ res, message: "No profile found." });
+      }
+
+      const usedEmail = await this.user.findOne({
+        _id: user._id,
+        email_address: user.email_address
+      });
+
+      if (!usedEmail) {
+        logger.failed({ object_type, message: "Email already in use" });
+        return response.failed({ res, message: "Email already in use" });
+      }
+
+      const sanitizedPhoneNumber = sanitizeNumber({
+        field: "phone number",
+        value: body.phone_number
+      });
+
+      const sanitizedEmergencyContact = sanitizeNumber({
+        field: "emergency contact",
+        value: body.emergency_contact
+      });
+
+      if (sanitizedPhoneNumber === sanitizedEmergencyContact) {
+        logger.failed({
+          object_type,
+          message: "Phone number and Emergency contact cannot be same."
+        });
+        return response.failed({
+          res,
+          message: "Phone number and Emergency contact cannot be same."
+        });
+      }
+
+      Object.assign(user, {
+        profile_picture: body.profile_picture ?? user.profile_picture,
+        legal_name: body.legal_name ?? user.legal_name,
+        first_name: body.first_name ?? user.first_name,
+        last_name: body.last_name ?? user.last_name,
+        driver_license: body.driver_license ?? user.driver_license,
+        phone_number: body.phone_number ?? user.phone_number,
+        email_address: body.email_address ?? user.email_address,
+        emergency_contact: body.emergency_contact ?? user.emergency_contact,
+        current_location: body.current_location ?? user.current_location,
+        gender: body.gender ?? user.gender,
+        driver_preference: body.driver_preference ?? user.driver_preference,
+        gender_preference: body.gender_preference ?? user.gender_preference,
+        state: body.state ?? user.state,
+        ssn_number: body.ssn_number ?? user.ssn_number
+      });
+
+      await user.save();
+      await user.populate(userSchema.populate);
+
+      logger.success({
+        object_type,
+        message: "Profile updated successfully.",
+        data: user
+      });
+      return response.success({
+        res,
+        message: "Profile updated successfully.",
+        data: user
+      });
+    } catch (error) {
+      logger.error({ object_type, message: error.message });
+      return response.error({ res, message: "Internal server error." });
+    }
+  }
+
+  async deleteAccount(request, res) {
+    const object_type = "delete-account";
     try {
       const user_id = request.user._id;
 
       const user = await this.user
         .findById(user_id)
-        .populate(populateUser.populate);
+        .populate(userSchema.populate);
 
       if (!user) {
-        return unavailableResponse({ response, message: "No profile found." });
+        logger.unavailable({
+          object_type,
+          message: "No profile found."
+        });
+        return response.unavailable({ res, message: "No profile found." });
       }
 
       user.is_deleted = true;
       await user.save();
 
-      return successResponse({
-        response,
+      logger.success({
+        object_type,
+        message: "Account deleted successfully.",
+        data: user
+      });
+      return response.success({
+        res,
         message: "Account deleted successfully.",
         data: user
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      logger.error({ object_type, message: error });
+      return response.error({ res, message: error.message });
     }
   }
 
-  async studentManagement({ response, user, body }) {
+  async studentManagement({ res, user, body }) {
+    const object_type = "manage-student";
     try {
-      const student = await this.student.findOne({
-        user_id: user._id
-      });
+      const student = await this.student.findOne({ user_id: user._id });
 
       if (student) {
-        return failedResponse({
-          response,
+        logger.failed({
+          object_type: "student",
+          message: "You already have a student profile."
+        });
+        return response.failed({
+          res,
           message: "You already have a student profile."
         });
       }
@@ -251,8 +289,12 @@ class Service {
       });
 
       if (!newStudent) {
-        return failedResponse({
-          response,
+        logger.failed({
+          object_type,
+          message: "Failed to complete student profile."
+        });
+        return response.failed({
+          res,
           message: "Failed to complete student profile."
         });
       }
@@ -263,15 +305,21 @@ class Service {
 
       const studentUser = await this.user
         .findById(user._id)
-        .populate(populateUser.populate);
+        .populate(userSchema.populate);
 
-      return successResponse({
-        response,
+      logger.success({
+        object_type,
+        message: "Profile created successfully",
+        data: studentUser
+      });
+      return response.success({
+        res,
         message: "Profile created successfully",
         data: studentUser
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      logger.error({ object_type, message: error });
+      return response.error({ res, message: error.message });
     }
   }
 }

@@ -1,19 +1,12 @@
 // const { sendNotification } = require("../../config/firebase");
 const Notification = require("../../models/Notification");
 const User = require("../../models/User");
-const { populateNotification } = require("../../populate/populate-models");
-const {
-  successLog,
-  failedLog,
-  errorLog
-} = require("../../utilities/handlers/log-handler");
-const {
-  successResponse,
-  errorResponse
-} = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
+
+const { handlers } = require("../../utilities/handlers/handlers");
+const notificationSchema = require("../../schemas/notification-schema");
 
 class Service {
   constructor() {
@@ -27,19 +20,19 @@ class Service {
     const { user_id, message, type, model_id, model_type } = body;
     try {
       const notification = await this.notification.create({
-        user_id: user_id,
-        message: message,
-        type: type,
-        model_id: model_id,
-        model_type: model_type
+        user_id,
+        message,
+        type,
+        model_id,
+        model_type
       });
 
-      return successLog({
+      return handlers.logger.success({
         message: "Notification created successfully.",
         data: notification
       });
     } catch (error) {
-      return errorLog({ error });
+      return handlers.logger.error({ error });
     }
   }
 
@@ -47,20 +40,20 @@ class Service {
     try {
       const notification = await this.notification
         .findByIdAndUpdate(_id, { status: "read" }, { new: true })
-        .populate(populateNotification.populate);
+        .populate(notificationSchema.populate);
 
       if (!notification) {
-        return failedLog({
+        return handlers.logger.failed({
           message: "Notification not found."
         });
       }
 
-      return successLog({
+      return handlers.logger.success({
         message: "Notification status updated successfully.",
         data: notification
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      return handlers.logger.error({ error });
     }
   }
 
@@ -89,10 +82,10 @@ class Service {
         page,
         limit,
         sort,
-        populate: populateNotification.populate
+        populate: notificationSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      return handlers.response.error({ response, error });
     }
   }
 
@@ -102,21 +95,21 @@ class Service {
     try {
       const notification = await this.notification
         .findByIdAndDelete(_id)
-        .populate(populateNotification.populate);
+        .populate(notificationSchema.populate);
 
       if (!notification) {
-        return errorResponse({
+        return handlers.response.failed({
           response,
           message: "Notification not found."
         });
       }
 
-      return successResponse({
+      return handlers.response.success({
         response,
         message: "Notification deleted successfully."
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      return handlers.response.error({ response, error });
     }
   }
 }

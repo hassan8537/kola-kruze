@@ -16,7 +16,7 @@ const FileSchema = new mongoose.Schema(
       required: true,
       default: "application/octet-stream"
     },
-    file_url: {
+    file_path: {
       type: String,
       required: true
     },

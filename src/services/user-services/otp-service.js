@@ -1,39 +1,47 @@
-const OTP = require("../../models/OTP");
+const Otp = require("../../models/Otp");
 const User = require("../../models/User");
-const {
-  errorResponse,
-  failedResponse,
-  successResponse,
-  unavailableResponse
-} = require("../../utilities/handlers/response-handler");
+const { handlers } = require("../../utilities/handlers/handlers");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
-const { populateUser } = require("../../populate/populate-models");
+const otpSchema = require("../../schemas/otp-schema");
 
 class Service {
   constructor() {
-    this.otp = OTP;
+    this.otp = Otp;
     this.user = User;
   }
 
-  async verifyOTP(request, response) {
+  async verifyOTP(req, res) {
+    const object_type = "otp-verification";
     try {
-      const { user_id, otp_code } = request.body;
+      const { user_id, otp_code } = req.body;
 
       const existingOTPCode = await this.otp.findOne({
         user_id: user_id,
-        otp_code: otp_code
+        otp_code: otp_code,
+        type: "email-verification"
       });
 
       if (!existingOTPCode) {
-        return failedResponse({ response, message: "Invalid OTP code." });
+        handlers.logger.failed({
+          object_type,
+          message: "Invalid OTP code."
+        });
+        return handlers.response.failed({
+          res: res,
+          message: "Invalid OTP code."
+        });
       } else {
         const user = await this.user
           .findById(user_id)
-          .populate(populateUser.populate);
+          .populate(otpSchema.populate);
 
         if (!user) {
-          return unavailableResponse({
-            response,
+          handlers.logger.unavailable({
+            object_type,
+            message: "No user found."
+          });
+          return handlers.response.unavailable({
+            res: res,
             message: "No user found."
           });
         } else {
@@ -42,19 +50,34 @@ class Service {
 
           await this.otp.findOneAndDelete({ user_id: user._id });
 
-          return successResponse({
-            response,
+          handlers.logger.success({
+            object_type,
+            message: "OTP verification successful.",
+            data: { user_id, user }
+          });
+
+          return handlers.response.success({
+            res: res,
             message: "OTP verification successful.",
             data: user
           });
         }
       }
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type,
+        message: error
+      });
+      return handlers.response.error({
+        res: res,
+        message: error.message
+      });
     }
   }
 
   async resendOTP(request, response) {
+    const object_type = "resend-otp";
+
     try {
       const { user_id } = request.params;
 
@@ -70,8 +93,20 @@ class Service {
       }
 
       await generateOTP({ response, user_id });
+
+      handlers.logger.success({
+        object_type,
+        message: "OTP resent successfully."
+      });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type,
+        message: error
+      });
+      return handlers.response.error({
+        res: response,
+        message: error.message
+      });
     }
   }
 }

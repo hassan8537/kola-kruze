@@ -1,7 +1,7 @@
 const Student = require("../../models/Student");
 const User = require("../../models/User");
-const { populateUser } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const userSchema = require("../../schemas/user-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -12,9 +12,9 @@ class Service {
     this.student = Student;
   }
 
-  async getProfiles(request, response) {
+  async getProfiles(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
 
       const filters = {};
 
@@ -33,17 +33,25 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Profiles",
         model: this.user,
         filters,
         page,
         limit,
         sort,
-        populate: populateUser.populate
+        populate: userSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "fetch-profiles",
+        message: error.message
+      });
+
+      return handlers.response.error({
+        res: res,
+        message: error.message
+      });
     }
   }
 }

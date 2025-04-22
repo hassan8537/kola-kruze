@@ -1,8 +1,4 @@
-const {
-  errorResponse,
-  successResponse,
-  unavailableResponse
-} = require("../handlers/response-handler");
+const { handlers } = require("../handlers/handlers");
 
 exports.pagination = async ({
   response,
@@ -17,7 +13,6 @@ exports.pagination = async ({
   try {
     const pageNumber = parseInt(page, 10) || 1;
     const pageSize = parseInt(limit, 10) || 10;
-
     const skip = (pageNumber - 1) * pageSize;
 
     const data = await model
@@ -30,14 +25,14 @@ exports.pagination = async ({
     const totalCount = await model.countDocuments(filters);
 
     if (!data.length) {
-      return unavailableResponse({
-        response,
+      return handlers.response.unavailable({
+        res: response,
         message: `No ${table.toLowerCase()} found.`
       });
     }
 
-    return successResponse({
-      response,
+    return handlers.response.success({
+      res: response,
       message: `${table} retrieved successfully.`,
       data: {
         results: data,
@@ -48,6 +43,9 @@ exports.pagination = async ({
       }
     });
   } catch (error) {
-    return errorResponse({ response, error });
+    return handlers.response.error({
+      res: response,
+      message: error.message
+    });
   }
 };

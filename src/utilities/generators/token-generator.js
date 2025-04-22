@@ -1,8 +1,5 @@
-const {
-  errorResponse,
-  failedResponse
-} = require("../handlers/response-handler");
 const jwt = require("jsonwebtoken");
+const { handlers } = require("../handlers/handlers");
 
 exports.generateToken = ({ response, user_id }) => {
   try {
@@ -11,18 +8,28 @@ exports.generateToken = ({ response, user_id }) => {
     });
 
     if (!token) {
-      return failedResponse({ response, message: "Invalid session" });
+      return handlers.response.failed({
+        res: response,
+        message: "Invalid session"
+      });
     }
 
     response.cookie("authorization", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.SAME_SITE,
-      maxAge: process.env.MAX_AGE
+      sameSite: process.env.SAME_SITE || "Lax",
+      maxAge: parseInt(process.env.MAX_AGE || "86400000") // fallback: 1 day
     });
 
-    return { status: 1, message: "Token generated successfully", token };
+    return {
+      status: 1,
+      message: "Token generated successfully",
+      token
+    };
   } catch (error) {
-    return errorResponse({ response, error });
+    return handlers.response.error({
+      res: response,
+      message: error.message
+    });
   }
 };

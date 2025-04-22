@@ -1,10 +1,6 @@
-const Category = require("../../models/Vehicle-Category");
-const { populateCategory } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  failedResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
+const Category = require("../../models/Category");
+const categorySchema = require("../../schemas/category-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -14,9 +10,9 @@ class Service {
     this.category = Category;
   }
 
-  async getCategories(request, response) {
+  async getCategories(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
       const filters = {};
 
       if (query._id) filters._id = query._id;
@@ -24,17 +20,21 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Categories",
         model: this.category,
         filters,
         page,
         limit,
         sort,
-        populate: populateCategory.populate
+        populate: categorySchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "fetch-categories",
+        message: error
+      });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 }

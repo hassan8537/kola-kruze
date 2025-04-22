@@ -15,9 +15,11 @@ const controllers = {
   chat: require("../../controllers/user-controllers/chat-controller"),
   category: require("../../controllers/user-controllers/category-controller"),
   ride: require("../../controllers/user-controllers/ride-controller"),
+  share_ride: require("../../controllers/user-controllers/share-ride-controller"),
   rating: require("../../controllers/user-controllers/rating-controller"),
   report: require("../../controllers/user-controllers/report-controller"),
-  toggle: require("../../controllers/user-controllers/toggle-controller")
+  toggle: require("../../controllers/user-controllers/toggle-controller"),
+  invitation: require("../../controllers/user-controllers/invitation-controller")
 };
 
 // session
@@ -189,6 +191,17 @@ router.post(
 router.get(
   "/toggles/driver-availability",
   controllers.toggle.toggleDriverAvailability.bind(controllers.toggle)
+);
+
+// invitation
+router.get(
+  "/invitations/send-invitation",
+  controllers.invitation.sendInvitation.bind(controllers.invitation)
+);
+
+router.get(
+  "/invitations/accept-invitation/:ride_id/:user_id",
+  controllers.invitation.acceptInvitation.bind(controllers.invitation)
 );
 
 module.exports = router;

@@ -1,12 +1,7 @@
 const Rating = require("../../models/Rating");
 const Ride = require("../../models/Ride");
-const { populateRating } = require("../../populate/populate-models");
-const {
-  successResponse,
-  failedResponse,
-  errorResponse,
-  unavailableResponse
-} = require("../../utilities/handlers/response-handler");
+const ratingSchema = require("../../schemas/rating-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
@@ -14,14 +9,21 @@ class Service {
     this.ride = Ride;
   }
 
-  async addRating(request, response) {
+  async addRating(req, res) {
     try {
-      const { ride_id, drive_again, rating, feedback, type } = request.body;
-      const reviewer_id = request.user._id;
+      const { ride_id, drive_again, rating, feedback, type } = req.body;
+      const reviewer_id = req.user._id;
 
       const ride = await this.ride.findById(ride_id).lean();
       if (!ride) {
-        return unavailableResponse({ response, message: "Ride not found" });
+        handlers.logger.unavailable({
+          object_type: "rating",
+          message: "Ride not found"
+        });
+        return handlers.response.unavailable({
+          res: res,
+          message: "Ride not found"
+        });
       }
 
       let recipient_id;
@@ -30,7 +32,14 @@ class Service {
       } else if (type === "driver-to-user") {
         recipient_id = ride.user_id.toString();
       } else {
-        return failedResponse({ response, message: "Invalid rating type" });
+        handlers.logger.failed({
+          object_type: "rating",
+          message: "Invalid rating type"
+        });
+        return handlers.response.failed({
+          res: res,
+          message: "Invalid rating type"
+        });
       }
 
       const ratingDoc = await this.rating.findOneAndUpdate(
@@ -48,23 +57,35 @@ class Service {
         { upsert: true, new: true }
       );
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "rating",
+        message: "Rating submitted successfully",
+        data: ratingDoc
+      });
+      return handlers.response.success({
+        res: res,
         message: "Rating submitted successfully",
         data: ratingDoc
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "rating",
+        message: error.message
+      });
+      return handlers.response.error({
+        res: res,
+        message: "Something went wrong",
+        data: null
+      });
     }
   }
 
-  async getRatings(request, response) {
+  async getRatings(req, res) {
     try {
       const { ride_id, drive_again, type, reviewer_id, recipient_id } =
-        request.query;
+        req.query;
 
       const query = {};
-
       if (ride_id) query.ride_id = ride_id;
       if (type) query.type = type;
       if (drive_again) query.drive_again = drive_again;
@@ -73,47 +94,72 @@ class Service {
 
       const ratings = await this.rating
         .find(query)
-        .populate(populateRating.populate);
+        .populate(ratingSchema.populate);
+
       if (!ratings.length) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "rating",
+          message: "No ratings found for this user"
+        });
+        return handlers.response.failed({
+          res: res,
           message: "No ratings found for this user"
         });
       }
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type: "rating",
+        message: "User ratings fetched successfully",
+        data: ratings
+      });
+      return handlers.response.success({
+        res: res,
         message: "User ratings fetched successfully",
         data: ratings
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "rating",
+        message: error.message
+      });
+      return handlers.response.error({
+        res: res,
+        message: "Something went wrong",
+        data: null
+      });
     }
   }
 
-  async getUserRatings(request, response) {
+  async getUserRatings(req, res) {
     try {
-      const user_id = request.query._id;
+      const user_id = req.query._id;
 
       if (!user_id) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "rating",
+          message: "User ID is required"
+        });
+        return handlers.response.failed({
+          res: res,
           message: "User ID is required"
         });
       }
 
       const ratings = await this.rating
         .find({ recipient_id: user_id })
-        .populate(populateRating.populate);
+        .populate(ratingSchema.populate);
 
       if (!ratings.length) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type: "rating",
+          message: "No ratings found for this user"
+        });
+        return handlers.response.failed({
+          res: res,
           message: "No ratings found for this user"
         });
       }
 
-      // Calculate the total average rating
       const totalRatings = ratings.length;
       const totalScore = ratings.reduce(
         (sum, rating) => sum + rating.rating,
@@ -121,17 +167,33 @@ class Service {
       );
       const averageRating = totalScore / totalRatings;
 
-      return successResponse({
-        response,
+      const data = {
+        ratings,
+        total_ratings: totalRatings,
+        average_rating: parseFloat(averageRating.toFixed(2))
+      };
+
+      handlers.logger.success({
+        object_type: "rating",
         message: "User ratings fetched successfully",
-        data: {
-          ratings,
-          total_ratings: totalRatings,
-          average_rating: parseFloat(averageRating.toFixed(2))
-        }
+        data
+      });
+
+      return handlers.response.success({
+        res: res,
+        message: "User ratings fetched successfully",
+        data
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "rating",
+        message: error.message
+      });
+      return handlers.response.error({
+        res: res,
+        message: "Something went wrong",
+        data: null
+      });
     }
   }
 }

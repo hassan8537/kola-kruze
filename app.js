@@ -8,28 +8,28 @@ const path = require("path");
 const fs = require("fs");
 const { Server } = require("socket.io");
 
-const adminSeeder = require("./middlewares/admin-seeder-middleware");
-const sessionAuthentication = require("./middlewares/authentication-middleware");
-const accountStatusVerification = require("./middlewares/account-status-verification-middleware");
-const adminVerification = require("./middlewares/admin-verification-middleware");
-const requestVerification = require("./middlewares/verification-middleware");
+const adminSeeder = require("./src/middlewares/admin-seeder-middleware");
+const sessionAuthentication = require("./src/middlewares/authentication-middleware");
+const accountStatusVerification = require("./src/middlewares/account-status-verification-middleware");
+const adminVerification = require("./src/middlewares/admin-verification-middleware");
+const requestVerification = require("./src/middlewares/verification-middleware");
 
 const authRoutes = {
   admin: {
-    authentication: require("./routes/admin-routes/authentication-routes")
+    authentication: require("./src/routes/admin-routes/authentication-routes")
   },
   user: {
-    authentication: require("./routes/user-routes/authentication-routes"),
-    otp: require("./routes/user-routes/otp-routes")
+    authentication: require("./src/routes/user-routes/authentication-routes"),
+    otp: require("./src/routes/user-routes/otp-routes")
   }
 };
 
 const protectedRoutes = {
-  admin: require("./routes/admin-routes/protected-routes"),
-  user: require("./routes/user-routes/protected-routes")
+  admin: require("./src/routes/admin-routes/protected-routes"),
+  user: require("./src/routes/user-routes/protected-routes")
 };
 
-const connectToDatabase = require("./config/database");
+const connectToDatabase = require("./src/config/database");
 
 const app = express();
 
@@ -110,13 +110,12 @@ io.on("connection", (socket) => {
 });
 
 // Pass io to service instances
-const rideService = require("./services/user-services/ride-service");
-const driverService = require("./services/user-services/driver-service");
-const chatService = require("./services/user-services/chat-service");
-const Ride = require("./models/Ride");
+const rideService = require("./src/services/user-services/ride-service");
+const chatService = require("./src/services/user-services/chat-service");
+
+const Ride = require("./src/models/Ride");
 
 rideService.io = io;
-driverService.io = io;
 chatService.io = io;
 
 io.on("connection", (socket) => {
@@ -142,17 +141,6 @@ io.on("connection", (socket) => {
   socket.on("share-ride", (data) => rideService.shareRide(socket, data));
   socket.on("ride-location-update", (data) =>
     rideService.rideLocationUpdate(socket, data)
-  );
-
-  // Driver Events Not In Use
-  socket.on("driver-availability", (data) =>
-    driverService.driverAvailability(socket, data)
-  );
-  socket.on("driver-location-update", (data) =>
-    driverService.driverLocationUpdate(socket, data)
-  );
-  socket.on("driver-ride-completed", (data) =>
-    driverService.driverRideCompleted(socket, data)
   );
 
   // Chat Events

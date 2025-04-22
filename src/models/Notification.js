@@ -23,12 +23,13 @@ const NotificationSchema = new mongoose.Schema(
     },
     model_id: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true
+      required: true,
+      refPath: "model_type"
     },
     model_type: {
       type: String,
-      enum: ["Payment", "Ride", "User", "Vehicle", "Rating", "Chat"],
-      required: true
+      required: true,
+      enum: ["Payment", "Ride", "User", "Vehicle", "Rating", "Chat"]
     }
   },
   {

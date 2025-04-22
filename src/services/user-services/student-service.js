@@ -1,6 +1,6 @@
 const Student = require("../../models/Student");
-const { populateStudent } = require("../../populate/populate-models");
-const { errorResponse } = require("../../utilities/handlers/response-handler");
+const studentSchema = require("../../schemas/student-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
@@ -10,9 +10,10 @@ class Service {
     this.student = Student;
   }
 
-  async getStudents(request, response) {
+  async getStudents(req, res) {
+    const object_type = "fetch-students";
     try {
-      const query = request.query;
+      const query = req.query;
 
       const filters = {};
 
@@ -22,17 +23,18 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Students",
         model: this.student,
         filters,
         page,
         limit,
         sort,
-        populate: populateStudent.populate
+        populate: studentSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 }

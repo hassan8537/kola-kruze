@@ -1,13 +1,8 @@
 const sendEmail = require("../../config/nodemailer");
-const OTP = require("../../models/OTP");
+const Otp = require("../../models/Otp");
 const User = require("../../models/User");
-const { populateUser } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  successResponse,
-  failedResponse,
-  unavailableResponse
-} = require("../handlers/response-handler");
+const userSchema = require("../../schemas/user-schema");
+const { handlers } = require("../handlers/handlers");
 const crypto = require("crypto");
 require("dotenv").config();
 
@@ -19,51 +14,48 @@ exports.generateOTP = async ({ response, user_id }) => {
     const expirationTime = new Date();
     expirationTime.setMinutes(expirationTime.getMinutes() + 10);
 
-    const user = await User.findById(user_id).populate(populateUser.populate);
+    const user = await User.findById(user_id).populate(userSchema.populate);
 
-    if (!user_id) {
-      return unavailableResponse({
-        response,
+    if (!user_id || !user) {
+      return handlers.response.unavailable({
+        res: response,
         message: "No user found."
       });
     }
 
-    const existingOTPCode = await OTP.findOne({
-      user_id: user._id
-    });
+    await Otp.findOneAndDelete({ user_id: user._id });
 
-    if (existingOTPCode) {
-      await OTP.findOneAndDelete({ user_id: user._id });
-    }
-
-    const newOTP = await OTP.create({
-      user_id: user_id,
-      otp_code: otp_code,
+    const newOTP = await Otp.create({
+      user_id,
+      otp_code,
       otp_expiration: expirationTime
     });
 
     if (!newOTP) {
-      return failedResponse({
-        response,
+      return handlers.response.failed({
+        res: response,
         message: "Failed to generate OTP."
       });
     }
 
     await sendEmail({
       to: user.email_address,
-      subject: "OTP Verification.",
+      subject: "OTP Verification",
       text: `This is your verification OTP: ${otp_code}`
     });
 
     user.is_verified = false;
     await user.save();
 
-    return successResponse({
-      response,
+    return handlers.response.success({
+      res: response,
       message: "A verification OTP has been sent to your email address.",
       data: user
     });
   } catch (error) {
-    return errorResponse({ response, error });
+    return handlers.response.error({
+      res: response,
+      message: error.message
+    });
   }
 };

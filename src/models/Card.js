@@ -1,9 +1,9 @@
-const mongoose = require("mongoose");
+const { Schema, model } = require("mongoose");
 
-const CardSchema = new mongoose.Schema(
+const CardSchema = new Schema(
   {
     user_id: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: true
     },
@@ -12,5 +12,5 @@ const CardSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Card = mongoose.model("Card", CardSchema);
+const Card = model("Card", CardSchema);
 module.exports = Card;

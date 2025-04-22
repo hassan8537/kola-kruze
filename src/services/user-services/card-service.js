@@ -2,13 +2,11 @@ const stripeSecretKey = require("../../config/stripe");
 const stripe = require("stripe")(stripeSecretKey);
 const Card = require("../../models/Card");
 const User = require("../../models/User");
-const { populateCard } = require("../../populate/populate-models");
+const cardSchema = require("../../schemas/card-schema");
 const {
-  errorResponse,
-  successResponse,
-  failedResponse,
-  unavailableResponse
-} = require("../../utilities/handlers/response-handler");
+  formatStripeList
+} = require("../../utilities/formatters/stripe-card-list-formatter");
+const { handlers } = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
@@ -16,25 +14,34 @@ class Service {
     this.card = Card;
   }
 
-  async addCard(request, response) {
+  async createCard(req, res) {
+    const object_type = "add-card";
     try {
-      const user = request.user;
-      const { stripe_card_id } = request.body;
+      const user = req.user;
+      const { stripe_card_id } = req.body;
 
       if (!stripe_card_id) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type,
+          message: "Stripe card id is required."
+        });
+        return handlers.response.failed({
+          res,
           message: "Stripe card id is required."
         });
       }
 
       const existingAccount = await this.card
         .findOne({ user_id: user._id, stripe_card_id })
-        .populate(populateCard.populate);
+        .populate(cardSchema.populate);
 
       if (existingAccount) {
-        return failedResponse({
-          response,
+        handlers.logger.failed({
+          object_type,
+          message: "Stripe card already exists."
+        });
+        return handlers.response.failed({
+          res,
           message: "Stripe card already exists."
         });
       }
@@ -58,23 +65,33 @@ class Service {
         stripe_card_id: card.id
       });
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type,
+        message: "Card added successfully."
+      });
+      return handlers.response.success({
+        res,
         message: "Card added successfully.",
         data: card
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async getMyCards(request, response) {
+  async getCards(req, res) {
+    const object_type = "fetch-cards";
     try {
-      const stripeCustomerId = request.user.stripe_customer_id;
+      const stripeCustomerId = req.user.stripe_customer_id;
 
       if (!stripeCustomerId) {
-        return unavailableResponse({
-          response,
+        handlers.logger.unavailable({
+          object_type,
+          message: "Stripe customer ID not found."
+        });
+        return handlers.response.unavailable({
+          res,
           message: "Stripe customer ID not found."
         });
       }
@@ -85,7 +102,14 @@ class Service {
       });
 
       if (!paymentMethods.data.length) {
-        return unavailableResponse({ response, message: "No cards found." });
+        handlers.logger.unavailable({
+          object_type,
+          message: "No cards found."
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No cards found."
+        });
       }
 
       const customer = await stripe.customers.retrieve(stripeCustomerId);
@@ -93,79 +117,99 @@ class Service {
         customer.invoice_settings.default_payment_method;
 
       const sortedCards = paymentMethods.data.sort((a, b) => {
-        if (a.id === defaultPaymentMethod) {
-          return -1;
-        }
-        if (b.id === defaultPaymentMethod) {
-          return 1;
-        }
+        if (a.id === defaultPaymentMethod) return -1;
+        if (b.id === defaultPaymentMethod) return 1;
         return 0;
       });
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type,
+        message: "Cards retrieved successfully."
+      });
+      return handlers.response.success({
+        res,
         message: "Cards retrieved successfully.",
-        data: this.formatStripeList(sortedCards)
+        data: formatStripeList(sortedCards)
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async deleteCard(request, response) {
+  async deleteCard(req, res) {
+    const object_type = "delete-card";
     try {
-      const user_id = request.user._id;
-      const { _id } = request.params;
+      const user_id = req.user._id;
+      const { _id } = req.params;
 
       const card = await this.card
         .findOne({ stripe_card_id: _id, user_id })
-        .populate(populateCard.populate);
+        .populate(cardSchema.populate);
 
       if (!card) {
-        return unavailableResponse({
-          response,
+        handlers.logger.unavailable({
+          object_type,
+          message: "Card not found."
+        });
+        return handlers.response.unavailable({
+          res,
           message: "Card not found."
         });
       }
 
       await stripe.customers.deleteSource(
-        request.user.stripe_customer_id,
+        req.user.stripe_customer_id,
         card.stripe_card_id
       );
 
       await this.card.findByIdAndDelete(card._id);
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type,
+        message: "Card deleted successfully."
+      });
+      return handlers.response.success({
+        res,
         message: "Card deleted successfully"
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
-  async setDefaultCard(request, response) {
+  async setDefaultCard(req, res) {
+    const object_type = "set-default-card";
     try {
-      const user_id = request.user._id;
-      const { stripe_card_id } = request.body;
+      const user_id = req.user._id;
+      const { stripe_card_id } = req.body;
 
       const card = await this.card.findOne({ user_id, stripe_card_id });
 
       if (!card) {
-        return unavailableResponse({
-          response,
+        handlers.logger.unavailable({
+          object_type,
+          message: "Card not found."
+        });
+        return handlers.response.unavailable({
+          res,
           message: "Card not found."
         });
       }
 
-      request.user.stripe_default_card = card._id;
-      await request.user.save();
+      req.user.stripe_default_card = card._id;
+      await req.user.save();
 
-      const stripeCustomerId = request.user.stripe_customer_id;
+      const stripeCustomerId = req.user.stripe_customer_id;
 
       if (!stripeCustomerId) {
-        return unavailableResponse({
-          response,
+        handlers.logger.unavailable({
+          object_type,
+          message: "Stripe customer ID not found."
+        });
+        return handlers.response.unavailable({
+          res,
           message: "Stripe customer ID not found."
         });
       }
@@ -178,24 +222,19 @@ class Service {
 
       const stripeCard = await stripe.paymentMethods.retrieve(stripe_card_id);
 
-      return successResponse({
-        response,
+      handlers.logger.success({
+        object_type,
+        message: "Default card set successfully."
+      });
+      return handlers.response.success({
+        res,
         message: "Default card set successfully.",
         data: stripeCard
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
     }
-  }
-
-  formatStripeList(array) {
-    return array.map((item) => {
-      return {
-        id: item.id,
-        brand: item.card.brand,
-        last4: item.card.last4
-      };
-    });
   }
 }
 

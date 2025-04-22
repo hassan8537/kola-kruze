@@ -10,7 +10,7 @@ const RatingSchema = new mongoose.Schema(
     type: {
       type: String,
       required: true,
-      enum: ["user-to-driver", "driver-to-user"]
+      enum: ["passenger-to-driver", "driver-to-passenger"]
     },
     drive_again: {
       type: Boolean,
@@ -26,8 +26,16 @@ const RatingSchema = new mongoose.Schema(
       ref: "User",
       required: true
     },
-    rating: { type: Number, min: 1, max: 5, required: true },
-    feedback: { type: String, default: null }
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      required: true
+    },
+    feedback: {
+      type: String,
+      default: null
+    }
   },
   { timestamps: true }
 );

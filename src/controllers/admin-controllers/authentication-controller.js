@@ -5,8 +5,8 @@ class Controller {
     this.service = service;
   }
 
-  async adminAuthentication(request, response) {
-    return this.service.adminAuthentication(request, response);
+  async signIn(request, response) {
+    return this.service.signIn(request, response);
   }
 }
 

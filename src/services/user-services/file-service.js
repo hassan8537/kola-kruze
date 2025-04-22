@@ -1,13 +1,9 @@
 const File = require("../../models/File");
-const { populateFile } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  unavailableResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
+const handlers = require("../../utilities/handlers/handlers");
+const fileSchema = require("../../schemas/file-schema");
 
 class Service {
   constructor() {
@@ -19,7 +15,6 @@ class Service {
       const query = request.query;
 
       const filters = {};
-
       if (query._id) filters._id = query._id;
       if (query.user_id) filters.user_id = query.user_id;
       if (query.file_type) filters.file_type = query.file_type;
@@ -35,10 +30,18 @@ class Service {
         page,
         limit,
         sort,
-        populate: populateFile.populate
+        populate: fileSchema.populate
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "fetch-files",
+        message: "Error fetching files.",
+        data: error.message
+      });
+      return handlers.response.error({
+        res: response,
+        message: "Error fetching files."
+      });
     }
   }
 
@@ -48,17 +51,37 @@ class Service {
 
       const file = await this.file.findById(_id);
 
-      if (!file)
-        return unavailableResponse({ response, message: "No file found." });
+      if (!file) {
+        handlers.logger.unavailable({
+          object_type: "delete-files",
+          message: "No file found."
+        });
+        return handlers.response.unavailable({
+          res: response,
+          message: "No file found."
+        });
+      }
 
       await this.file.findByIdAndDelete(_id);
 
-      return successResponse({
-        response,
-        message: "File delete successfully."
+      handlers.logger.success({
+        object_type: "delete-files",
+        message: "File deleted successfully."
+      });
+      return handlers.response.success({
+        res: response,
+        message: "File deleted successfully."
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "file",
+        message: "Error deleting file.",
+        data: error.message
+      });
+      return handlers.response.error({
+        res: response,
+        message: "Error deleting file."
+      });
     }
   }
 }

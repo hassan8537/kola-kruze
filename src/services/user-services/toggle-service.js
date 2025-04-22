@@ -1,35 +1,42 @@
 const User = require("../../models/User");
-const { populateUser } = require("../../populate/populate-models");
-const {
-  errorResponse,
-  successResponse
-} = require("../../utilities/handlers/response-handler");
+const userSchema = require("../../schemas/user-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
     this.user = User;
   }
 
-  async toggleDriverAvailability(request, response) {
+  async toggleDriverAvailability(req, res) {
     try {
-      const user = request.user;
+      const user = req.user;
 
-      if (!user.is_available) {
-        user.is_available = true;
-      } else {
-        user.is_available = false;
-      }
+      user.is_available = !user.is_available;
 
       await user.save();
-      await user.populate(populateUser.populate);
+      await user.populate(userSchema.populate);
 
-      return successResponse({
-        response,
-        message: `You are ${user.is_available ? "available" : "unavailable"}`,
+      const statusText = user.is_available ? "available" : "unavailable";
+
+      handlers.logger.success({
+        object_type: "user",
+        message: `You are ${statusText}`,
+        data: user
+      });
+
+      return handlers.response.success({
+        res: res,
+        message: `You are ${statusText}`,
         data: user
       });
     } catch (error) {
-      return errorResponse({ response, error });
+      handlers.logger.error({
+        object_type: "user",
+        message: "Failed to toggle availability",
+        data: error?.message
+      });
+
+      return handlers.response.error({ res: res, error });
     }
   }
 }
