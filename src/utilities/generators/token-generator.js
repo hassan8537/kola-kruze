@@ -21,11 +21,7 @@ exports.generateToken = ({ res, user_id }) => {
       maxAge: parseInt(process.env.MAX_AGE || "86400000") // fallback: 1 day
     });
 
-    return handlers.logger.failed({
-      res: res,
-      message: "Token generated successfully",
-      token
-    });
+    return token;
   } catch (error) {
     return handlers.response.error({
       res: res,
