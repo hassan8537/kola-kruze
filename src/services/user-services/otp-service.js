@@ -3,6 +3,7 @@ const User = require("../../models/User");
 const { handlers } = require("../../utilities/handlers/handlers");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const otpSchema = require("../../schemas/otp-schema");
+const userSchema = require("../../schemas/user-schema");
 
 class Service {
   constructor() {
@@ -33,7 +34,7 @@ class Service {
       } else {
         const user = await this.user
           .findById(user_id)
-          .populate(otpSchema.populate);
+          .populate(userSchema.populate);
 
         if (!user) {
           handlers.logger.unavailable({

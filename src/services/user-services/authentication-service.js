@@ -22,7 +22,7 @@ class Service {
       await user.save();
       await user.populate(userSchema.populate);
 
-      sendEmail({
+      await sendEmail({
         to: user.email_address,
         subject: "Account Verification",
         text: `Your verification code is: ${otpCode}`

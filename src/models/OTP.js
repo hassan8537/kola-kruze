@@ -3,7 +3,7 @@ const { Schema, model } = require("mongoose");
 const otpSchema = new Schema(
   {
     user_id: {
-      type: String,
+      type: Schema.Types.ObjectId,
       required: true,
       ref: "User"
     },
