@@ -57,14 +57,17 @@ class Service {
         role
       } = req.body;
 
-      const emailUsed = await this.user.findOne({ email: email_address });
-      if (emailUsed && emailUsed.role !== role) {
+      // 1. Find user by email (only)
+      let user = await this.user.findOne({ email_address });
+
+      // 2. If found and role is different, block
+      if (user && user.role !== role) {
         handlers.logger.failed({
           object_type: "user-authentication",
           message: "Email already registered with a different role",
           data: {
             email: email_address,
-            existing_role: emailUsed.role,
+            existing_role: user.role,
             attempted_role: role
           }
         });
@@ -75,8 +78,7 @@ class Service {
         });
       }
 
-      let user = await this.user.findOne({ email: email_address, role });
-
+      // 3. If no user, create one
       if (!user) {
         user = await this.user.create({
           role,
@@ -95,6 +97,7 @@ class Service {
         });
       }
 
+      // 4. Continue with OTP/token
       const { user: updatedUser } = await this.generateAndSendOtp(
         user,
         device_token,
