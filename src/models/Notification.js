@@ -13,7 +13,16 @@ const NotificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["payment", "ride", "user", "vehicle", "review", "chat"],
+      enum: [
+        "payment",
+        "user",
+        "vehicle",
+        "review",
+        "chat",
+        "instant-ride",
+        "schedule-ride",
+        "share-ride"
+      ],
       required: true
     },
     status: {
@@ -29,7 +38,15 @@ const NotificationSchema = new mongoose.Schema(
     model_type: {
       type: String,
       required: true,
-      enum: ["Payment", "Ride", "User", "Vehicle", "Rating", "Chat"]
+      enum: [
+        "Payment",
+        "Ride",
+        "User",
+        "Vehicle",
+        "Rating",
+        "Chat",
+        "RideInvite"
+      ]
     }
   },
   {

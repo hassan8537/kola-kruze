@@ -1,3 +1,10 @@
+const RADIUS_OF_EARTH_KM = 6371;
+const RADIUS_OF_EARTH_MILES = 3958.8;
+
+const toRad = (value) => {
+  return (value * Math.PI) / 180;
+};
+
 exports.calculateDistance = (lat1, lon1, lat2, lon2, unit = "km") => {
   const R = unit === "miles" ? RADIUS_OF_EARTH_MILES : RADIUS_OF_EARTH_KM;
   const dLat = toRad(lat2 - lat1);

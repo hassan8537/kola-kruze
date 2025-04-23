@@ -112,36 +112,42 @@ const RideSchema = new mongoose.Schema(
         },
         coordinates: { type: [Number], index: "2dsphere", default: [0, 0] }
       },
-      distance_miles_from_pickup: {
-        type: Number,
-        default: 0
-      },
+      distance_miles_from_pickup: { type: Number, default: 0 },
       eta_to_pickup: { type: String, default: null },
       eta_to_dropoff: { type: String, default: null }
     },
-
-    // Ride Sharing (Multi-Rider)
-    shared_with: [
-      {
-        user_id: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
-          default: null
-        },
-        phone: { type: String, default: null },
-        status: {
-          type: String,
-          enum: ["invited", "accepted", "declined", "cancelled", "expired"],
-          default: "invited"
-        },
-        split_amount: { type: Number, default: 0 }
-      }
-    ],
 
     split_fare: {
       total_riders: { type: Number, default: 1, min: 1, max: 4 },
       per_rider_amount: { type: Number, default: 0 }
     },
+
+    split_with_users: [
+      {
+        user_id: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true
+        },
+        amount: {
+          type: Number,
+          required: true
+        },
+        status: {
+          type: String,
+          enum: ["pending", "paid", "failed", "cancelled"],
+          default: "pending"
+        },
+        payment_intent_id: {
+          type: String,
+          default: null
+        },
+        paid_at: {
+          type: Date,
+          default: null
+        }
+      }
+    ],
 
     ride_otp: { type: Number, default: null },
     is_verified: { type: Boolean, default: false },
@@ -150,12 +156,16 @@ const RideSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Report",
       default: null
-    }
+    },
+
+    total_invites: { type: Number, default: 0 },
+    total_accepted: { type: Number, default: 0 },
+    total_rejected: { type: Number, default: 0 },
+    total_shares: { type: Number, default: 0 }
   },
   { timestamps: true }
 );
 
-// Indexes for faster queries
 RideSchema.index({ user_id: 1, driver_id: 1, ride_status: 1 });
 RideSchema.index({ "pickup_location.location": "2dsphere" });
 RideSchema.index({ "dropoff_location.location": "2dsphere" });
