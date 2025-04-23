@@ -239,29 +239,24 @@ class Service {
         });
       }
 
+      const data = {
+        vehicle_categories: categories,
+        rate_per_stop: admin.rate_per_stop,
+        distance_miles: Number(totalMiles),
+        pickup_location,
+        dropoff_location,
+        stops: stops
+      };
+
       handlers.logger.success({
         object_type: "select-destinations",
         message: "Stop(s) managed successfully.",
-        data: {
-          vehicle_categories: categories,
-          rate_per_stop: admin.rate_per_stop,
-          distance_miles: Number(totalMiles.toFixed(2)),
-          pickup_location,
-          dropoff_location,
-          stops: stops
-        }
+        data: data
       });
       return handlers.response.success({
         res,
         message: "Stop(s) managed successfully.",
-        data: {
-          vehicle_categories: categories,
-          rate_per_stop: admin.rate_per_stop,
-          distance_miles: Number(totalMiles.toFixed(2)),
-          pickup_location,
-          dropoff_location,
-          stops: stops
-        }
+        data: data
       });
     } catch (error) {
       handlers.logger.error({
