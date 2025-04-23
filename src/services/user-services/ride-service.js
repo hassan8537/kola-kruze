@@ -272,8 +272,8 @@ class Service {
 
   async rideDetailsAndFares(req, res) {
     try {
+      const user_id = req.user._id;
       const {
-        user_id,
         vehicle_category,
         fare_details,
         distance_miles,
@@ -479,7 +479,7 @@ class Service {
         message: "Ride confirmed successfully",
         data: data
       });
-      handlers.logger.success({
+      handlers.response.success({
         res,
         message: "Ride confirmed successfully",
         data: data
