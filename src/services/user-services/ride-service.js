@@ -363,8 +363,8 @@ class Service {
         pickup_location: newRide.pickup_location,
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
-        stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])
+        stops: newRide.stops
+        // card: formatStripeList([cardObject.card_details])
       };
 
       handlers.logger.success({
