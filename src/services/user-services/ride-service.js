@@ -433,7 +433,7 @@ class Service {
           object_type: "confirm-ride",
           message: "No categories found"
         });
-        handlers.logger.unavailable({
+        handlers.response.unavailable({
           res,
           message: "No categories found"
         });
