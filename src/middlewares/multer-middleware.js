@@ -10,7 +10,7 @@ const storage = multer.diskStorage({
     } else if (file.mimetype.startsWith("audio")) {
       cb(null, "uploads/audios");
     } else {
-      cb(null, "uploads/documents");
+      cb(null, "uploads/docs");
     }
   },
   filename: (req, file, cb) => {
