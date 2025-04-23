@@ -314,21 +314,22 @@ class Service {
         });
       }
 
-      const card = await this.card.findOne({ stripe_card_id });
-      if (!card) {
-        handlers.logger.unavailable({
-          object_type: "ride-details-and-fares",
-          message: "No cards found"
-        });
-        return handlers.response.unavailable({
-          res,
-          message: "No cards found"
-        });
-      }
-      const stripeCardDetails =
-        await stripe.paymentMethods.retrieve(stripe_card_id);
-      const cardObject = card.toObject();
-      cardObject.card_details = stripeCardDetails;
+      // On Hold
+      // const card = await this.card.findOne({ stripe_card_id });
+      // if (!card) {
+      //   handlers.logger.unavailable({
+      //     object_type: "ride-details-and-fares",
+      //     message: "No cards found"
+      //   });
+      //   return handlers.response.unavailable({
+      //     res,
+      //     message: "No cards found"
+      //   });
+      // }
+      // const stripeCardDetails =
+      //   await stripe.paymentMethods.retrieve(stripe_card_id);
+      // const cardObject = card.toObject();
+      // cardObject.card_details = stripeCardDetails;
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
@@ -575,11 +576,12 @@ class Service {
           message: "You already have booked this ride"
         });
 
-      const stripe_default_card = ride.user_id.stripe_default_card;
+      // On Hold
+      // const stripe_default_card = ride.user_id.stripe_default_card;
 
-      const card = await this.card.findOne({
-        stripe_card_id: stripe_default_card
-      });
+      // const card = await this.card.findOne({
+      //   stripe_card_id: stripe_default_card
+      // });
 
       ride.ride_status = "booked";
       ride.fare_details.payment_status = "paid";
