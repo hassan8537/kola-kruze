@@ -2,8 +2,8 @@ const File = require("../../models/File");
 const {
   pagination
 } = require("../../utilities/paginations/pagination-utility");
-const handlers = require("../../utilities/handlers/handlers");
 const fileSchema = require("../../schemas/file-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
 
 class Service {
   constructor() {
@@ -28,11 +28,10 @@ class Service {
         req.files[fieldname].forEach((file) => {
           filesToSave.push({
             user_id,
-            name: file.originalname,
-            field: file.fieldname,
-            type: file.mimetype,
-            size: file.size,
-            path: file.path
+            file_name: file.originalname,
+            file_type: file.mimetype,
+            file_size: file.size,
+            file_path: file.path
           });
         });
       }
