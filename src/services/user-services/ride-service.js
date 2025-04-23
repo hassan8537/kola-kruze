@@ -609,11 +609,11 @@ class Service {
   async joinRoom(socket, data) {
     const { userId } = data;
 
-    socket.join(userId.toString());
+    socket.join(userId);
 
     console.log(`User [${userId}] joined the room.`);
 
-    socket.emit(
+    return socket.emit(
       "response",
       successEvent({
         object_type: "room-joined",
