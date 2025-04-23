@@ -1056,11 +1056,12 @@ class Service {
       });
 
       // Emit to both
-      socket.emit("response", message); // canceller
-      const receiverId = isPassenger ? driver_id : passenger_id;
-      if (receiverId) {
-        await this.io.to(receiverId.toString()).emit("response", message); // other party
-      }
+      // socket.emit("response", message); // canceller
+      // const receiverId = isPassenger ? driver_id : passenger_id;
+      // if (receiverId) {
+      await this.io.to(passenger_id.toString()).emit("response", message); // other party
+      await this.io.to(driver_id.toString()).emit("response", message); // other party
+      // }
     } catch (error) {
       socket.emit("error", errorEvent({ error: error.message }));
     }
