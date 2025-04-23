@@ -5,6 +5,10 @@ class Controller {
     this.service = service;
   }
 
+  async createFile(request, response) {
+    return this.service.createFile(request, response);
+  }
+
   async getFiles(request, response) {
     return this.service.getFiles(request, response);
   }

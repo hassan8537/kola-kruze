@@ -99,6 +99,17 @@ router.put(
 );
 
 // files
+router.post(
+  "/files",
+  upload.fields([
+    { name: "videos" },
+    { name: "images" },
+    { name: "audios" },
+    { name: "docs" }
+  ]),
+  controllers.file.createFile.bind(controllers.file)
+);
+
 router.get("/files", controllers.file.getFiles.bind(controllers.file));
 
 router.delete(
