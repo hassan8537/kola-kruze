@@ -59,8 +59,10 @@ class Service {
           invited_by: current_user._id,
           invited_user_id: invited_user_id
         });
-
         await newInvite.save();
+
+        existingRide.total_invites++;
+        await existingRide.save();
 
         // Send notification
         await this.notification.create({
@@ -136,13 +138,17 @@ class Service {
       existingPendingInvitation.accepted_at = Date.now();
       await existingPendingInvitation.save();
 
+      existingRide.total_accepted++;
+      existingRide.total_shares++;
+      await existingRide.save();
+
       // Send notification
       await this.notification.create({
-        user_id: invited_user_id,
-        message: `You’ve been invited to join a ride by ${current_user.first_name} ${current_user.last_name}. 
-                    Tap to view the ride details.`,
+        user_id: existingRide.user_id,
+        message: `${current_user.first_name} ${current_user.last_name} has accepted your ride invitation. 
+            Tap to view the updated ride details.`,
         type: "share-ride",
-        model_id: newInvite._id,
+        model_id: existingPendingInvitation._id,
         model_type: "RideInvite"
       });
 
@@ -208,6 +214,16 @@ class Service {
       existingPendingInvitation.status = "rejected";
       existingPendingInvitation.accepted_at = Date.now();
       await existingPendingInvitation.save();
+
+      // Send notification
+      await this.notification.create({
+        user_id: existingRide.user_id,
+        message: `${current_user.first_name} ${current_user.last_name} has rejected your ride invitation. 
+            Tap to view the updated ride details.`,
+        type: "share-ride",
+        model_id: existingPendingInvitation._id,
+        model_type: "RideInvite"
+      });
 
       handlers.logger.success({
         object_type: "accept-invitation",
