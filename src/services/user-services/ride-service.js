@@ -1012,14 +1012,14 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      // Fetch the ride
+      // Find the ride
       const ride = await this.ride.findOne({
         _id: ride_id,
         $or: [{ user_id }, { driver_id: user_id }],
         ride_status: { $in: ["booked", "accepted"] }
       });
 
-      // If no ride is found, return early
+      // Ride not found
       if (!ride) {
         return socket.emit(
           "response",
@@ -1030,28 +1030,28 @@ class Service {
         );
       }
 
-      // Ensure user_id, driver_id, and passenger_id are valid
-      const isPassenger = ride.user_id?.toString() === user_id?.toString();
       const driver_id = ride.driver_id?.toString() || null;
       const passenger_id = ride.user_id?.toString() || null;
+      const isPassenger = passenger_id === user_id;
 
-      const object_type = isPassenger
-        ? "ride-cancelled-by-passenger"
-        : "ride-cancelled-by-driver";
-
-      // Update ride status and cancellation details
+      // Update ride status
       ride.ride_status = "cancelled";
       ride.cancellation = {
         user_id,
         reason: cancellation?.reason || null,
         description: cancellation?.description || null
       };
+
       await ride.save();
 
-      // Populate and send the current ride details
+      // Get the updated ride
       const currentRide = await this.ride
         .findById(ride_id)
         .populate(rideSchema.populate);
+
+      const object_type = isPassenger
+        ? "ride-cancelled-by-passenger"
+        : "ride-cancelled-by-driver";
 
       const message = successEvent({
         object_type,
@@ -1059,10 +1059,15 @@ class Service {
         data: currentRide
       });
 
-      // Emit message only to the receiver (the other party in the ride)
-      if (passenger_id)
-        await this.io.to(passenger_id).emit("response", message);
-      if (driver_id) await this.io.to(driver_id).emit("response", message);
+      // Emit to the user who cancelled
+      socket.emit("response", message);
+
+      // Emit to the other party if different
+      const receiverId = isPassenger ? driver_id : passenger_id;
+
+      if (receiverId && receiverId !== socket.id) {
+        await this.io.to(receiverId).emit("response", message);
+      }
     } catch (error) {
       socket.emit("error", errorEvent({ error: error.message }));
     }
