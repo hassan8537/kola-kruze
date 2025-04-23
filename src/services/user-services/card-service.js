@@ -88,11 +88,13 @@ class Service {
       if (!stripeCustomerId) {
         handlers.logger.unavailable({
           object_type,
-          message: "Stripe customer ID not found."
+          message:
+            "Stripe customer ID not found. Please setup your Stripe merchant"
         });
         return handlers.response.unavailable({
           res,
-          message: "Stripe customer ID not found."
+          message:
+            "Stripe customer ID not found. Please setup your Stripe merchant"
         });
       }
 
