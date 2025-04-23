@@ -36,14 +36,14 @@ const rideSchema = {
         select: fileSchema.fieldsToSelect
       }
     },
-    {
-      path: "shared_with.user_id",
-      select: userSchema.fieldsToSelect,
-      populate: {
-        path: "profile_picture driver_license",
-        select: fileSchema.fieldsToSelect
-      }
-    },
+    // {
+    //   path: "shared_with.user_id",
+    //   select: userSchema.fieldsToSelect,
+    //   populate: {
+    //     path: "profile_picture driver_license",
+    //     select: fileSchema.fieldsToSelect
+    //   }
+    // },
     {
       path: "report_id",
       populate: [
