@@ -1012,14 +1012,12 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      // Find the ride
       const ride = await this.ride.findOne({
         _id: ride_id,
         $or: [{ user_id }, { driver_id: user_id }],
         ride_status: { $in: ["booked", "accepted"] }
       });
 
-      // Ride not found
       if (!ride) {
         return socket.emit(
           "response",
@@ -1034,7 +1032,6 @@ class Service {
       const passenger_id = ride.user_id?.toString() || null;
       const isPassenger = passenger_id === user_id;
 
-      // Update ride status
       ride.ride_status = "cancelled";
       ride.cancellation = {
         user_id,
@@ -1044,7 +1041,6 @@ class Service {
 
       await ride.save();
 
-      // Get the updated ride
       const currentRide = await this.ride
         .findById(ride_id)
         .populate(rideSchema.populate);
@@ -1059,16 +1055,11 @@ class Service {
         data: currentRide
       });
 
-      // Emit to the user who cancelled
-      socket.emit("response", message);
-
-      // Emit to the other party if different
-      const receiverId = isPassenger
-        ? driver_id.toString()
-        : passenger_id.toString();
-
-      if (receiverId && receiverId !== socket.id) {
-        await this.io.to(receiverId).emit("response", message);
+      // Emit to both
+      socket.emit("response", message); // canceller
+      const receiverId = isPassenger ? driver_id : passenger_id;
+      if (receiverId) {
+        await this.io.to(receiverId.toString()).emit("response", message); // other party
       }
     } catch (error) {
       socket.emit("error", errorEvent({ error: error.message }));
