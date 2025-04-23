@@ -159,6 +159,9 @@ app.delete(`/api/${process.env.API_VERSION}/rides`, async (req, res) => {
 
 connectToDatabase()
   .then(() => {
+    require("./src/models/RideInvite");
+    require("./src/models/Payment");
+
     server.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

@@ -19,7 +19,8 @@ const controllers = {
   rating: require("../../controllers/user-controllers/rating-controller"),
   report: require("../../controllers/user-controllers/report-controller"),
   toggle: require("../../controllers/user-controllers/toggle-controller"),
-  invitation: require("../../controllers/user-controllers/invitation-controller")
+  invitation: require("../../controllers/user-controllers/invitation-controller"),
+  notification: require("../../controllers/user-controllers/notification-controller")
 };
 
 // session
@@ -213,6 +214,24 @@ router.get(
 router.get(
   "/invitations/accept-invitation/:ride_id/:user_id",
   controllers.invitation.acceptInvitation.bind(controllers.invitation)
+);
+
+// invitation
+router.get(
+  "/notifications",
+  controllers.notification.getNotifications.bind(controllers.notification)
+);
+
+router.get(
+  "/notifications/unread",
+  controllers.notification.getUnreadNotificationCount.bind(
+    controllers.notification
+  )
+);
+
+router.get(
+  "/notifications/mark-as-read",
+  controllers.notification.markAsRead.bind(controllers.notification)
 );
 
 module.exports = router;

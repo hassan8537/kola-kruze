@@ -59,9 +59,9 @@ class Service {
 
   // APIs
 
-  async getNotifications(request, response) {
+  async getNotifications(req, res) {
     try {
-      const query = request.query;
+      const query = req.query;
 
       const filters = {};
 
@@ -75,7 +75,7 @@ class Service {
       const { page, limit, sort } = query;
 
       await pagination({
-        response,
+        response: res,
         table: "Notifications",
         model: this.notification,
         filters,
@@ -85,7 +85,60 @@ class Service {
         populate: notificationSchema.populate
       });
     } catch (error) {
-      return handlers.response.error({ response, error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
+
+  async getUnreadNotificationCount(req, res) {
+    try {
+      const user_id = req.user._id;
+
+      console.log(req.user.email_address);
+
+      if (!user_id) {
+        return handlers.response.failed({
+          res,
+          message: "User ID is required to fetch unread notification count."
+        });
+      }
+
+      const count = await this.notification.countDocuments({
+        user_id,
+        status: "unread"
+      });
+
+      return handlers.response.success({
+        res,
+        message: "Unread notification count fetched successfully.",
+        data: { count }
+      });
+    } catch (error) {
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
+
+  async markAsRead(req, res) {
+    try {
+      const user_id = req.user._id;
+
+      if (!user_id) {
+        return handlers.response.failed({
+          res,
+          message: "User ID is required to mark notifications as read."
+        });
+      }
+
+      const result = await this.notification.updateMany(
+        { user_id, status: "unread" },
+        { $set: { status: "read" } }
+      );
+
+      return handlers.response.success({
+        res,
+        message: "All unread notifications marked as read."
+      });
+    } catch (error) {
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
@@ -109,7 +162,7 @@ class Service {
         message: "Notification deleted successfully."
       });
     } catch (error) {
-      return handlers.response.error({ response, error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 }

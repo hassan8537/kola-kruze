@@ -1,8 +1,15 @@
+const fileSchema = require("./file-schema");
+const userSchema = require("./user-schema");
+
 const notificationSchema = {
   populate: [
     {
       path: "user_id",
-      select: "name email phone profile_image role"
+      select: userSchema.fieldsToSelect,
+      populate: {
+        path: "profile_picture driver_license",
+        select: fileSchema.fieldsToSelect
+      }
     },
     {
       path: "model_id",
