@@ -153,7 +153,7 @@ class Service {
           data: {
             vehicle_categories: categories,
             rate_per_stop: admin.rate_per_stop,
-            distance_miles: Number(totalMiles.toFixed(2)),
+            distance_miles: Number(totalMiles),
             pickup_location,
             dropoff_location,
             stops: stops
