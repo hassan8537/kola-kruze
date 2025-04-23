@@ -1063,7 +1063,9 @@ class Service {
       socket.emit("response", message);
 
       // Emit to the other party if different
-      const receiverId = isPassenger ? driver_id : passenger_id;
+      const receiverId = isPassenger
+        ? driver_id.toString()
+        : passenger_id.toString();
 
       if (receiverId && receiverId !== socket.id) {
         await this.io.to(receiverId).emit("response", message);
