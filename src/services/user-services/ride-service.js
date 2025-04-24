@@ -47,7 +47,16 @@ class Service {
       const currentRide = await this.ride
         .findOne({
           ...userFilter,
-          ride_status: { $in: ["pending", "ongoing", "booked"] }
+          ride_status: {
+            $in: [
+              "booked",
+              "reserved",
+              "accepted",
+              "scheduled",
+              "arrived",
+              "ongoing"
+            ]
+          }
         })
         .populate(rideSchema.populate);
 
