@@ -37,55 +37,14 @@ class Service {
     this.card = Card;
   }
 
-  async getCurrentRide(req, res) {
-    try {
-      const userFilter =
-        req.user.role === "driver"
-          ? { driver_id: req.user._id }
-          : { user_id: req.user._id };
-
-      const currentRide = await this.ride
-        .findOne({
-          ...userFilter,
-          ride_status: { $in: ["pending", "ongoing", "booked"] }
-        })
-        .populate(rideSchema.populate);
-
-      if (!currentRide) {
-        handlers.logger.failed({
-          object_type: "current-ride",
-          message: "No current rides yet"
-        });
-        return handlers.response.failed({
-          res,
-          message: "No current rides yet"
-        });
-      }
-
-      handlers.logger.success({
-        object_type: "current-ride",
-        message: "Current ride fetched successfully"
-      });
-
-      return handlers.response.success({
-        res,
-        message: "Current ride fetched successfully",
-        data: currentRide
-      });
-    } catch (error) {
-      handlers.logger.error({ object_type: "current-ride", message: error });
-      return handlers.response.error({ res, message: error.message });
-    }
-  }
-
   async getMyRides(req, res) {
     try {
       const { _id, status } = req.query;
 
       const userFilter =
         req.user.role === "driver"
-          ? { driver_id: req.user._id }
-          : { user_id: req.user._id };
+          ? { driver_id: req.user._id, ride_type: "scheduled" }
+          : { user_id: req.user._id, ride_type: "scheduled" };
 
       const filters = { ...userFilter };
       if (_id) filters._id = _id;
@@ -115,7 +74,11 @@ class Service {
 
       const existingRide = await this.ride
         .findOne(
-          { user_id, ride_status: { $in: ["pending", "ongoing", "booked"] } },
+          {
+            user_id,
+            ride_type: "scheduled",
+            ride_status: { $in: ["pending", "ongoing", "booked"] }
+          },
           "_id"
         )
         .lean();

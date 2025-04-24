@@ -58,6 +58,12 @@ const RideSchema = new mongoose.Schema(
 
     distance_miles: { type: Number, default: 0 },
 
+    ride_type: {
+      type: String,
+      enum: ["instant", "scheduled", "share"],
+      default: "instant"
+    },
+
     ride_status: {
       type: String,
       enum: [

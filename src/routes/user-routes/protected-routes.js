@@ -149,6 +149,11 @@ router.get(
 );
 
 // rides
+router.get(
+  "/rides/current",
+  controllers.ride.getCurrentRide.bind(controllers.ride)
+);
+
 router.get("/rides", controllers.ride.getMyRides.bind(controllers.ride));
 
 router.post(
