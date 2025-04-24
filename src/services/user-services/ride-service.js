@@ -124,7 +124,19 @@ class Service {
 
       const existingRide = await this.ride
         .findOne(
-          { user_id, ride_status: { $in: ["pending", "ongoing", "booked"] } },
+          {
+            user_id,
+            ride_status: {
+              $in: [
+                "booked",
+                "reserved",
+                "accepted",
+                "scheduled",
+                "arrived",
+                "ongoing"
+              ]
+            }
+          },
           "_id"
         )
         .lean();
