@@ -14,7 +14,7 @@ class Controller {
   }
 
   async editProfile(request, response) {
-    return this.service.editProfile(request, response);
+    return this.service.updateProfile(request, response);
   }
 
   async deleteAccount(request, response) {

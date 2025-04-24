@@ -39,10 +39,14 @@ class Service {
 
   async getCurrentRide(req, res) {
     try {
+      console.log(req.user.role);
+
       const userFilter =
         req.user.role === "driver"
           ? { driver_id: req.user._id }
           : { user_id: req.user._id };
+
+      console.log({ userFilter });
 
       const currentRide = await this.ride
         .findOne({
