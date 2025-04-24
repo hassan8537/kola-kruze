@@ -146,7 +146,7 @@ class Service {
   }
 
   async updateProfile(req, res) {
-    const object_type = "create-profile";
+    const object_type = "update-profile";
 
     try {
       const user_id = req.user._id;
@@ -191,6 +191,13 @@ class Service {
           message: "Phone number and Emergency contact cannot be same."
         });
       }
+
+      console.log({
+        profile_picture: body.profile_picture ?? user.profile_picture,
+        legal_name: body.legal_name ?? user.legal_name,
+        first_name: body.first_name ?? user.first_name,
+        last_name: body.last_name ?? user.last_name
+      });
 
       Object.assign(user, {
         profile_picture: body.profile_picture ?? user.profile_picture,
