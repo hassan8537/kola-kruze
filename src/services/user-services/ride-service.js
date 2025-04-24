@@ -48,6 +48,7 @@ class Service {
 
       const filters = { ...userFilter };
       if (_id) filters._id = _id;
+      if (status) filters.status = status;
 
       const { page, limit, sort } = req.query;
 
