@@ -61,16 +61,9 @@ class Service {
 
   async getNotifications(req, res) {
     try {
-      const query = req.query;
+      const user_id = req.user_id;
 
-      const filters = {};
-
-      if (query._id) filters._id = query._id;
-      if (query.user_id) filters.user_id = query.user_id;
-      if (query.type) filters.type = query.type;
-      if (query.status) filters.status = query.status;
-      if (query.model_id) filters.model_id = query.model_id;
-      if (query.model_type) filters.model_type = query.model_type;
+      const filters = { user_id };
 
       const { page, limit, sort } = query;
 
