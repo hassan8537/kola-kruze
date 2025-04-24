@@ -65,7 +65,7 @@ class Service {
 
       const filters = { user_id };
 
-      const { page, limit, sort } = query;
+      const { page, limit, sort } = req.query;
 
       await pagination({
         response: res,
