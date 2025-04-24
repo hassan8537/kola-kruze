@@ -41,14 +41,16 @@ class Service {
     try {
       const { _id } = req.query;
 
-      const user_id =
+      const userFilter =
         req.user.role === "driver"
           ? { driver_id: req.user._id }
           : { user_id: req.user._id };
 
-      const filters = { user_id };
+      const filters = { ...userFilter };
       if (_id) filters._id = _id;
+
       const { page, limit, sort } = req.query;
+
       await pagination({
         response: res,
         table: "Rides",
