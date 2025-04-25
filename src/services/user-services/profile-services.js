@@ -152,8 +152,6 @@ class Service {
       const user_id = req.user._id;
       const body = req.body;
 
-      console.log({ body });
-
       const user = await this.user.findById(user_id);
       if (!user) {
         logger.unavailable({

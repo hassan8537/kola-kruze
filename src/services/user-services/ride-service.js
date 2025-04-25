@@ -56,6 +56,7 @@ class Service {
               "booked",
               "reserved",
               "accepted",
+              "started",
               "scheduled",
               "arrived",
               "ongoing"
