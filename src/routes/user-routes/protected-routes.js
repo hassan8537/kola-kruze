@@ -204,6 +204,21 @@ router.get(
   controllers.shared_ride.getPassengers.bind(controllers.shared_ride)
 );
 
+router.post(
+  "/rides/shared/send-invite",
+  controllers.shared_ride.inviteUser.bind(controllers.shared_ride)
+);
+
+router.post(
+  "/rides/shared/invites/accept",
+  controllers.shared_ride.acceptInvite.bind(controllers.shared_ride)
+);
+
+router.post(
+  "/rides/shared/invites/reject",
+  controllers.shared_ride.rejectInvite.bind(controllers.shared_ride)
+);
+
 // rating
 router.get(
   "/ratings/user",

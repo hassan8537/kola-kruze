@@ -12,6 +12,18 @@ class Controller {
   async getPassengers(request, response) {
     return this.service.getPassengers(request, response);
   }
+
+  async inviteUser(request, response) {
+    return this.service.inviteUser(request, response);
+  }
+
+  async acceptInvite(request, response) {
+    return this.service.acceptInvite(request, response);
+  }
+
+  async rejectInvite(request, response) {
+    return this.service.rejectInvite(request, response);
+  }
 }
 
 module.exports = new Controller();
