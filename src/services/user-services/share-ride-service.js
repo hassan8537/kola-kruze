@@ -2,7 +2,14 @@ const Notification = require("../../models/Notification");
 const Ride = require("../../models/Ride");
 const RideInvite = require("../../models/RideInvite");
 const User = require("../../models/User");
+const userSchema = require("../../schemas/user-schema");
+const {
+  calculateDistance
+} = require("../../utilities/calculators/distance-calculator");
 const { handlers } = require("../../utilities/handlers/handlers");
+const {
+  pagination
+} = require("../../utilities/paginations/pagination-utility");
 
 class Service {
   constructor() {
@@ -241,6 +248,166 @@ class Service {
         message: error
       });
       handlers.response.error({ res, message: error.message });
+    }
+  }
+
+  async selectDestination(req, res) {
+    try {
+      const user_id = req.user._id;
+
+      const existingRide = await this.ride
+        .findOne(
+          {
+            user_id,
+            ride_type: "shared",
+            ride_status: {
+              $in: [
+                "booked",
+                "reserved",
+                "accepted",
+                "started",
+                "scheduled",
+                "arrived",
+                "ongoing"
+              ]
+            }
+          },
+          "_id"
+        )
+        .lean();
+
+      if (existingRide) {
+        handlers.logger.failed({
+          object_type: "select-destinations",
+          message: "A ride is already in progress"
+        });
+        return handlers.response.failed({
+          res,
+          message: "A ride is already in progress"
+        });
+      }
+
+      try {
+        const {
+          pickup_location,
+          dropoff_location,
+          no_of_passengers,
+          split_amount,
+          total_amount
+        } = req.body;
+
+        const admin = await this.user.findOne({ role: "admin" });
+
+        const pickupCoords = pickup_location.location.coordinates;
+        const dropoffCoords = dropoff_location.location.coordinates;
+
+        // Calculate total distance with stops in order
+        let totalMiles = 0;
+        let prevCoords = pickupCoords;
+
+        if (!stops.length) {
+          for (const stop of stops) {
+            const stopCoords = stop.location.coordinates;
+            totalMiles += calculateDistance(
+              prevCoords[1],
+              prevCoords[0],
+              stopCoords[1],
+              stopCoords[0]
+            );
+            prevCoords = stopCoords;
+          }
+        }
+
+        // Add final segment from last stop to dropoff
+        totalMiles += calculateDistance(
+          prevCoords[1],
+          prevCoords[0],
+          dropoffCoords[1],
+          dropoffCoords[0]
+        );
+
+        const categories = await this.category
+          .find()
+          .populate(categorySchema.populate)
+          .lean();
+        if (!categories.length) {
+          handlers.logger.failed({
+            object_type: "select-destinations",
+            message: "No categories found"
+          });
+          return handlers.response.failed({
+            res,
+            message: "No categories found"
+          });
+        }
+
+        handlers.logger.success({
+          object_type: "select-destinations",
+          message: "Stop(s) managed successfully.",
+          data: {
+            vehicle_categories: categories,
+            rate_per_stop: admin.rate_per_stop,
+            distance_miles: Number(totalMiles),
+            pickup_location,
+            dropoff_location,
+            stops: stops
+          }
+        });
+        return handlers.response.success({
+          res,
+          message: "Stop(s) managed successfully.",
+          data: {
+            vehicle_categories: categories,
+            rate_per_stop: admin.rate_per_stop,
+            distance_miles: Number(totalMiles),
+            pickup_location,
+            dropoff_location,
+            stops: stops
+          }
+        });
+      } catch (error) {
+        handlers.logger.error({
+          object_type: "select-destinations",
+          message: error
+        });
+        return handlers.response.error({
+          res,
+          message: error.message
+        });
+      }
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "select-destinations",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
+
+  async getPassengers(req, res) {
+    try {
+      const userFilter = req.user.role === "passenger";
+
+      const filters = { ...userFilter };
+
+      const { page, limit, sort } = req.query;
+
+      await pagination({
+        response: res,
+        table: "Passengers",
+        model: this.user,
+        filters,
+        page,
+        limit,
+        sort,
+        populate: userSchema.populate
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-passengers", message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 }

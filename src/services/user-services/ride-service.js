@@ -131,11 +131,13 @@ class Service {
         .findOne(
           {
             user_id,
+            ride_type: "instant",
             ride_status: {
               $in: [
                 "booked",
                 "reserved",
                 "accepted",
+                "started",
                 "scheduled",
                 "arrived",
                 "ongoing"

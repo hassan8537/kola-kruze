@@ -15,7 +15,8 @@ const controllers = {
   chat: require("../../controllers/user-controllers/chat-controller"),
   category: require("../../controllers/user-controllers/category-controller"),
   ride: require("../../controllers/user-controllers/ride-controller"),
-  share_ride: require("../../controllers/user-controllers/share-ride-controller"),
+  scheduled_ride: require("../../controllers/user-controllers/scheduled-ride-controller"),
+  shared_ride: require("../../controllers/user-controllers/share-ride-controller"),
   rating: require("../../controllers/user-controllers/rating-controller"),
   report: require("../../controllers/user-controllers/report-controller"),
   toggle: require("../../controllers/user-controllers/toggle-controller"),
@@ -184,6 +185,23 @@ router.post(
 router.post(
   "/rides/verify-otp",
   controllers.ride.verifyOtp.bind(controllers.ride)
+);
+
+// scheduled rides
+router.get(
+  "/rides/scheduled",
+  controllers.scheduled_ride.getMyRides.bind(controllers.scheduled_ride)
+);
+
+// shared rides
+router.get(
+  "/rides/shared/select-destination",
+  controllers.shared_ride.selectDestination.bind(controllers.shared_ride)
+);
+
+router.get(
+  "/rides/shared/passengers",
+  controllers.shared_ride.getPassengers.bind(controllers.shared_ride)
 );
 
 // rating

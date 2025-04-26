@@ -77,7 +77,17 @@ class Service {
           {
             user_id,
             ride_type: "scheduled",
-            ride_status: { $in: ["pending", "ongoing", "booked"] }
+            ride_status: {
+              $in: [
+                "booked",
+                "reserved",
+                "accepted",
+                "started",
+                "scheduled",
+                "arrived",
+                "ongoing"
+              ]
+            }
           },
           "_id"
         )
