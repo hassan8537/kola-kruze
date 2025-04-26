@@ -123,10 +123,7 @@ const RideSchema = new mongoose.Schema(
       eta_to_dropoff: { type: String, default: null }
     },
 
-    split_fare: {
-      total_riders: { type: Number, default: 1, min: 1, max: 4 },
-      per_rider_amount: { type: Number, default: 0 }
-    },
+    no_of_passengers: { type: Number, default: 0, max: 4 },
 
     split_with_users: [
       {

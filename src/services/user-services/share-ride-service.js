@@ -2,6 +2,7 @@ const Notification = require("../../models/Notification");
 const Ride = require("../../models/Ride");
 const RideInvite = require("../../models/RideInvite");
 const User = require("../../models/User");
+const categorySchema = require("../../schemas/category-schema");
 const userSchema = require("../../schemas/user-schema");
 const {
   calculateDistance
@@ -292,36 +293,19 @@ class Service {
           pickup_location,
           dropoff_location,
           no_of_passengers,
-          split_amount,
+          split_fare,
           total_amount
         } = req.body;
 
-        const admin = await this.user.findOne({ role: "admin" });
+        // const admin = await this.user.findOne({ role: "admin" });
 
         const pickupCoords = pickup_location.location.coordinates;
         const dropoffCoords = dropoff_location.location.coordinates;
 
-        // Calculate total distance with stops in order
-        let totalMiles = 0;
-        let prevCoords = pickupCoords;
-
-        if (!stops.length) {
-          for (const stop of stops) {
-            const stopCoords = stop.location.coordinates;
-            totalMiles += calculateDistance(
-              prevCoords[1],
-              prevCoords[0],
-              stopCoords[1],
-              stopCoords[0]
-            );
-            prevCoords = stopCoords;
-          }
-        }
-
-        // Add final segment from last stop to dropoff
-        totalMiles += calculateDistance(
-          prevCoords[1],
-          prevCoords[0],
+        // Calculate distance directly from pickup to dropoff
+        const distance_miles = calculateDistance(
+          pickupCoords[1],
+          pickupCoords[0],
           dropoffCoords[1],
           dropoffCoords[0]
         );
@@ -330,6 +314,7 @@ class Service {
           .find()
           .populate(categorySchema.populate)
           .lean();
+
         if (!categories.length) {
           handlers.logger.failed({
             object_type: "select-destinations",
@@ -341,29 +326,31 @@ class Service {
           });
         }
 
+        const newSharedRide = new Ride({
+          user_id: user_id,
+          pickup_location: pickup_location,
+          dropoff_location: dropoff_location,
+          distance_miles: distance_miles,
+          ride_type: "shared",
+          no_of_passengers: no_of_passengers
+        });
+
+        const finalData = {
+          vehicle_categories: categories,
+          distance_miles: Number(distance_miles),
+          pickup_location,
+          dropoff_location
+        };
+
         handlers.logger.success({
           object_type: "select-destinations",
-          message: "Stop(s) managed successfully.",
-          data: {
-            vehicle_categories: categories,
-            rate_per_stop: admin.rate_per_stop,
-            distance_miles: Number(totalMiles),
-            pickup_location,
-            dropoff_location,
-            stops: stops
-          }
+          message: "Destination managed successfully.",
+          data: finalData
         });
         return handlers.response.success({
           res,
-          message: "Stop(s) managed successfully.",
-          data: {
-            vehicle_categories: categories,
-            rate_per_stop: admin.rate_per_stop,
-            distance_miles: Number(totalMiles),
-            pickup_location,
-            dropoff_location,
-            stops: stops
-          }
+          message: "Destination managed successfully.",
+          data: finalData
         });
       } catch (error) {
         handlers.logger.error({
@@ -389,15 +376,16 @@ class Service {
 
   async getPassengers(req, res) {
     try {
-      const userFilter = req.user.role === "passenger";
-
-      const filters = { ...userFilter };
+      const filters = {
+        role: "passenger",
+        _id: { $ne: req.user._id } // Correct way to exclude current user
+      };
 
       const { page, limit, sort } = req.query;
 
       await pagination({
         response: res,
-        table: "Passengers",
+        table: "Passenger", // Or "Passengers" if your system expects plural
         model: this.user,
         filters,
         page,
@@ -406,8 +394,14 @@ class Service {
         populate: userSchema.populate
       });
     } catch (error) {
-      handlers.logger.error({ object_type: "get-passengers", message: error });
-      return handlers.response.error({ res, message: error.message });
+      handlers.logger.error({
+        object_type: "get-passengers",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
     }
   }
 }
