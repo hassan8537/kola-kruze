@@ -121,8 +121,8 @@ class Service {
             { sender_id: receiver_id, receiver_id: sender_id }
           ]
         })
-        .sort(populateChat.sort)
-        .populate(populateChat.populate);
+        .sort("-createdAt")
+        .populate(chatSchema.populate);
 
       await this.chat.updateMany(
         {
