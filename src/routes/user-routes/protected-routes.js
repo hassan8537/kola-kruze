@@ -279,7 +279,7 @@ router.post(
   controllers.favourites.getFavourites.bind(controllers.favourites)
 );
 
-router.get(
+router.post(
   "/favourites/toggle",
   controllers.favourites.toggleFavouriteDriver.bind(controllers.favourites)
 );
