@@ -1,6 +1,7 @@
 const Favourite = require("../../models/Favourites");
 const Notification = require("../../models/Notification");
 const User = require("../../models/User");
+const favouriteSchema = require("../../schemas/favourite-schema");
 const userSchema = require("../../schemas/user-schema");
 
 const { handlers } = require("../../utilities/handlers/handlers");
@@ -32,7 +33,7 @@ class Service {
         page,
         limit,
         sort,
-        populate: userSchema.populate
+        populate: favouriteSchema.populate
       });
     } catch (error) {
       handlers.logger.error({
