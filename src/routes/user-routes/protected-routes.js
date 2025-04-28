@@ -274,7 +274,7 @@ router.get(
 );
 
 // Favourites
-router.post(
+router.get(
   "/favourites",
   controllers.favourites.getFavourites.bind(controllers.favourites)
 );
