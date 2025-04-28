@@ -25,15 +25,38 @@ class Service {
         user_id: current_user._id
       };
 
-      await pagination({
-        response: res,
-        table: "Favourites",
-        model: this.favourite,
-        filters,
-        page,
-        limit,
-        sort,
-        populate: favouriteSchema.populate
+      const pageNumber = parseInt(page, 10) || 1;
+      const pageSize = parseInt(limit, 10) || 10;
+      const skip = (pageNumber - 1) * pageSize;
+
+      const data = await this.favourite
+        .find(filters)
+        .skip(skip)
+        .limit(pageSize)
+        .sort(sort)
+        .populate(favouriteSchema.populate);
+
+      const filteredData = data.map((item) => item.driver_id);
+
+      const totalCount = await this.favourite.countDocuments(filters);
+
+      if (!filteredData.length) {
+        return handlers.response.unavailable({
+          res: res,
+          message: `No favourite drivers found.`
+        });
+      }
+
+      return handlers.response.success({
+        res: res,
+        message: `Favourite drivers retrieved successfully.`,
+        data: {
+          results: filteredData,
+          total_records: totalCount,
+          total_pages: Math.ceil(totalCount / pageSize),
+          current_page: pageNumber,
+          page_size: pageSize
+        }
       });
     } catch (error) {
       handlers.logger.error({
