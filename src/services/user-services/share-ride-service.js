@@ -378,14 +378,23 @@ class Service {
     try {
       const filters = {
         role: "passenger",
-        _id: { $ne: req.user._id } // Correct way to exclude current user
+        _id: { $ne: req.user._id }
       };
 
-      const { page, limit, sort } = req.query;
+      const { page, limit, sort, search } = req.query;
+
+      if (search) {
+        const regex = new RegExp(search, "i");
+        filters.$or = [
+          { legal_name: { $regex: regex } },
+          { first_name: { $regex: regex } },
+          { last_name: { $regex: regex } }
+        ];
+      }
 
       await pagination({
         response: res,
-        table: "Passenger", // Or "Passengers" if your system expects plural
+        table: "Passenger", // Keep as needed
         model: this.user,
         filters,
         page,
