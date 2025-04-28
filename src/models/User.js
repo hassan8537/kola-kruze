@@ -152,6 +152,11 @@ const UserSchema = new mongoose.Schema(
     rate_per_stop: {
       type: Number,
       default: 3.5
+    },
+
+    total_favourite_drivers: {
+      type: Number,
+      default: 0
     }
   },
   {

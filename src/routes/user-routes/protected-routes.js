@@ -21,7 +21,8 @@ const controllers = {
   report: require("../../controllers/user-controllers/report-controller"),
   toggle: require("../../controllers/user-controllers/toggle-controller"),
   invitation: require("../../controllers/user-controllers/invitation-controller"),
-  notification: require("../../controllers/user-controllers/notification-controller")
+  notification: require("../../controllers/user-controllers/notification-controller"),
+  favourites: require("../../controllers/user-controllers/favourite-controller")
 };
 
 // session
@@ -270,6 +271,17 @@ router.get(
 router.get(
   "/notifications/mark-as-read",
   controllers.notification.markAsRead.bind(controllers.notification)
+);
+
+// Favourites
+router.post(
+  "/favourites",
+  controllers.favourites.getFavourites.bind(controllers.favourites)
+);
+
+router.get(
+  "/favourites/toggle",
+  controllers.favourites.toggleFavouriteDriver.bind(controllers.favourites)
 );
 
 module.exports = router;
