@@ -561,7 +561,7 @@ class Service {
         message: "Ride confirmed successfully",
         data: data
       });
-      handlers.response.success({
+      return handlers.response.success({
         res,
         message: "Ride confirmed successfully",
         data: data
