@@ -669,7 +669,11 @@ class Service {
         customer: stripeCustomerId,
         payment_method: stripeDefaultCard,
         confirm: true,
-        capture_method: "manual", // <--- HOLD the funds
+        capture_method: "manual",
+        automatic_payment_methods: {
+          enabled: true,
+          allow_redirects: "never" // 👈 prevent redirect-based methods
+        },
         metadata: {
           ride_id: ride._id.toString(),
           user_id: ride.user_id._id.toString()
