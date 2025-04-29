@@ -8,7 +8,7 @@ const userSchema = {
     }
   ],
   fieldsToSelect:
-    "first_name last_name legal_name profile_picture gender email_address phone_number role is_student driver_license is_verified"
+    "first_name last_name legal_name profile_picture gender email_address phone_number role is_student driver_license is_verified stripe_customer_id"
 };
 
 module.exports = userSchema;

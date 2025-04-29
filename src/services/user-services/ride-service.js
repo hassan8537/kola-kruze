@@ -625,6 +625,7 @@ class Service {
   async payNow(req, res) {
     try {
       const rideId = req.params._id;
+      const body = req.body;
       if (!rideId) {
         handlers.logger.failed({
           object_type: "pay-now",
@@ -657,12 +658,25 @@ class Service {
         });
       }
 
+      // Stripe Payment Process Start
       const stripeCustomerId = ride.user_id.stripe_customer_id;
-      const stripeDefaultCard = ride.user_id.stripe_default_card;
-      const amountInCents = Math.round(Number(ride.fare_details.amount) * 100); // e.g. $20.00 → 2000
-      console.log({ amountInCents });
+      const stripeDefaultCard = body.stripe_card_id;
 
-      // Create Payment Intent with manual capture
+      // // ❗ Attach the payment method to the customer explicitly
+      // await stripe.paymentMethods.attach(stripeDefaultCard, {
+      //   customer: stripeCustomerId
+      // });
+
+      // // ✅ Ensure the customer’s default payment method is set
+      // await stripe.customers.update(stripeCustomerId, {
+      //   invoice_settings: {
+      //     default_payment_method: stripeDefaultCard
+      //   }
+      // });
+
+      const amountInCents = Math.round(Number(ride.fare_details.amount) * 100);
+
+      // ✅ Now create the PaymentIntent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amountInCents,
         currency: "usd",
@@ -672,13 +686,14 @@ class Service {
         capture_method: "manual",
         automatic_payment_methods: {
           enabled: true,
-          allow_redirects: "never" // 👈 prevent redirect-based methods
+          allow_redirects: "never"
         },
         metadata: {
           ride_id: ride._id.toString(),
           user_id: ride.user_id._id.toString()
         }
       });
+      // Stripe Payment Process End
 
       // Store the PaymentIntent ID in the ride record
       ride.ride_status = "booked";
