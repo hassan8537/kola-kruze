@@ -659,7 +659,8 @@ class Service {
 
       const stripeCustomerId = ride.user_id.stripe_customer_id;
       const stripeDefaultCard = ride.user_id.stripe_default_card;
-      const amountInCents = Math.round(ride.fare_details.total_fare * 100); // e.g. $20.00 → 2000
+      const amountInCents = Math.round(Number(ride.fare_details.amount) * 100); // e.g. $20.00 → 2000
+      console.log({ amountInCents });
 
       // Create Payment Intent with manual capture
       const paymentIntent = await stripe.paymentIntents.create({
