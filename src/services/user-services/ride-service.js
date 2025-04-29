@@ -662,18 +662,6 @@ class Service {
       const stripeCustomerId = ride.user_id.stripe_customer_id;
       const stripeDefaultCard = body.stripe_card_id;
 
-      // // ❗ Attach the payment method to the customer explicitly
-      // await stripe.paymentMethods.attach(stripeDefaultCard, {
-      //   customer: stripeCustomerId
-      // });
-
-      // // ✅ Ensure the customer’s default payment method is set
-      // await stripe.customers.update(stripeCustomerId, {
-      //   invoice_settings: {
-      //     default_payment_method: stripeDefaultCard
-      //   }
-      // });
-
       const amountInCents = Math.round(Number(ride.fare_details.amount) * 100);
 
       // ✅ Now create the PaymentIntent
