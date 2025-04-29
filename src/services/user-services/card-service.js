@@ -83,18 +83,29 @@ class Service {
   async getCards(req, res) {
     const object_type = "fetch-cards";
     try {
+      const existingCards = await this.card.findOne({ user_id: req.user._id });
+
+      if (!existingCards) {
+        handlers.logger.unavailable({
+          object_type,
+          message: "No cards found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No cards found"
+        });
+      }
+
       const stripeCustomerId = req.user.stripe_customer_id;
 
       if (!stripeCustomerId) {
         handlers.logger.unavailable({
           object_type,
-          message:
-            "Stripe customer ID not found. Please setup your Stripe merchant"
+          message: "Stripe customer ID not found. Please add a payment method"
         });
         return handlers.response.unavailable({
           res,
-          message:
-            "Stripe customer ID not found. Please setup your Stripe merchant"
+          message: "Stripe customer ID not found. Please add a payment method"
         });
       }
 

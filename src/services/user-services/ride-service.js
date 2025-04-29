@@ -355,6 +355,16 @@ class Service {
         stripe_card_id
       } = req.body;
 
+      console.log("Body Parameters:", {
+        vehicle_category,
+        fare_details,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        stops,
+        stripe_card_id
+      });
+
       const user = await this.user.findById(user_id);
       if (!user) {
         handlers.logger.unavailable({
