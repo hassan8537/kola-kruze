@@ -382,21 +382,21 @@ class Service {
       }
 
       // On Hold
-      // const card = await this.card.findOne({ stripe_card_id });
-      // if (!card) {
-      //   handlers.logger.unavailable({
-      //     object_type: "ride-details-and-fares",
-      //     message: "No cards found"
-      //   });
-      //   return handlers.response.unavailable({
-      //     res,
-      //     message: "No cards found"
-      //   });
-      // }
-      // const stripeCardDetails =
-      //   await stripe.paymentMethods.retrieve(stripe_card_id);
-      // const cardObject = card.toObject();
-      // cardObject.card_details = stripeCardDetails;
+      const card = await this.card.findOne({ stripe_card_id });
+      if (!card) {
+        handlers.logger.unavailable({
+          object_type: "ride-details-and-fares",
+          message: "No cards found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No cards found"
+        });
+      }
+      const stripeCardDetails =
+        await stripe.paymentMethods.retrieve(stripe_card_id);
+      const cardObject = card.toObject();
+      cardObject.card_details = stripeCardDetails;
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
@@ -512,22 +512,22 @@ class Service {
       }
 
       // On Hold
-      // const card = await this.card.findOne({ stripe_card_id });
-      // if (!card) {
-      //   handlers.logger.unavailable({
-      //     object_type: "confirm-ride",
-      //     message: "No cards found"
-      //   });
-      //   handlers.logger.unavailable({
-      //     res,
-      //     message: "No cards found"
-      //   });
-      // }
+      const card = await this.card.findOne({ stripe_card_id });
+      if (!card) {
+        handlers.logger.unavailable({
+          object_type: "confirm-ride",
+          message: "No cards found"
+        });
+        handlers.logger.unavailable({
+          res,
+          message: "No cards found"
+        });
+      }
 
-      // const stripeCardDetails =
-      //   await stripe.paymentMethods.retrieve(stripe_card_id);
-      // const cardObject = card.toObject();
-      // cardObject.card_details = stripeCardDetails;
+      const stripeCardDetails =
+        await stripe.paymentMethods.retrieve(stripe_card_id);
+      const cardObject = card.toObject();
+      cardObject.card_details = stripeCardDetails;
 
       const admin = await this.user.findOne({ role: "admin" });
 
@@ -542,8 +542,8 @@ class Service {
         pickup_location: newRide.pickup_location,
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
-        stops: newRide.stops
-        // card: formatStripeList([cardObject.card_details])
+        stops: newRide.stops,
+        card: formatStripeList([cardObject.card_details])
       };
 
       handlers.logger.success({
@@ -614,7 +614,8 @@ class Service {
 
   async payNow(req, res) {
     try {
-      if (!req.params._id) {
+      const rideId = req.params._id;
+      if (!rideId) {
         handlers.logger.failed({
           object_type: "pay-now",
           message: "Ride ID is required"
@@ -625,8 +626,9 @@ class Service {
         });
       }
 
-      const ride = await this.ride.findById(req.params._id).populate("user_id");
-
+      const ride = await this.ride
+        .findById(rideId)
+        .populate(rideSchema.populate);
       if (!ride) {
         handlers.logger.unavailable({
           object_type: "pay-now",
@@ -638,32 +640,46 @@ class Service {
         });
       }
 
-      if (ride.ride_status === "booked")
-        return failedResponse({
-          response: res,
+      if (ride.ride_status === "booked") {
+        return handlers.response.failed({
+          res,
           message: "You already have booked this ride"
         });
+      }
 
-      // On Hold
-      // const stripe_default_card = ride.user_id.stripe_default_card;
+      const stripeCustomerId = ride.user_id.stripe_customer_id;
+      const stripeDefaultCard = ride.user_id.stripe_default_card;
+      const amountInCents = Math.round(ride.fare_details.total_fare * 100); // e.g. $20.00 → 2000
 
-      // const card = await this.card.findOne({
-      //   stripe_card_id: stripe_default_card
-      // });
+      // Create Payment Intent with manual capture
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: "usd",
+        customer: stripeCustomerId,
+        payment_method: stripeDefaultCard,
+        confirm: true,
+        capture_method: "manual", // <--- HOLD the funds
+        metadata: {
+          ride_id: ride._id.toString(),
+          user_id: ride.user_id._id.toString()
+        }
+      });
 
+      // Store the PaymentIntent ID in the ride record
       ride.ride_status = "booked";
-      ride.fare_details.payment_status = "paid";
+      ride.fare_details.payment_status = "authorized";
+      ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
       await ride.save();
       await ride.populate(rideSchema.populate);
 
       handlers.logger.success({
         object_type: "pay-now",
-        message: "Payment authorized and ride booked",
+        message: "Payment authorized and ride booked successfully",
         data: ride
       });
       return handlers.response.success({
         res,
-        message: "Payment authorized and ride booked",
+        message: "Payment authorized and ride booked successfully",
         data: ride
       });
     } catch (error) {
@@ -1057,6 +1073,35 @@ class Service {
         );
       }
 
+      // 👉 Capture the authorized payment
+      const paymentIntentId = ride.fare_details.stripe_payment_intent_id;
+
+      if (
+        paymentIntentId &&
+        ride.fare_details.payment_status === "authorized"
+      ) {
+        const capturedPayment =
+          await stripe.paymentIntents.capture(paymentIntentId);
+
+        // 👉 Transfer amount to driver (80% example)
+        const driverStripeAccountId = ride.driver_id.stripe_account_id;
+        const amountToTransfer = Math.round(
+          ride.fare_details.amount * 0.8 * 100
+        ); // cents
+
+        const transfer = await stripe.transfers.create({
+          amount: amountToTransfer,
+          currency: "usd",
+          destination: driverStripeAccountId,
+          transfer_group: `ride_${ride._id}`
+        });
+
+        // 👉 Update ride fare details
+        ride.fare_details.payment_status = "paid";
+        ride.fare_details.stripe_transfer_id = transfer.id;
+        await ride.save();
+      }
+
       // Emit to both driver and user
       await this.io.to(ride.user_id._id.toString()).emit(
         "response",
@@ -1076,7 +1121,10 @@ class Service {
         })
       );
     } catch (error) {
-      socket.emit("response", errorEvent({ error }));
+      socket.emit(
+        "error",
+        errorEvent({ error: "Failed to end ride: " + error })
+      );
     }
   }
 

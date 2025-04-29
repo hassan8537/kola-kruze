@@ -57,7 +57,7 @@ class Service {
       const user_id = request.user._id;
       let user = await this.user.findById(user_id);
 
-      if (!user.stripe_merchant_id) {
+      if (!user.stripe_merchant_id || !user.stripe_account_id) {
         const account = await stripe.accounts.create({
           type: "express",
           email: request.user.email_address,
