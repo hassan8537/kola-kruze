@@ -6,7 +6,7 @@ class Controller {
   }
 
   async addCard(request, response) {
-    return this.service.addCard(request, response);
+    return this.service.createCard(request, response);
   }
 
   async getCards(request, response) {
