@@ -131,7 +131,7 @@ class Service {
         .findOne(
           {
             user_id,
-            ride_type: "instant",
+            ride_type: req.body.ride_type || "instant",
             ride_status: {
               $in: [
                 "booked",
