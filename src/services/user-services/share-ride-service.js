@@ -3,6 +3,7 @@ const Ride = require("../../models/Ride");
 const RideInvite = require("../../models/RideInvite");
 const User = require("../../models/User");
 const categorySchema = require("../../schemas/category-schema");
+const rideSchema = require("../../schemas/ride-schema");
 const userSchema = require("../../schemas/user-schema");
 const {
   calculateDistance
@@ -84,6 +85,7 @@ class Service {
 
       existingRide.total_invites++;
       await existingRide.save();
+      await existingRide.populate(rideSchema.populate);
 
       await this.notification.create({
         user_id: invited_user_id,
@@ -96,11 +98,13 @@ class Service {
       handlers.logger.success({
         object_type: "invite-user",
         res,
-        message: "Invitation sent successfully"
+        message: "Invitation sent successfully",
+        data: existingRide
       });
       handlers.response.success({
         res,
-        message: "Invitation sent successfully"
+        message: "Invitation sent successfully",
+        data: existingRide
       });
     } catch (error) {
       handlers.logger.error({
