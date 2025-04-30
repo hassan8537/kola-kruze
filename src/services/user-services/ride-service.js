@@ -295,7 +295,8 @@ class Service {
         pickup_location,
         dropoff_location,
         stops,
-        no_of_passengers
+        no_of_passengers,
+        ride_type
       };
 
       handlers.logger.success({
@@ -505,7 +506,8 @@ class Service {
         stops,
         ride_type,
         scheduled_at,
-        no_of_passengers
+        no_of_passengers,
+        ride_type
       });
 
       await newRide.populate(rideSchema.populate);
@@ -641,7 +643,8 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0]
+        card: formatStripeList([cardObject.card_details])[0],
+        ride_type
       };
 
       handlers.logger.success({

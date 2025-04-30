@@ -146,8 +146,17 @@ class Service {
       existingPendingInvitation.accepted_at = Date.now();
       await existingPendingInvitation.save();
 
+      // Manage Ride
       existingRide.total_accepted++;
       existingRide.total_shares++;
+
+      existingRide.split_with_users.push({
+        user_id: current_user._id,
+        amount:
+          existingRide.fare_details.amount / existingRide.no_of_passengers,
+        status: "accepted"
+      });
+
       await existingRide.save();
 
       // Send notification
@@ -261,116 +270,6 @@ class Service {
         message: error
       });
       handlers.response.error({ res, message: error.message });
-    }
-  }
-
-  async selectDestination(req, res) {
-    try {
-      const user_id = req.user._id;
-
-      const existingRide = await this.ride
-        .findOne(
-          {
-            user_id,
-            ride_type: "split-fare",
-            ride_status: {
-              $in: [
-                "booked",
-                "reserved",
-                "accepted",
-                "started",
-                "scheduled",
-                "arrived",
-                "ongoing",
-                "waiting"
-              ]
-            }
-          },
-          "_id"
-        )
-        .lean();
-
-      if (existingRide) {
-        handlers.logger.failed({
-          object_type: "select-destinations",
-          message: "A ride is already in progress"
-        });
-        return handlers.response.failed({
-          res,
-          message: "A ride is already in progress"
-        });
-      }
-
-      try {
-        const { pickup_location, dropoff_location, no_of_passengers } =
-          req.body;
-
-        // const admin = await this.user.findOne({ role: "admin" });
-
-        const pickupCoords = pickup_location.location.coordinates;
-        const dropoffCoords = dropoff_location.location.coordinates;
-
-        // Calculate distance directly from pickup to dropoff
-        const distance_miles = calculateDistance(
-          pickupCoords[1],
-          pickupCoords[0],
-          dropoffCoords[1],
-          dropoffCoords[0]
-        );
-
-        const categories = await this.category
-          .find()
-          .populate(categorySchema.populate)
-          .lean();
-
-        if (!categories.length) {
-          handlers.logger.failed({
-            object_type: "select-destinations",
-            message: "No categories found"
-          });
-          return handlers.response.failed({
-            res,
-            message: "No categories found"
-          });
-        }
-
-        const finalData = {
-          vehicle_categories: categories,
-          distance_miles: Number(distance_miles),
-          pickup_location,
-          dropoff_location,
-          no_of_passengers
-        };
-
-        handlers.logger.success({
-          object_type: "select-destinations",
-          message: "Destination managed successfully.",
-          data: finalData
-        });
-        return handlers.response.success({
-          res,
-          message: "Destination managed successfully.",
-          data: finalData
-        });
-      } catch (error) {
-        handlers.logger.error({
-          object_type: "select-destinations",
-          message: error
-        });
-        return handlers.response.error({
-          res,
-          message: error.message
-        });
-      }
-    } catch (error) {
-      handlers.logger.error({
-        object_type: "select-destinations",
-        message: error
-      });
-      return handlers.response.error({
-        res,
-        message: error.message
-      });
     }
   }
 
