@@ -126,12 +126,13 @@ class Service {
   async selectDestination(req, res) {
     try {
       const user_id = req.user._id;
+      const ride_type = req.body.ride_type || "instant";
 
       const existingRide = await this.ride
         .findOne(
           {
             user_id,
-            ride_type: req.body.ride_type || "instant",
+            ride_type,
             ride_status: {
               $in: [
                 "booked",
@@ -159,124 +160,156 @@ class Service {
         });
       }
 
-      try {
-        const {
-          pickup_location,
-          dropoff_location,
-          stops = [],
-          ride_type,
-          scheduled_at
-        } = req.body;
-
-        if (ride_type === "scheduled") {
-          const now = new Date();
-          const scheduledDate = new Date(scheduled_at);
-          const maxAllowedDate = new Date(
-            now.getTime() + 30 * 24 * 60 * 60 * 1000
-          );
-
-          if (scheduledDate < now) {
-            handlers.logger.failed({
-              object_type: "scheduled-ride",
-              message: "Scheduled ride cannot be in the past"
-            });
-            return handlers.response.failed({
-              res,
-              message: "Scheduled ride cannot be in the past"
-            });
-          }
-
-          if (scheduledDate > maxAllowedDate) {
-            handlers.logger.failed({
-              object_type: "scheduled-ride",
-              message: "Scheduled ride cannot be more than 30 days ahead"
-            });
-            return handlers.response.failed({
-              res,
-              message: "Scheduled ride cannot be more than 30 days ahead"
-            });
-          }
-        }
-
-        const admin = await this.user.findOne({ role: "admin" });
-
-        const pickupCoords = pickup_location.location.coordinates;
-        const dropoffCoords = dropoff_location.location.coordinates;
-
-        // Calculate total distance with stops in order
-        let totalMiles = 0;
-        let prevCoords = pickupCoords;
-
-        if (!stops.length) {
-          for (const stop of stops) {
-            const stopCoords = stop.location.coordinates;
-            totalMiles += calculateDistance(
-              prevCoords[1],
-              prevCoords[0],
-              stopCoords[1],
-              stopCoords[0]
-            );
-            prevCoords = stopCoords;
-          }
-        }
-
-        // Add final segment from last stop to dropoff
-        totalMiles += calculateDistance(
-          prevCoords[1],
-          prevCoords[0],
-          dropoffCoords[1],
-          dropoffCoords[0]
+      if (ride_type === "instant") {
+        const now = new Date();
+        const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const oneMinuteBefore = new Date(
+          twoHoursFromNow.getTime() - 1 * 60 * 1000
+        );
+        const oneMinuteAfter = new Date(
+          twoHoursFromNow.getTime() + 1 * 60 * 1000
         );
 
-        const categories = await this.category
-          .find()
-          .populate(categorySchema.populate)
+        const nearScheduledRide = await this.ride
+          .findOne({
+            user_id,
+            ride_type: "scheduled",
+            ride_status: "scheduled",
+            scheduled_at: { $gte: oneMinuteBefore, $lte: oneMinuteAfter }
+          })
           .lean();
-        if (!categories.length) {
+
+        if (nearScheduledRide) {
           handlers.logger.failed({
             object_type: "select-destinations",
-            message: "No categories found"
+            message:
+              "Cannot create instant ride within 2 hours of a scheduled ride"
           });
           return handlers.response.failed({
             res,
-            message: "No categories found"
+            message:
+              "Cannot create instant ride within 2 hours of a scheduled ride"
+          });
+        }
+      }
+
+      const {
+        pickup_location,
+        dropoff_location,
+        stops = [],
+        scheduled_at
+      } = req.body;
+
+      if (ride_type === "scheduled") {
+        const now = new Date();
+        const scheduledDate = new Date(scheduled_at);
+        const minScheduledDate = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const maxAllowedDate = new Date(
+          now.getTime() + 30 * 24 * 60 * 60 * 1000
+        );
+
+        if (scheduledDate < now) {
+          handlers.logger.failed({
+            object_type: "scheduled-ride",
+            message: "Scheduled ride cannot be in the past"
+          });
+          return handlers.response.failed({
+            res,
+            message: "Scheduled ride cannot be in the past"
           });
         }
 
-        handlers.logger.success({
+        if (scheduledDate < minScheduledDate) {
+          handlers.logger.failed({
+            object_type: "scheduled-ride",
+            message: "Scheduled ride must be at least 2 hours in the future"
+          });
+          return handlers.response.failed({
+            res,
+            message: "Scheduled ride must be at least 2 hours in the future"
+          });
+        }
+
+        if (scheduledDate > maxAllowedDate) {
+          handlers.logger.failed({
+            object_type: "scheduled-ride",
+            message: "Scheduled ride cannot be more than 30 days ahead"
+          });
+          return handlers.response.failed({
+            res,
+            message: "Scheduled ride cannot be more than 30 days ahead"
+          });
+        }
+      }
+
+      const admin = await this.user.findOne({ role: "admin" });
+
+      const pickupCoords = pickup_location.location.coordinates;
+      const dropoffCoords = dropoff_location.location.coordinates;
+
+      let totalMiles = 0;
+      let prevCoords = pickupCoords;
+
+      if (!stops.length) {
+        for (const stop of stops) {
+          const stopCoords = stop.location.coordinates;
+          totalMiles += calculateDistance(
+            prevCoords[1],
+            prevCoords[0],
+            stopCoords[1],
+            stopCoords[0]
+          );
+          prevCoords = stopCoords;
+        }
+      }
+
+      totalMiles += calculateDistance(
+        prevCoords[1],
+        prevCoords[0],
+        dropoffCoords[1],
+        dropoffCoords[0]
+      );
+
+      const categories = await this.category
+        .find()
+        .populate(categorySchema.populate)
+        .lean();
+
+      if (!categories.length) {
+        handlers.logger.failed({
           object_type: "select-destinations",
-          message: "Locations selected successfully.",
-          data: {
-            vehicle_categories: categories,
-            rate_per_stop: admin.rate_per_stop,
-            distance_miles: Number(totalMiles),
-            pickup_location,
-            dropoff_location,
-            stops: stops
-          }
+          message: "No categories found"
         });
-        return handlers.response.success({
+        return handlers.response.failed({
           res,
-          message: "Stop(s) managed successfully.",
-          data: {
-            vehicle_categories: categories,
-            rate_per_stop: admin.rate_per_stop,
-            distance_miles: Number(totalMiles),
-            pickup_location,
-            dropoff_location,
-            stops: stops
-          }
-        });
-      } catch (error) {
-        handlers.logger.error({
-          object_type: "select-destinations",
-          message: error
-        });
-        return handlers.response.error({
-          res,
-          message: error.message
+          message: "No categories found"
         });
       }
+
+      handlers.logger.success({
+        object_type: "select-destinations",
+        message: "Locations selected successfully.",
+        data: {
+          vehicle_categories: categories,
+          rate_per_stop: admin.rate_per_stop,
+          distance_miles: Number(totalMiles),
+          pickup_location,
+          dropoff_location,
+          stops
+        }
+      });
+      return handlers.response.success({
+        res,
+        message: "Stop(s) managed successfully.",
+        data: {
+          vehicle_categories: categories,
+          rate_per_stop: admin.rate_per_stop,
+          distance_miles: Number(totalMiles),
+          pickup_location,
+          dropoff_location,
+          stops
+        }
+      });
     } catch (error) {
       handlers.logger.error({
         object_type: "select-destinations",
@@ -621,6 +654,49 @@ class Service {
     } catch (error) {
       handlers.logger.error({
         object_type: "confirm-ride",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
+
+  async cancelScheduledRide(req, res) {
+    try {
+      const { ride_id } = req.params;
+
+      const ride = await this.ride.findOne({
+        _id: ride_id,
+        ride_type: "scheduled",
+        ride_status: "scheduled"
+      });
+
+      if (!ride) {
+        handlers.logger.unavailable({
+          object_type: "cancel-ride",
+          message: "No scheduled rides found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No scheduled rides found"
+        });
+      }
+
+      await this.ride.deleteOne({ _id: ride_id });
+
+      handlers.logger.success({
+        object_type: "cancel-ride",
+        message: "Ride cancelled successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Ride cancelled successfully"
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "cancel-ride",
         message: error
       });
       return handlers.response.error({

@@ -36,6 +36,10 @@ class Controller {
   async verifyOtp(request, response) {
     return this.service.verifyOtp(request, response);
   }
+
+  async cancelScheduledRide(request, response) {
+    return this.service.cancelScheduledRide(request, response);
+  }
 }
 
 module.exports = new Controller();

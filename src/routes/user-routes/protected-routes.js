@@ -194,6 +194,11 @@ router.get(
   controllers.scheduled_ride.getMyRides.bind(controllers.scheduled_ride)
 );
 
+router.get(
+  "/rides/scheduled/cancel/:ride_id",
+  controllers.ride.cancelScheduledRide.bind(controllers.ride)
+);
+
 // shared rides
 router.get(
   "/rides/shared/select-destination",
