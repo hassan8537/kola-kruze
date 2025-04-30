@@ -183,14 +183,25 @@ class Service {
         model_type: "RideInvite"
       });
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: req.user._id
+      });
+
+      const data = {
+        invited_passengers: invitedPassengers,
+        ...existingRide.toObject()
+      };
+
       handlers.logger.success({
         object_type: "withdraw-invite",
         res,
-        message: "Invitation withdrawn successfully"
+        message: "Invitation withdrawn successfully",
+        data: data
       });
       handlers.response.success({
         res,
-        message: "Invitation withdrawn successfully"
+        message: "Invitation withdrawn successfully",
+        data: data
       });
     } catch (error) {
       handlers.logger.error({
