@@ -175,6 +175,7 @@ class Service {
       if (existingRide.total_invites > 0) {
         existingRide.total_invites--;
         await existingRide.save();
+        await existingRide.populate(rideSchema.populate);
       }
 
       await this.notification.deleteOne({
