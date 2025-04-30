@@ -10,11 +10,6 @@ const notificationSchema = {
         path: "profile_picture driver_license",
         select: fileSchema.fieldsToSelect
       }
-    },
-    {
-      path: "model_id",
-      refPath: "model_type",
-      select: "-__v -createdAt -updatedAt"
     }
   ],
   options: {

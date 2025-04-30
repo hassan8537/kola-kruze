@@ -837,7 +837,7 @@ class Service {
       });
       return handlers.response.error({
         res,
-        message: error.message
+        message: "Failed to pay"
       });
     }
   }
