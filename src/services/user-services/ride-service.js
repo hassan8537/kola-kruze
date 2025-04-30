@@ -729,7 +729,7 @@ class Service {
         _id: ride_id,
         ride_type: "split-fare",
         ride_status: {
-          $in: ["booked", "pending", "waiting"]
+          $in: ["booked", "pending", "waiting", "confirm-split-fare"]
         }
       });
 
