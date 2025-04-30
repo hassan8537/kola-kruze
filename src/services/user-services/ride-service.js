@@ -596,6 +596,12 @@ class Service {
         no_of_passengers
       });
 
+      newRide.split_with_users.push({
+        user_id: req.user._id,
+        amount: Number(fare_details.amount) / no_of_passengers,
+        status: "accepted",
+        stripe_card_id: stripe_card_id
+      });
       await newRide.save();
       await newRide.populate(rideSchema.populate);
 

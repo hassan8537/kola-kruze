@@ -60,7 +60,7 @@ const RideSchema = new mongoose.Schema(
 
     ride_type: {
       type: String,
-      enum: ["instant", "scheduled"],
+      enum: ["instant", "scheduled", "split-fare"],
       default: "instant"
     },
 
