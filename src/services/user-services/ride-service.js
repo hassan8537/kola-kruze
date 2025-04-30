@@ -39,8 +39,6 @@ class Service {
 
   async getCurrentRide(req, res) {
     try {
-      console.log(req.user.role);
-
       const userFilter =
         req.user.role === "driver"
           ? { driver_id: req.user._id }
@@ -60,8 +58,7 @@ class Service {
               "scheduled",
               "arrived",
               "ongoing",
-              // Add "pending" if ride type is "split-fare"
-              ...(req.body.ride_type === "split-fare" ? ["pending"] : [])
+              "pending"
             ]
           }
         })
