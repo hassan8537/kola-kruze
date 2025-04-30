@@ -7,6 +7,7 @@ const {
 
 const { handlers } = require("../../utilities/handlers/handlers");
 const notificationSchema = require("../../schemas/notification-schema");
+const { default: mongoose } = require("mongoose");
 
 class Service {
   constructor() {
@@ -21,6 +22,27 @@ class Service {
     try {
       const notification = await this.notification.create({
         user_id,
+        message,
+        type,
+        model_id,
+        model_type
+      });
+
+      return handlers.logger.success({
+        message: "Notification created successfully.",
+        data: notification
+      });
+    } catch (error) {
+      return handlers.logger.error({ error });
+    }
+  }
+
+  async createNotification(req, res) {
+    const { message, type, model_id, model_type } = req.body;
+
+    try {
+      const notification = await this.notification.create({
+        user_id: req.user._id,
         message,
         type,
         model_id,
@@ -63,7 +85,7 @@ class Service {
     try {
       const user_id = req.user_id;
 
-      const filters = { user_id };
+      const filters = { ...user_id };
 
       const { page, limit, sort } = req.query;
 
@@ -78,6 +100,7 @@ class Service {
         populate: notificationSchema.populate
       });
     } catch (error) {
+      handlers.logger.error({ message: error });
       return handlers.response.error({ res, message: error.message });
     }
   }

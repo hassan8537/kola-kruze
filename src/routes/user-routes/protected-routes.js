@@ -261,6 +261,11 @@ router.get(
 );
 
 // invitation
+router.post(
+  "/notifications",
+  controllers.notification.createNotification.bind(controllers.notification)
+);
+
 router.get(
   "/notifications",
   controllers.notification.getNotifications.bind(controllers.notification)

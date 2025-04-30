@@ -5,6 +5,10 @@ class Controller {
     this.service = service;
   }
 
+  async createNotification(request, response) {
+    return this.service.createNotification(request, response);
+  }
+
   async getNotifications(request, response) {
     return this.service.getNotifications(request, response);
   }
