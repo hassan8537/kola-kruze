@@ -77,6 +77,7 @@ const RideSchema = new mongoose.Schema(
         "completed",
         "delayed",
         "booked",
+        "confirm-split-fare",
         "waiting"
       ],
       default: "pending"

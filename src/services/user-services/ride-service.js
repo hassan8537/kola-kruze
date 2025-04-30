@@ -44,8 +44,6 @@ class Service {
           ? { driver_id: req.user._id }
           : { user_id: req.user._id };
 
-      console.log({ userFilter });
-
       const currentRide = await this.ride
         .findOne({
           ...userFilter,
@@ -58,7 +56,7 @@ class Service {
               "scheduled",
               "arrived",
               "ongoing",
-              "pending"
+              "confirm-split-fare"
             ]
           }
         })
@@ -601,6 +599,7 @@ class Service {
         status: "accepted",
         stripe_card_id: stripe_card_id
       });
+      newRide.ride_status = "confirm-split-fare";
       await newRide.save();
       await newRide.populate(rideSchema.populate);
 
