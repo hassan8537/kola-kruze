@@ -526,7 +526,8 @@ class Service {
         fare_details: newRide.fare_details,
         stops: newRide.stops,
         card: formatStripeList([cardObject.card_details])[0],
-        no_of_passengers
+        no_of_passengers,
+        ride_type
       };
 
       handlers.logger.success({
