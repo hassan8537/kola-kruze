@@ -26,12 +26,14 @@ const {
   formatStripeList
 } = require("../../utilities/formatters/stripe-card-list-formatter");
 const { calculateETA } = require("../../utilities/calculators/eta-calculator");
+const RideInvite = require("../../models/RideInvite");
 
 class Service {
   constructor(io) {
     this.io = io;
     this.user = User;
     this.ride = Ride;
+    this.rideInvite = RideInvite;
     this.category = Category;
     this.vehicle = Vehicle;
     this.card = Card;
@@ -43,6 +45,10 @@ class Service {
         req.user.role === "driver"
           ? { driver_id: req.user._id }
           : { user_id: req.user._id };
+
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: req.user._id
+      });
 
       const currentRide = await this.ride
         .findOne({
@@ -73,15 +79,20 @@ class Service {
         });
       }
 
+      const formattedCurrentRide = currentRide.toObject();
+
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
       handlers.logger.success({
         object_type: "current-ride",
-        message: "Current ride fetched successfully"
+        message: "Current ride fetched successfully",
+        data: formattedCurrentRide
       });
 
       return handlers.response.success({
         res,
         message: "Current ride fetched successfully",
-        data: currentRide
+        data: formattedCurrentRide
       });
     } catch (error) {
       handlers.logger.error({ object_type: "current-ride", message: error });
@@ -637,6 +648,10 @@ class Service {
 
       const admin = await this.user.findOne({ role: "admin" });
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: req.user._id
+      });
+
       const data = {
         _id: newRide._id,
         selected_category: categories.filter(
@@ -651,7 +666,8 @@ class Service {
         stops: newRide.stops,
         card: formatStripeList([cardObject.card_details])[0],
         ride_type,
-        no_of_passengers
+        no_of_passengers,
+        invited_passengers: invitedPassengers
       };
 
       handlers.logger.success({
