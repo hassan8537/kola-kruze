@@ -23,7 +23,6 @@ class Service {
   async inviteUser(req, res) {
     try {
       const { user: current_user, body } = req;
-
       const { ride_id, invited_user_id } = body;
 
       const existingRide = await this.ride.findOne({
@@ -37,7 +36,7 @@ class Service {
           res,
           message: "Invalid ride"
         });
-        handlers.response.failed({
+        return handlers.response.failed({
           res,
           message: "Invalid ride"
         });
@@ -46,7 +45,7 @@ class Service {
       const checkIfTheUserIsAlreadyInvited = await this.rideInvite.findOne({
         ride_id,
         invited_user_id,
-        status: { $ne: ["accepted", "rejected", "expired"] }
+        status: { $nin: ["accepted", "rejected", "expired"] }
       });
 
       if (checkIfTheUserIsAlreadyInvited) {
@@ -55,43 +54,54 @@ class Service {
           res,
           message: "Invitation is already pending"
         });
-        handlers.response.failed({
+        return handlers.response.failed({
           res,
           message: "Invitation is already pending"
         });
       }
 
-      if (existingRide.total_invites < 3 && existingRide.total_shares < 3) {
-        const newInvite = new RideInvite({
-          ride_id: ride_id,
-          invited_by: current_user._id,
-          invited_user_id: invited_user_id
-        });
-        await newInvite.save();
+      const currentTotal =
+        existingRide.total_accepted + existingRide.total_invites;
 
-        existingRide.total_invites++;
-        await existingRide.save();
-
-        // Send notification
-        await this.notification.create({
-          user_id: invited_user_id,
-          message: `You’ve been invited to join a ride by ${current_user.first_name} ${current_user.last_name}. 
-                    Tap to view the ride details.`,
-          type: "share-ride",
-          model_id: newInvite._id,
-          model_type: "RideInvite"
-        });
-
-        handlers.logger.success({
+      if (currentTotal >= existingRide.no_of_passengers - 1) {
+        handlers.logger.failed({
           object_type: "invite-user",
           res,
-          message: "Invitation sent successfully"
+          message: "Cannot invite more users. Ride is full."
         });
-        handlers.response.success({
+        return handlers.response.failed({
           res,
-          message: "Invitation sent successfully"
+          message: "Cannot invite more users. Ride is full."
         });
       }
+
+      const newInvite = new this.rideInvite({
+        ride_id,
+        invited_by: current_user._id,
+        invited_user_id
+      });
+      await newInvite.save();
+
+      existingRide.total_invites++;
+      await existingRide.save();
+
+      await this.notification.create({
+        user_id: invited_user_id,
+        message: `You’ve been invited to join a ride by ${current_user.first_name} ${current_user.last_name}. Tap to view the ride details.`,
+        type: "share-ride",
+        model_id: newInvite._id,
+        model_type: "RideInvite"
+      });
+
+      handlers.logger.success({
+        object_type: "invite-user",
+        res,
+        message: "Invitation sent successfully"
+      });
+      handlers.response.success({
+        res,
+        message: "Invitation sent successfully"
+      });
     } catch (error) {
       handlers.logger.error({
         object_type: "invite-user",
@@ -102,10 +112,82 @@ class Service {
     }
   }
 
+  async withdrawInvite(req, res) {
+    try {
+      const { user: current_user, body } = req;
+      const { ride_id, invited_user_id } = body;
+
+      const existingRide = await this.ride.findOne({
+        _id: ride_id,
+        status: "pending"
+      });
+
+      if (!existingRide) {
+        handlers.logger.failed({
+          object_type: "withdraw-invite",
+          res,
+          message: "Invalid ride"
+        });
+        return handlers.response.failed({
+          res,
+          message: "Invalid ride"
+        });
+      }
+
+      const invite = await this.rideInvite.findOne({
+        ride_id,
+        invited_user_id,
+        invited_by: current_user._id,
+        status: { $nin: ["accepted", "rejected", "expired"] }
+      });
+
+      if (!invite) {
+        handlers.logger.failed({
+          object_type: "withdraw-invite",
+          res,
+          message: "No active invitation found to withdraw"
+        });
+        return handlers.response.failed({
+          res,
+          message: "No active invitation found to withdraw"
+        });
+      }
+
+      await this.rideInvite.deleteOne({ _id: invite._id });
+
+      if (existingRide.total_invites > 0) {
+        existingRide.total_invites--;
+        await existingRide.save();
+      }
+
+      await this.notification.deleteOne({
+        user_id: invited_user_id,
+        model_id: invite._id,
+        model_type: "RideInvite"
+      });
+
+      handlers.logger.success({
+        object_type: "withdraw-invite",
+        res,
+        message: "Invitation withdrawn successfully"
+      });
+      handlers.response.success({
+        res,
+        message: "Invitation withdrawn successfully"
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "withdraw-invite",
+        res,
+        message: error
+      });
+      handlers.response.error({ res, message: error.message });
+    }
+  }
+
   async acceptInvite(req, res) {
     try {
       const { user: current_user, body } = req;
-
       const { ride_invite_id } = body;
 
       const existingPendingInvitation = await this.rideInvite.findOne({
@@ -119,9 +201,41 @@ class Service {
           res,
           message: "Invalid invitation"
         });
-        handlers.response.failed({
+        return handlers.response.failed({
           res,
           message: "Invalid invitation"
+        });
+      }
+
+      // 🚫 Check if user already has an ongoing ride
+      const existingOngoingRide = await this.ride.findOne({
+        $or: [
+          { user_id: current_user._id }, // if they are the ride creator
+          { "split_with_users.user_id": current_user._id } // if they are a shared passenger
+        ],
+        ride_status: {
+          $in: [
+            "booked",
+            "reserved",
+            "accepted",
+            "started",
+            "scheduled",
+            "arrived",
+            "ongoing",
+            "waiting"
+          ]
+        }
+      });
+
+      if (existingOngoingRide) {
+        handlers.logger.failed({
+          object_type: "accept-invitation",
+          res,
+          message: "You already have an ongoing ride"
+        });
+        return handlers.response.failed({
+          res,
+          message: "You already have an ongoing ride"
         });
       }
 
@@ -136,7 +250,7 @@ class Service {
           res,
           message: "Invalid ride"
         });
-        handlers.response.failed({
+        return handlers.response.failed({
           res,
           message: "Invalid ride"
         });
@@ -146,7 +260,6 @@ class Service {
       existingPendingInvitation.accepted_at = Date.now();
       await existingPendingInvitation.save();
 
-      // Manage Ride
       existingRide.total_accepted++;
       existingRide.total_shares++;
 
@@ -159,11 +272,9 @@ class Service {
 
       await existingRide.save();
 
-      // Send notification
       await this.notification.create({
         user_id: existingRide.user_id,
-        message: `${current_user.first_name} ${current_user.last_name} has accepted your ride invitation. 
-            Tap to view the updated ride details.`,
+        message: `${current_user.first_name} ${current_user.last_name} has accepted your ride invitation. Tap to view the updated ride details.`,
         type: "share-ride",
         model_id: existingPendingInvitation._id,
         model_type: "RideInvite"

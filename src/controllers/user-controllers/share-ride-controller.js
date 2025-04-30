@@ -5,16 +5,16 @@ class Controller {
     this.service = service;
   }
 
-  async selectDestination(request, response) {
-    return this.service.selectDestination(request, response);
-  }
-
   async getPassengers(request, response) {
     return this.service.getPassengers(request, response);
   }
 
   async inviteUser(request, response) {
     return this.service.inviteUser(request, response);
+  }
+
+  async withdrawInvite(request, response) {
+    return this.service.withdrawInvite(request, response);
   }
 
   async acceptInvite(request, response) {

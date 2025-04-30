@@ -205,10 +205,6 @@ router.get(
 );
 
 // shared rides
-router.get(
-  "/rides/shared/select-destination",
-  controllers.shared_ride.selectDestination.bind(controllers.shared_ride)
-);
 
 router.get(
   "/rides/shared/passengers",
@@ -218,6 +214,11 @@ router.get(
 router.post(
   "/rides/shared/send-invite",
   controllers.shared_ride.inviteUser.bind(controllers.shared_ride)
+);
+
+router.post(
+  "/rides/shared/withdraw-invite",
+  controllers.shared_ride.withdrawInvite.bind(controllers.shared_ride)
 );
 
 router.post(
