@@ -670,7 +670,9 @@ class Service {
       const ride = await this.ride.findOne({
         _id: ride_id,
         ride_type: "scheduled",
-        ride_status: "scheduled"
+        ride_status: {
+          $in: ["scheduled", "pending"]
+        }
       });
 
       if (!ride) {
