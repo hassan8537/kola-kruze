@@ -171,11 +171,20 @@ class Service {
         if (ride_type === "scheduled") {
           const now = new Date();
           const scheduledDate = new Date(scheduled_at);
-
-          // Create a new Date object 30 days ahead of now
           const maxAllowedDate = new Date(
             now.getTime() + 30 * 24 * 60 * 60 * 1000
           );
+
+          if (scheduledDate < now) {
+            handlers.logger.failed({
+              object_type: "scheduled-ride",
+              message: "Scheduled ride cannot be in the past"
+            });
+            return handlers.response.failed({
+              res,
+              message: "Scheduled ride cannot be in the past"
+            });
+          }
 
           if (scheduledDate > maxAllowedDate) {
             handlers.logger.failed({
