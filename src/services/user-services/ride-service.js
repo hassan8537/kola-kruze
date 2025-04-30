@@ -141,7 +141,8 @@ class Service {
                 "started",
                 "scheduled",
                 "arrived",
-                "ongoing"
+                "ongoing",
+                "waiting"
               ]
             }
           },
@@ -197,7 +198,8 @@ class Service {
         pickup_location,
         dropoff_location,
         stops = [],
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       } = req.body;
 
       if (ride_type === "scheduled") {
@@ -286,29 +288,25 @@ class Service {
         });
       }
 
+      const data = {
+        vehicle_categories: categories,
+        rate_per_stop: admin.rate_per_stop,
+        distance_miles: Number(totalMiles),
+        pickup_location,
+        dropoff_location,
+        stops,
+        no_of_passengers
+      };
+
       handlers.logger.success({
         object_type: "select-destinations",
         message: "Locations selected successfully.",
-        data: {
-          vehicle_categories: categories,
-          rate_per_stop: admin.rate_per_stop,
-          distance_miles: Number(totalMiles),
-          pickup_location,
-          dropoff_location,
-          stops
-        }
+        data: data
       });
       return handlers.response.success({
         res,
         message: "Stop(s) managed successfully.",
-        data: {
-          vehicle_categories: categories,
-          rate_per_stop: admin.rate_per_stop,
-          distance_miles: Number(totalMiles),
-          pickup_location,
-          dropoff_location,
-          stops
-        }
+        data: data
       });
     } catch (error) {
       handlers.logger.error({
@@ -429,7 +427,8 @@ class Service {
         stops,
         stripe_card_id,
         ride_type,
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       } = req.body;
 
       console.log("Body Parameters:", {
@@ -441,7 +440,8 @@ class Service {
         stops,
         stripe_card_id,
         ride_type,
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       });
 
       const user = await this.user.findById(user_id);
@@ -504,7 +504,8 @@ class Service {
         dropoff_location,
         stops,
         ride_type,
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       });
 
       await newRide.populate(rideSchema.populate);
@@ -558,7 +559,8 @@ class Service {
         distance_miles,
         stripe_card_id,
         ride_type,
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       } = req.body;
 
       // Check for existing ride
@@ -586,7 +588,8 @@ class Service {
         fare_details,
         distance_miles,
         ride_type,
-        scheduled_at
+        scheduled_at,
+        no_of_passengers
       });
 
       await newRide.save();
@@ -683,6 +686,51 @@ class Service {
         return handlers.response.unavailable({
           res,
           message: "No scheduled rides found"
+        });
+      }
+
+      await this.ride.deleteOne({ _id: ride_id });
+
+      handlers.logger.success({
+        object_type: "cancel-ride",
+        message: "Ride cancelled successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Ride cancelled successfully"
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "cancel-ride",
+        message: error
+      });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
+
+  async cancelSplitFaredRide(req, res) {
+    try {
+      const { ride_id } = req.params;
+
+      const ride = await this.ride.findOne({
+        _id: ride_id,
+        ride_type: "split-fare",
+        ride_status: {
+          $in: ["booked", "pending", "waiting"]
+        }
+      });
+
+      if (!ride) {
+        handlers.logger.unavailable({
+          object_type: "cancel-ride",
+          message: "No split fare rides found"
+        });
+        return handlers.response.unavailable({
+          res,
+          message: "No split fare rides found"
         });
       }
 
@@ -837,7 +885,7 @@ class Service {
       });
       return handlers.response.error({
         res,
-        message: "Failed to pay"
+        message: error.message
       });
     }
   }

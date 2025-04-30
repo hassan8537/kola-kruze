@@ -47,6 +47,10 @@ const NotificationSchema = new mongoose.Schema(
         "Chat",
         "RideInvite"
       ]
+    },
+    model_action: {
+      type: String,
+      enum: ["accepted", "rejected"]
     }
   },
   {

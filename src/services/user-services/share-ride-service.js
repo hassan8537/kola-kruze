@@ -160,6 +160,12 @@ class Service {
         model_type: "RideInvite"
       });
 
+      await this.notification.findOneAndUpdate(
+        { model_id: ride_invite_id },
+        { model_action: "accepted" },
+        { new: true }
+      );
+
       handlers.logger.success({
         object_type: "accept-invitation",
         res,
@@ -233,8 +239,14 @@ class Service {
         model_type: "RideInvite"
       });
 
+      await this.notification.findOneAndUpdate(
+        { model_id: ride_invite_id },
+        { model_action: "rejected" },
+        { new: true }
+      );
+
       handlers.logger.success({
-        object_type: "accept-invitation",
+        object_type: "reject-invitation",
         res,
         message: "Invitation rejected"
       });
@@ -244,7 +256,7 @@ class Service {
       });
     } catch (error) {
       handlers.logger.error({
-        object_type: "accept-invitation",
+        object_type: "reject-invitation",
         res,
         message: error
       });
@@ -260,7 +272,7 @@ class Service {
         .findOne(
           {
             user_id,
-            ride_type: "shared",
+            ride_type: "split-fare",
             ride_status: {
               $in: [
                 "booked",
@@ -269,7 +281,8 @@ class Service {
                 "started",
                 "scheduled",
                 "arrived",
-                "ongoing"
+                "ongoing",
+                "waiting"
               ]
             }
           },
@@ -289,13 +302,8 @@ class Service {
       }
 
       try {
-        const {
-          pickup_location,
-          dropoff_location,
-          no_of_passengers,
-          split_fare,
-          total_amount
-        } = req.body;
+        const { pickup_location, dropoff_location, no_of_passengers } =
+          req.body;
 
         // const admin = await this.user.findOne({ role: "admin" });
 
@@ -326,20 +334,12 @@ class Service {
           });
         }
 
-        const newSharedRide = new Ride({
-          user_id: user_id,
-          pickup_location: pickup_location,
-          dropoff_location: dropoff_location,
-          distance_miles: distance_miles,
-          ride_type: "shared",
-          no_of_passengers: no_of_passengers
-        });
-
         const finalData = {
           vehicle_categories: categories,
           distance_miles: Number(distance_miles),
           pickup_location,
-          dropoff_location
+          dropoff_location,
+          no_of_passengers
         };
 
         handlers.logger.success({

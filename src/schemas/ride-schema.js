@@ -63,7 +63,7 @@ const rideSchema = {
     }
   ],
   fieldsToSelect:
-    "pickup_location dropoff_location distance_miles ride_status arrival_time scheduled_at reserved_at start_time end_time fare_details.amount fare_details.payment_status is_verified is_reported"
+    "pickup_location dropoff_location distance_miles ride_status ride_type arrival_time scheduled_at reserved_at start_time end_time fare_details.amount fare_details.payment_status is_verified is_reported ride_type"
 };
 
 module.exports = rideSchema;

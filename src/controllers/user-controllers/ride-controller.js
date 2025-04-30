@@ -40,6 +40,10 @@ class Controller {
   async cancelScheduledRide(request, response) {
     return this.service.cancelScheduledRide(request, response);
   }
+
+  async cancelSplitFaredRide(request, response) {
+    return this.service.cancelSplitFaredRide(request, response);
+  }
 }
 
 module.exports = new Controller();
