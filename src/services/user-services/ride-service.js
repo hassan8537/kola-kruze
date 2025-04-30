@@ -160,7 +160,31 @@ class Service {
       }
 
       try {
-        const { pickup_location, dropoff_location, stops = [] } = req.body;
+        const {
+          pickup_location,
+          dropoff_location,
+          stops = [],
+          ride_type,
+          scheduled_at
+        } = req.body;
+
+        if (ride_type === "scheduled") {
+          const now = new Date();
+          const scheduledDate = new Date(scheduled_at);
+          const maxDate = new Date();
+          maxDate.setDate(now.getDate() + 30);
+
+          if (scheduledDate > maxDate) {
+            handlers.logger.failed({
+              object_type: "scheduled-ride",
+              message: "Scheduled ride cannot be more than 30 days ahead"
+            });
+            return handlers.response.failed({
+              res,
+              message: "Scheduled ride cannot be more than 30 days ahead"
+            });
+          }
+        }
 
         const admin = await this.user.findOne({ role: "admin" });
 
@@ -216,7 +240,9 @@ class Service {
             distance_miles: Number(totalMiles),
             pickup_location,
             dropoff_location,
-            stops: stops
+            stops: stops,
+            ride_type: ride_type,
+            scheduled_at: scheduled_at
           }
         });
         return handlers.response.success({
@@ -255,7 +281,13 @@ class Service {
 
   async manageStops(req, res) {
     try {
-      const { pickup_location, dropoff_location, stops = [] } = req.body;
+      const {
+        pickup_location,
+        dropoff_location,
+        stops = [],
+        ride_type,
+        scheduled_at
+      } = req.body;
 
       if (!stops.length) {
         handlers.logger.failed({
@@ -317,7 +349,9 @@ class Service {
         distance_miles: Number(totalMiles),
         pickup_location,
         dropoff_location,
-        stops: stops
+        stops: stops,
+        ride_type: ride_type,
+        scheduled_at: scheduled_at
       };
 
       handlers.logger.success({
@@ -352,7 +386,9 @@ class Service {
         pickup_location,
         dropoff_location,
         stops,
-        stripe_card_id
+        stripe_card_id,
+        ride_type,
+        scheduled_at
       } = req.body;
 
       console.log("Body Parameters:", {
@@ -362,7 +398,9 @@ class Service {
         pickup_location,
         dropoff_location,
         stops,
-        stripe_card_id
+        stripe_card_id,
+        ride_type,
+        scheduled_at
       });
 
       const user = await this.user.findById(user_id);
@@ -423,7 +461,9 @@ class Service {
         distance_miles,
         pickup_location,
         dropoff_location,
-        stops
+        stops,
+        ride_type,
+        scheduled_at
       });
 
       await newRide.populate(rideSchema.populate);
@@ -441,7 +481,9 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0]
+        card: formatStripeList([cardObject.card_details])[0],
+        ride_type: ride_type,
+        scheduled_at: scheduled_at
       };
 
       handlers.logger.success({
@@ -475,7 +517,9 @@ class Service {
         stops,
         fare_details,
         distance_miles,
-        stripe_card_id
+        stripe_card_id,
+        ride_type,
+        scheduled_at
       } = req.body;
 
       // Check for existing ride
@@ -501,7 +545,9 @@ class Service {
         dropoff_location,
         stops,
         fare_details,
-        distance_miles
+        distance_miles,
+        ride_type,
+        scheduled_at
       });
 
       await newRide.save();
@@ -553,7 +599,9 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0]
+        card: formatStripeList([cardObject.card_details])[0],
+        ride_type: ride_type,
+        scheduled_at: scheduled_at
       };
 
       handlers.logger.success({

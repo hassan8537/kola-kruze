@@ -60,7 +60,7 @@ const RideSchema = new mongoose.Schema(
 
     ride_type: {
       type: String,
-      enum: ["instant", "scheduled", "share"],
+      enum: ["instant", "scheduled"],
       default: "instant"
     },
 
@@ -83,7 +83,7 @@ const RideSchema = new mongoose.Schema(
     },
 
     arrival_time: { type: Date, default: null },
-    scheduled_time: { type: Date, default: null },
+    scheduled_at: { type: Date, default: null },
     reserved_at: { type: Date, default: null },
     start_time: { type: Date, default: null },
     end_time: { type: Date, default: null },
