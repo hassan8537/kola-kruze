@@ -525,7 +525,8 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0]
+        card: formatStripeList([cardObject.card_details])[0],
+        no_of_passengers
       };
 
       handlers.logger.success({
@@ -644,7 +645,8 @@ class Service {
         fare_details: newRide.fare_details,
         stops: newRide.stops,
         card: formatStripeList([cardObject.card_details])[0],
-        ride_type
+        ride_type,
+        no_of_passengers
       };
 
       handlers.logger.success({
