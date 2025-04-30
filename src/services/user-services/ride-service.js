@@ -172,7 +172,7 @@ class Service {
           const now = new Date();
           const scheduledDate = new Date(scheduled_at);
           const maxDate = new Date();
-          maxDate.setDate(now.getDate() + 30);
+          maxDate.setDate(now.getDate());
 
           if (scheduledDate > maxDate) {
             handlers.logger.failed({
@@ -233,7 +233,7 @@ class Service {
 
         handlers.logger.success({
           object_type: "select-destinations",
-          message: "Stop(s) managed successfully.",
+          message: "Locations selected successfully.",
           data: {
             vehicle_categories: categories,
             rate_per_stop: admin.rate_per_stop,
