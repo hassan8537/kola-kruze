@@ -41,8 +41,8 @@ class Controller {
     return this.service.cancelScheduledRide(request, response);
   }
 
-  async cancelSplitFaredRide(request, response) {
-    return this.service.cancelSplitFaredRide(request, response);
+  async cancelSplitFareRide(request, response) {
+    return this.service.cancelSplitFareRide(request, response);
   }
 }
 

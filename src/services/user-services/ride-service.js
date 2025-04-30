@@ -711,7 +711,7 @@ class Service {
     }
   }
 
-  async cancelSplitFaredRide(req, res) {
+  async cancelSplitFareRide(req, res) {
     try {
       const { ride_id } = req.params;
 

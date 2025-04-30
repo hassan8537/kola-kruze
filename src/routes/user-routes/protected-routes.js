@@ -201,7 +201,7 @@ router.get(
 
 router.get(
   "/rides/split-fare/cancel/:ride_id",
-  controllers.ride.cancelSplitFaredRide.bind(controllers.ride)
+  controllers.ride.cancelSplitFareRide.bind(controllers.ride)
 );
 
 // shared rides
