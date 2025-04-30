@@ -158,28 +158,26 @@ app.delete(`/api/${process.env.API_VERSION}/rides`, async (req, res) => {
 });
 
 // Crones
-const cron = require("node-cron");
-const Ride = require("../models/Ride"); // Adjust path as needed
-const { findDrivers } = require("../services/ride.service"); // Or wherever your function is
+// const cron = require("node-cron");
 
-cron.schedule("* * * * *", async () => {
-  try {
-    const now = new Date();
-    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+// cron.schedule("* * * * *", async () => {
+//   try {
+//     const now = new Date();
+//     const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    const rides = await Ride.find({
-      ride_type: "scheduled",
-      ride_status: "scheduled",
-      scheduled_at: { $lte: twoHoursFromNow }
-    });
+//     const rides = await Ride.find({
+//       ride_type: "scheduled",
+//       ride_status: "scheduled",
+//       scheduled_at: { $lte: twoHoursFromNow }
+//     });
 
-    for (const ride of rides) {
-      console.log(`🔍 Starting driver search for ride: ${ride._id}`);
-    }
-  } catch (err) {
-    console.error("❌ Cron job error:", err.message);
-  }
-});
+//     for (const ride of rides) {
+//       console.log(`🔍 Starting driver search for ride: ${ride._id}`);
+//     }
+//   } catch (err) {
+//     console.error("❌ Cron job error:", err.message);
+//   }
+// });
 
 connectToDatabase()
   .then(() => {
