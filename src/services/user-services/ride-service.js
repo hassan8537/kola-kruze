@@ -59,7 +59,9 @@ class Service {
               "started",
               "scheduled",
               "arrived",
-              "ongoing"
+              "ongoing",
+              // Add "pending" if ride type is "split-fare"
+              ...(req.body.ride_type === "split-fare" ? ["pending"] : [])
             ]
           }
         })
