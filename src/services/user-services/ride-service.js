@@ -1341,7 +1341,7 @@ class Service {
       const ride = await this.ride.findOne({
         _id: ride_id,
         $or: [{ user_id }, { driver_id: user_id }],
-        ride_status: { $in: ["booked", "accepted"] }
+        ride_status: { $in: ["booked", "accepted", "confirm-split-fare"] }
       });
 
       if (!ride) {
