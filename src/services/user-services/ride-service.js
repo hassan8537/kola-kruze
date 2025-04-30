@@ -171,10 +171,13 @@ class Service {
         if (ride_type === "scheduled") {
           const now = new Date();
           const scheduledDate = new Date(scheduled_at);
-          const maxDate = new Date();
-          maxDate.setDate(now.getDate());
 
-          if (scheduledDate > maxDate) {
+          // Create a new Date object 30 days ahead of now
+          const maxAllowedDate = new Date(
+            now.getTime() + 30 * 24 * 60 * 60 * 1000
+          );
+
+          if (scheduledDate > maxAllowedDate) {
             handlers.logger.failed({
               object_type: "scheduled-ride",
               message: "Scheduled ride cannot be more than 30 days ahead"
