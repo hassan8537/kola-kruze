@@ -97,16 +97,25 @@ class Service {
         model_type: "RideInvite"
       });
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: req.user._id
+      });
+
+      const data = {
+        invited_passengers: invitedPassengers,
+        ...existingRide.toObject()
+      };
+
       handlers.logger.success({
         object_type: "invite-user",
         res,
         message: "Invitation sent successfully",
-        data: existingRide
+        data: data
       });
       handlers.response.success({
         res,
         message: "Invitation sent successfully",
-        data: existingRide
+        data: data
       });
     } catch (error) {
       handlers.logger.error({
