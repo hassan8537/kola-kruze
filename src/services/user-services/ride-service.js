@@ -240,9 +240,7 @@ class Service {
             distance_miles: Number(totalMiles),
             pickup_location,
             dropoff_location,
-            stops: stops,
-            ride_type: ride_type,
-            scheduled_at: scheduled_at
+            stops: stops
           }
         });
         return handlers.response.success({
@@ -349,9 +347,7 @@ class Service {
         distance_miles: Number(totalMiles),
         pickup_location,
         dropoff_location,
-        stops: stops,
-        ride_type: ride_type,
-        scheduled_at: scheduled_at
+        stops: stops
       };
 
       handlers.logger.success({
@@ -481,9 +477,7 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0],
-        ride_type: ride_type,
-        scheduled_at: scheduled_at
+        card: formatStripeList([cardObject.card_details])[0]
       };
 
       handlers.logger.success({
@@ -599,9 +593,7 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0],
-        ride_type: ride_type,
-        scheduled_at: scheduled_at
+        card: formatStripeList([cardObject.card_details])[0]
       };
 
       handlers.logger.success({
