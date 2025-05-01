@@ -870,20 +870,25 @@ class Service {
         ride.split_with_users.length > 0;
 
       if (isSplitFare) {
-        let totalCollected = 0;
         const successfulCharges = [];
+
+        // Ensure all users have a valid stripe_card_id before proceeding
+        for (let i = 0; i < ride.split_with_users.length; i++) {
+          const userShare = ride.split_with_users[i];
+
+          if (!userShare.stripe_card_id) {
+            return handlers.response.failed({
+              res,
+              message: `User with ID ${userShare.user_id} does not have a valid card. Payment cannot proceed.`
+            });
+          }
+        }
 
         for (let i = 0; i < ride.split_with_users.length; i++) {
           const userShare = ride.split_with_users[i];
           const splitUser = await this.user.findById(userShare.user_id);
 
-          if (
-            !splitUser ||
-            !userShare.stripe_card_id ||
-            userShare.status === "authorized"
-          ) {
-            continue;
-          }
+          if (!splitUser || userShare.status === "authorized") continue;
 
           const userAmountInCents = Math.round(Number(userShare.amount) * 100);
 
@@ -937,6 +942,10 @@ class Service {
           }
         }
 
+        const totalCollected = ride.split_with_users.reduce((sum, user) => {
+          return sum + Number(user.amount || 0);
+        }, 0);
+
         // Finalize if all authorized
         if (
           Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
@@ -972,6 +981,13 @@ class Service {
         const amountInCents = Math.round(
           Number(ride.fare_details.amount) * 100
         );
+
+        if (!stripeDefaultCard) {
+          return handlers.response.failed({
+            res,
+            message: "User does not have a valid card. Payment cannot proceed."
+          });
+        }
 
         const paymentIntent = await stripe.paymentIntents.create({
           amount: amountInCents,

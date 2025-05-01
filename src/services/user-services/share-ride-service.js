@@ -290,6 +290,18 @@ class Service {
         });
       }
 
+      if (!current_user.stripe_default_card_id) {
+        handlers.logger.failed({
+          object_type: "accept-invitation",
+          res,
+          message: "Please add a card before accepting invitation"
+        });
+        return handlers.response.failed({
+          res,
+          message: "Please add a card before accepting invitation"
+        });
+      }
+
       existingPendingInvitation.status = "accepted";
       existingPendingInvitation.accepted_at = Date.now();
       await existingPendingInvitation.save();
