@@ -912,6 +912,7 @@ class Service {
         if (
           Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
         ) {
+          ride.total_split_payment_collected = totalCollected;
           await ride.save(); // Save partial payment state
           return handlers.response.failed({
             res,
