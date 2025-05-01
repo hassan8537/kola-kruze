@@ -21,7 +21,7 @@ const NotificationSchema = new mongoose.Schema(
         "chat",
         "instant-ride",
         "schedule-ride",
-        "share-ride"
+        "split-fare"
       ],
       required: true
     },

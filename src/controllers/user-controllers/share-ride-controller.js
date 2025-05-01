@@ -1,4 +1,4 @@
-const service = require("../../services/user-services/share-ride-service");
+const service = require("../../services/user-services/split-fare-service");
 
 class Controller {
   constructor() {
