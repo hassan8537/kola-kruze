@@ -59,7 +59,8 @@ class Service {
               "scheduled",
               "arrived",
               "ongoing",
-              "confirm-split-fare"
+              "confirm-split-fare",
+              "split-fare"
             ]
           },
           $or: isDriver
