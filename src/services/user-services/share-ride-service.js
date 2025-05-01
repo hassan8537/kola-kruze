@@ -271,8 +271,7 @@ class Service {
       }
 
       const existingRide = await this.ride.findOne({
-        _id: existingPendingInvitation.ride_id,
-        status: "pending"
+        _id: existingPendingInvitation.ride_id
       });
 
       if (!existingRide) {
