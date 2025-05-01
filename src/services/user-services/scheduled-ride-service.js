@@ -590,10 +590,10 @@ class Service {
         });
 
       // On Hold
-      // const stripe_default_card = ride.user_id.stripe_default_card;
+      // const stripe_default_card_id = ride.user_id.stripe_default_card_id;
 
       // const card = await this.card.findOne({
-      //   stripe_card_id: stripe_default_card
+      //   stripe_card_id: stripe_default_card_id
       // });
 
       ride.ride_status = "booked";

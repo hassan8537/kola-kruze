@@ -65,6 +65,9 @@ class Service {
         stripe_card_id: card.id
       });
 
+      user.stripe_default_card_id = stripe_card_id;
+      await user.save();
+
       handlers.logger.success({
         object_type,
         message: "Card added successfully."
@@ -211,7 +214,7 @@ class Service {
         });
       }
 
-      req.user.stripe_default_card = card._id;
+      req.user.stripe_default_card_id = stripe_card_id;
       await req.user.save();
 
       const stripeCustomerId = req.user.stripe_customer_id;

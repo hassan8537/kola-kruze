@@ -123,9 +123,8 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null
     },
-    stripe_default_card: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Card",
+    stripe_default_card_id: {
+      type: String,
       default: null
     },
     session_token: {

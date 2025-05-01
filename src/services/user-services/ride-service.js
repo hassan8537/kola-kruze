@@ -604,13 +604,15 @@ class Service {
         no_of_passengers
       });
 
-      newRide.split_with_users.push({
-        user_id: req.user._id,
-        amount: Number(fare_details.amount) / no_of_passengers,
-        status: "accepted",
-        stripe_card_id: stripe_card_id
-      });
-      newRide.ride_status = "confirm-split-fare";
+      if (ride_type === "split-fare") {
+        newRide.split_with_users.push({
+          user_id: req.user._id,
+          amount: Number(fare_details.amount) / no_of_passengers,
+          status: "accepted",
+          stripe_card_id: stripe_card_id
+        });
+        newRide.ride_status = "confirm-split-fare";
+      }
       await newRide.save();
       await newRide.populate(rideSchema.populate);
 
@@ -829,7 +831,7 @@ class Service {
   async payNow(req, res) {
     try {
       const rideId = req.params._id;
-      const body = req.body;
+
       if (!rideId) {
         handlers.logger.failed({
           object_type: "pay-now",
@@ -844,6 +846,7 @@ class Service {
       const ride = await this.ride
         .findById(rideId)
         .populate(rideSchema.populate);
+
       if (!ride) {
         handlers.logger.unavailable({
           object_type: "pay-now",
@@ -862,48 +865,120 @@ class Service {
         });
       }
 
-      // Stripe Payment Process Start
-      const stripeCustomerId = ride.user_id.stripe_customer_id;
-      const stripeDefaultCard = body.stripe_card_id;
+      const isSplitFare =
+        Array.isArray(ride.split_with_users) &&
+        ride.split_with_users.length > 0;
+      let totalCollected = 0;
 
-      const amountInCents = Math.round(Number(ride.fare_details.amount) * 100);
+      if (isSplitFare) {
+        for (let i = 0; i < ride.split_with_users.length; i++) {
+          const userShare = ride.split_with_users[i];
+          const splitUser = await this.user.findById(userShare.user_id);
+          if (
+            !splitUser ||
+            !userShare.stripe_card_id ||
+            userShare.status === "authorized"
+          )
+            continue;
 
-      // ✅ Now create the PaymentIntent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: amountInCents,
-        currency: "usd",
-        customer: stripeCustomerId,
-        payment_method: stripeDefaultCard,
-        confirm: true,
-        capture_method: "manual",
-        automatic_payment_methods: {
-          enabled: true,
-          allow_redirects: "never"
-        },
-        metadata: {
-          ride_id: ride._id.toString(),
-          user_id: ride.user_id._id.toString()
+          const userAmountInCents = Math.round(Number(userShare.amount) * 100);
+
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: userAmountInCents,
+            currency: "usd",
+            customer: splitUser.stripe_customer_id,
+            payment_method: userShare.stripe_card_id,
+            confirm: true,
+            capture_method: "manual",
+            automatic_payment_methods: {
+              enabled: true,
+              allow_redirects: "never"
+            },
+            metadata: {
+              ride_id: ride._id.toString(),
+              user_id: splitUser._id.toString()
+            }
+          });
+
+          // Save details in split_with_users[i]
+          ride.split_with_users[i].stripe_payment_intent_id = paymentIntent.id;
+          ride.split_with_users[i].status = "authorized";
+          ride.split_with_users[i].paid_at = new Date();
+
+          totalCollected += Number(userShare.amount);
         }
-      });
-      // Stripe Payment Process End
 
-      // Store the PaymentIntent ID in the ride record
-      ride.ride_status = "booked";
-      ride.fare_details.payment_status = "authorized";
-      ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
-      await ride.save();
-      await ride.populate(rideSchema.populate);
+        // Check if total collected matches the full fare
+        if (
+          Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
+        ) {
+          await ride.save(); // Save partial payment state
+          return handlers.response.failed({
+            res,
+            message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
+          });
+        }
 
-      handlers.logger.success({
-        object_type: "pay-now",
-        message: "Payment authorized and ride booked successfully",
-        data: ride
-      });
-      return handlers.response.success({
-        res,
-        message: "Payment authorized and ride booked successfully",
-        data: ride
-      });
+        // All users paid fully — finalize ride booking
+        ride.ride_status = "booked";
+        ride.fare_details.payment_status = "authorized";
+        ride.fare_details.stripe_payment_intent_id = "split-payment"; // Optional placeholder
+        await ride.save();
+        await ride.populate(rideSchema.populate);
+
+        handlers.logger.success({
+          object_type: "pay-now",
+          message: "All split payments authorized. Ride booked.",
+          data: ride
+        });
+        return handlers.response.success({
+          res,
+          message: "All split payments authorized. Ride booked.",
+          data: ride
+        });
+      } else {
+        // Standard single user payment
+        const stripeCustomerId = ride.user_id.stripe_customer_id;
+        const stripeDefaultCard = ride.user_id.stripe_default_card_id;
+        const amountInCents = Math.round(
+          Number(ride.fare_details.amount) * 100
+        );
+
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: amountInCents,
+          currency: "usd",
+          customer: stripeCustomerId,
+          payment_method: stripeDefaultCard,
+          confirm: true,
+          capture_method: "manual",
+          automatic_payment_methods: {
+            enabled: true,
+            allow_redirects: "never"
+          },
+          metadata: {
+            ride_id: ride._id.toString(),
+            user_id: ride.user_id._id.toString()
+          }
+        });
+
+        ride.ride_status = "booked";
+        ride.fare_details.payment_status = "authorized";
+        ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
+
+        await ride.save();
+        await ride.populate(rideSchema.populate);
+
+        handlers.logger.success({
+          object_type: "pay-now",
+          message: "Payment authorized and ride booked successfully",
+          data: ride
+        });
+        return handlers.response.success({
+          res,
+          message: "Payment authorized and ride booked successfully",
+          data: ride
+        });
+      }
     } catch (error) {
       handlers.logger.error({
         object_type: "pay-now",
