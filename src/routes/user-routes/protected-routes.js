@@ -16,7 +16,7 @@ const controllers = {
   category: require("../../controllers/user-controllers/category-controller"),
   ride: require("../../controllers/user-controllers/ride-controller"),
   scheduled_ride: require("../../controllers/user-controllers/scheduled-ride-controller"),
-  shared_ride: require("../../controllers/user-controllers/split-fare-controller"),
+  shared_ride: require("../../controllers/user-controllers/share-ride-controller"),
   rating: require("../../controllers/user-controllers/rating-controller"),
   report: require("../../controllers/user-controllers/report-controller"),
   toggle: require("../../controllers/user-controllers/toggle-controller"),
