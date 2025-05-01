@@ -222,7 +222,7 @@ class Service {
       const existingPendingInvitation = await this.rideInvite.findOne({
         _id: ride_invite_id,
         ride_status: {
-          $in: ["confirm-split-fare"]
+          $in: ["pending"]
         }
       });
 
@@ -345,7 +345,7 @@ class Service {
       const existingPendingInvitation = await this.rideInvite.findOne({
         _id: ride_invite_id,
         ride_status: {
-          $in: ["confirm-split-fare"]
+          $in: ["pending"]
         }
       });
 
