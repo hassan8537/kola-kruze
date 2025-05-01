@@ -59,8 +59,7 @@ class Service {
               "scheduled",
               "arrived",
               "ongoing",
-              "confirm-split-fare",
-              "split-fare"
+              "confirm-split-fare"
             ]
           },
           $or: isDriver
@@ -82,18 +81,6 @@ class Service {
 
       const formattedCurrentRide = currentRide.toObject();
       formattedCurrentRide.invited_passengers = invitedPassengers;
-
-      // Determine ride_type
-      if (currentRide.is_scheduled) {
-        formattedCurrentRide.ride_type = "scheduled";
-      } else if (
-        currentRide.split_with_users &&
-        currentRide.split_with_users.length > 0
-      ) {
-        formattedCurrentRide.ride_type = "split-fare";
-      } else {
-        formattedCurrentRide.ride_type = "instant";
-      }
 
       handlers.logger.success({
         object_type: "current-ride",
