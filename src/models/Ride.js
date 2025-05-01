@@ -139,7 +139,15 @@ const RideSchema = new mongoose.Schema(
         },
         status: {
           type: String,
-          enum: ["pending", "paid", "failed", "accepted", "rejected", "self"],
+          enum: [
+            "pending",
+            "paid",
+            "failed",
+            "accepted",
+            "rejected",
+            "self",
+            "authorized"
+          ],
           default: "pending"
         },
         stripe_card_id: {
