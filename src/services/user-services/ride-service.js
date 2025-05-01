@@ -41,18 +41,15 @@ class Service {
 
   async getCurrentRide(req, res) {
     try {
-      const userFilter =
-        req.user.role === "driver"
-          ? { driver_id: req.user._id }
-          : { user_id: req.user._id };
+      const userId = req.user._id;
+      const isDriver = req.user.role === "driver";
 
       const invitedPassengers = await this.rideInvite.find({
-        invited_by: req.user._id
+        invited_by: userId
       });
 
       const currentRide = await this.ride
         .findOne({
-          ...userFilter,
           ride_status: {
             $in: [
               "booked",
@@ -64,7 +61,10 @@ class Service {
               "ongoing",
               "confirm-split-fare"
             ]
-          }
+          },
+          $or: isDriver
+            ? [{ driver_id: userId }]
+            : [{ user_id: userId }, { "split_with_users.user_id": userId }]
         })
         .populate(rideSchema.populate);
 
@@ -80,8 +80,19 @@ class Service {
       }
 
       const formattedCurrentRide = currentRide.toObject();
-
       formattedCurrentRide.invited_passengers = invitedPassengers;
+
+      // Determine ride_type
+      if (currentRide.is_scheduled) {
+        formattedCurrentRide.ride_type = "scheduled";
+      } else if (
+        currentRide.split_with_users &&
+        currentRide.split_with_users.length > 0
+      ) {
+        formattedCurrentRide.ride_type = "split-fare";
+      } else {
+        formattedCurrentRide.ride_type = "instant";
+      }
 
       handlers.logger.success({
         object_type: "current-ride",
