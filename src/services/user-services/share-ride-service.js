@@ -63,8 +63,11 @@ class Service {
         });
       }
 
-      const currentTotal =
-        existingRide.total_accepted + existingRide.total_invites;
+      const currentTotal = await this.rideInvite.countDocuments({
+        ride_id: existingRide._id,
+        invited_by: current_user._id,
+        status: "pending"
+      });
 
       if (currentTotal >= existingRide.no_of_passengers - 1) {
         handlers.logger.failed({
@@ -364,7 +367,7 @@ class Service {
 
       const existingRide = await this.ride.findOne({
         _id: existingPendingInvitation.ride_id,
-        status: "pending"
+        ride_status: "confirm-split-fare"
       });
 
       if (!existingRide) {
@@ -379,8 +382,10 @@ class Service {
         });
       }
 
+      existingRide.total_rejected++;
       existingPendingInvitation.status = "rejected";
       existingPendingInvitation.accepted_at = Date.now();
+      await existingRide.save();
       await existingPendingInvitation.save();
 
       // Send notification

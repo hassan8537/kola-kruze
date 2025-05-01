@@ -608,7 +608,7 @@ class Service {
         newRide.split_with_users.push({
           user_id: req.user._id,
           amount: Number(fare_details.amount) / no_of_passengers,
-          status: "accepted",
+          status: "self",
           stripe_card_id: stripe_card_id
         });
         newRide.ride_status = "confirm-split-fare";
