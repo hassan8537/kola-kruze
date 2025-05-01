@@ -253,8 +253,7 @@ class Service {
             "scheduled",
             "arrived",
             "ongoing",
-            "waiting",
-            "confirm-split-fare"
+            "waiting"
           ]
         }
       });
