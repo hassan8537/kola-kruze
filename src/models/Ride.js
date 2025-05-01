@@ -126,7 +126,6 @@ const RideSchema = new mongoose.Schema(
 
     no_of_passengers: { type: Number, default: 0, max: 4 },
 
-    total_split_payment_collected: { type: Number, default: 0 },
     split_with_users: [
       {
         user_id: {

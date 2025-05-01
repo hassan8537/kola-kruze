@@ -868,62 +868,90 @@ class Service {
       const isSplitFare =
         Array.isArray(ride.split_with_users) &&
         ride.split_with_users.length > 0;
-      let totalCollected = 0;
 
       if (isSplitFare) {
+        let totalCollected = 0;
+        const successfulCharges = [];
+
         for (let i = 0; i < ride.split_with_users.length; i++) {
           const userShare = ride.split_with_users[i];
           const splitUser = await this.user.findById(userShare.user_id);
+
           if (
             !splitUser ||
             !userShare.stripe_card_id ||
             userShare.status === "authorized"
-          )
+          ) {
             continue;
+          }
 
           const userAmountInCents = Math.round(Number(userShare.amount) * 100);
 
-          const paymentIntent = await stripe.paymentIntents.create({
-            amount: userAmountInCents,
-            currency: "usd",
-            customer: splitUser.stripe_customer_id,
-            payment_method: userShare.stripe_card_id,
-            confirm: true,
-            capture_method: "manual",
-            automatic_payment_methods: {
-              enabled: true,
-              allow_redirects: "never"
-            },
-            metadata: {
-              ride_id: ride._id.toString(),
-              user_id: splitUser._id.toString()
+          try {
+            const paymentIntent = await stripe.paymentIntents.create({
+              amount: userAmountInCents,
+              currency: "usd",
+              customer: splitUser.stripe_customer_id,
+              payment_method: userShare.stripe_card_id,
+              confirm: true,
+              capture_method: "manual",
+              automatic_payment_methods: {
+                enabled: true,
+                allow_redirects: "never"
+              },
+              metadata: {
+                ride_id: ride._id.toString(),
+                user_id: splitUser._id.toString()
+              }
+            });
+
+            // Save success
+            userShare.stripe_payment_intent_id = paymentIntent.id;
+            userShare.status = "authorized";
+            userShare.paid_at = new Date();
+
+            totalCollected += Number(userShare.amount);
+            successfulCharges.push(paymentIntent.id);
+          } catch (err) {
+            // On failure, rollback all successful charges
+            for (const pid of successfulCharges) {
+              try {
+                await stripe.paymentIntents.cancel(pid); // rollback
+              } catch (cancelErr) {
+                handlers.logger.error({
+                  object_type: "pay-now",
+                  message: `Failed to cancel payment intent ${pid}: ${cancelErr.message}`
+                });
+              }
             }
-          });
 
-          // Save details in split_with_users[i]
-          ride.split_with_users[i].stripe_payment_intent_id = paymentIntent.id;
-          ride.split_with_users[i].status = "authorized";
-          ride.split_with_users[i].paid_at = new Date();
-
-          totalCollected += Number(userShare.amount);
+            handlers.logger.failed({
+              object_type: "pay-now",
+              message: `Payment failed for one or more users. Rollback completed. ${err.message}`
+            });
+            return handlers.response.failed({
+              res,
+              message:
+                "Payment failed for one or more users. All authorized payments rolled back."
+            });
+          }
         }
 
-        // Check if total collected matches the full fare
+        // Finalize if all authorized
         if (
           Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
         ) {
           ride.total_split_payment_collected = totalCollected;
-          await ride.save(); // Save partial payment state
+          await ride.save();
           return handlers.response.failed({
             res,
             message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
           });
         }
 
-        // All users paid fully — finalize ride booking
         ride.ride_status = "booked";
         ride.fare_details.payment_status = "authorized";
-        ride.fare_details.stripe_payment_intent_id = "split-payment"; // Optional placeholder
+        ride.fare_details.stripe_payment_intent_id = "split-payment";
         await ride.save();
         await ride.populate(rideSchema.populate);
 
@@ -938,7 +966,7 @@ class Service {
           data: ride
         });
       } else {
-        // Standard single user payment
+        // Single user flow
         const stripeCustomerId = ride.user_id.stripe_customer_id;
         const stripeDefaultCard = ride.user_id.stripe_default_card_id;
         const amountInCents = Math.round(
