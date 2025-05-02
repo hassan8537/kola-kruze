@@ -436,7 +436,9 @@ class Service {
         stripe_card_id,
         ride_type,
         scheduled_at,
-        no_of_passengers
+        no_of_passengers,
+        gender_preference,
+        driver_preference
       } = req.body;
 
       console.log("Body Parameters:", {
@@ -449,7 +451,9 @@ class Service {
         stripe_card_id,
         ride_type,
         scheduled_at,
-        no_of_passengers
+        no_of_passengers,
+        gender_preference,
+        driver_preference
       });
 
       const user = await this.user.findById(user_id);
@@ -534,7 +538,9 @@ class Service {
         stops: newRide.stops,
         card: formatStripeList([cardObject.card_details])[0],
         no_of_passengers,
-        ride_type
+        ride_type,
+        gender_preference,
+        driver_preference
       };
 
       handlers.logger.success({
