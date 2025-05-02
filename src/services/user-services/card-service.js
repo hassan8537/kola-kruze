@@ -65,7 +65,7 @@ class Service {
         stripe_card_id: card.id
       });
 
-      user.stripe_default_card_id = stripe_card_id;
+      user.stripe_default_card_id = card.id;
       await user.save();
 
       handlers.logger.success({
@@ -214,7 +214,7 @@ class Service {
         });
       }
 
-      req.user.stripe_default_card_id = stripe_card_id;
+      req.user.stripe_default_card_id = card.stripe_card_id;
       await req.user.save();
 
       const stripeCustomerId = req.user.stripe_customer_id;
