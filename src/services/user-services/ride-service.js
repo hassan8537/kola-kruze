@@ -987,6 +987,8 @@ class Service {
           Number(ride.fare_details.amount) * 100
         );
 
+        console.log({ stripeDefaultCard });
+
         if (!stripeDefaultCard) {
           return handlers.response.failed({
             res,
