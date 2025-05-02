@@ -111,6 +111,7 @@ class Service {
       Object.assign(user, {
         profile_picture: body.profile_picture,
         email: body.email,
+        legal_name: body.legal_name,
         first_name: body.first_name,
         last_name: body.last_name,
         gender: body.gender,
