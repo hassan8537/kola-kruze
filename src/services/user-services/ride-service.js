@@ -1425,31 +1425,31 @@ class Service {
       // 👉 Capture the authorized payment
       const paymentIntentId = ride.fare_details.stripe_payment_intent_id;
 
-      if (
-        paymentIntentId &&
-        ride.fare_details.payment_status === "authorized"
-      ) {
-        const capturedPayment =
-          await stripe.paymentIntents.capture(paymentIntentId);
+      // if (
+      //   paymentIntentId &&
+      //   ride.fare_details.payment_status === "authorized"
+      // ) {
+      //   const capturedPayment =
+      //     await stripe.paymentIntents.capture(paymentIntentId);
 
-        // 👉 Transfer amount to driver (80% example)
-        const driverStripeAccountId = ride.driver_id.stripe_account_id;
-        const amountToTransfer = Math.round(
-          ride.fare_details.amount * 0.8 * 100
-        ); // cents
+      //   // 👉 Transfer amount to driver (80% example)
+      //   const driverStripeAccountId = ride.driver_id.stripe_account_id;
+      //   const amountToTransfer = Math.round(
+      //     ride.fare_details.amount * 0.8 * 100
+      //   ); // cents
 
-        const transfer = await stripe.transfers.create({
-          amount: amountToTransfer,
-          currency: "usd",
-          destination: driverStripeAccountId,
-          transfer_group: `ride_${ride._id}`
-        });
+      //   const transfer = await stripe.transfers.create({
+      //     amount: amountToTransfer,
+      //     currency: "usd",
+      //     destination: driverStripeAccountId,
+      //     transfer_group: `ride_${ride._id}`
+      //   });
 
-        // 👉 Update ride fare details
-        ride.fare_details.payment_status = "paid";
-        ride.fare_details.stripe_transfer_id = transfer.id;
-        await ride.save();
-      }
+      //   // 👉 Update ride fare details
+      //   ride.fare_details.payment_status = "paid";
+      //   ride.fare_details.stripe_transfer_id = transfer.id;
+      //   await ride.save();
+      // }
 
       // Emit to both driver and user
       await this.io.to(ride.user_id._id.toString()).emit(
