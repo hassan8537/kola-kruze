@@ -314,7 +314,7 @@ class Service {
         amount:
           existingRide.fare_details.amount / existingRide.no_of_passengers,
         status: "accepted",
-        stripe_card_id: current_user.stripe_card_id
+        stripe_card_id: current_user.stripe_default_card_id
       });
 
       await existingRide.save();
