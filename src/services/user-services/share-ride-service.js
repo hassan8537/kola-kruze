@@ -318,6 +318,7 @@ class Service {
       });
 
       await existingRide.save();
+      await existingRide.populate(rideSchema.populate);
 
       await this.notification.create({
         user_id: existingRide.user_id,
@@ -336,11 +337,13 @@ class Service {
       handlers.logger.success({
         object_type: "accept-invitation",
         res,
-        message: "Invitation accepted"
+        message: "Invitation accepted",
+        data: existingRide
       });
       handlers.response.success({
         res,
-        message: "Invitation accepted"
+        message: "Invitation accepted",
+        data: existingRide
       });
     } catch (error) {
       handlers.logger.error({
