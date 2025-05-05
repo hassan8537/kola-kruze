@@ -102,7 +102,7 @@ const io = require("socket.io")(server, {
   }
 });
 
-global.io = io;
+// global.io = io;
 
 io.on("connection", (socket) => {
   console.log("New WebSocket connection:", socket.id);
@@ -188,28 +188,28 @@ app.delete(`/api/${process.env.API_VERSION}/rides`, async (req, res) => {
 //   }
 // });
 
-setInterval(async () => {
-  try {
-    console.log("Running every second");
+// setInterval(async () => {
+//   try {
+//     console.log("Running every second");
 
-    const now = new Date();
-    // const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+//     const now = new Date();
+//     // const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
 
-    const rides = await Ride.find({
-      ride_type: "scheduled",
-      ride_status: "pending"
-      // scheduled_at: { $lte: twoHoursFromNow }
-    });
+//     const rides = await Ride.find({
+//       ride_type: "scheduled",
+//       ride_status: "pending"
+//       // scheduled_at: { $lte: twoHoursFromNow }
+//     });
 
-    for (const ride of rides) {
-      console.log(`🔍 Starting driver search for ride: ${ride._id}`);
-      const data = { ride_id: ride._id };
-      await rideService.requestARide(null, data);
-    }
-  } catch (err) {
-    console.error("❌ Interval error:", err.message);
-  }
-}, 5000); // 1000ms = 1 second
+//     for (const ride of rides) {
+//       console.log(`🔍 Starting driver search for ride: ${ride._id}`);
+//       const data = { ride_id: ride._id };
+//       await rideService.requestARide(null, data);
+//     }
+//   } catch (err) {
+//     console.error("❌ Interval error:", err.message);
+//   }
+// }, 5000); // 1000ms = 1 second
 
 connectToDatabase()
   .then(() => {
