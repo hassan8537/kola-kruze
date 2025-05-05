@@ -833,6 +833,216 @@ class Service {
     }
   }
 
+  // async payNow(req, res) {
+  //   try {
+  //     const rideId = req.params._id;
+
+  //     if (!rideId) {
+  //       handlers.logger.failed({
+  //         object_type: "pay-now",
+  //         message: "Ride ID is required"
+  //       });
+  //       return handlers.response.failed({
+  //         res,
+  //         message: "Ride ID is required"
+  //       });
+  //     }
+
+  //     const ride = await this.ride
+  //       .findById(rideId)
+  //       .populate(rideSchema.populate);
+
+  //     if (!ride) {
+  //       handlers.logger.unavailable({
+  //         object_type: "pay-now",
+  //         message: "No rides found"
+  //       });
+  //       return handlers.response.unavailable({
+  //         res,
+  //         message: "No rides found"
+  //       });
+  //     }
+
+  //     if (ride.ride_status === "booked") {
+  //       return handlers.response.failed({
+  //         res,
+  //         message: "You already have booked this ride"
+  //       });
+  //     }
+
+  //     const isSplitFare =
+  //       Array.isArray(ride.split_with_users) &&
+  //       ride.split_with_users.length > 0;
+
+  //     if (isSplitFare) {
+  //       const successfulCharges = [];
+
+  //       // Ensure all users have a valid stripe_card_id before proceeding
+  //       for (let i = 0; i < ride.split_with_users.length; i++) {
+  //         const userShare = ride.split_with_users[i];
+
+  //         if (!userShare.stripe_card_id) {
+  //           return handlers.response.failed({
+  //             res,
+  //             message: `User with ID ${userShare.user_id} does not have a valid card. Payment cannot proceed.`
+  //           });
+  //         }
+  //       }
+
+  //       for (let i = 0; i < ride.split_with_users.length; i++) {
+  //         const userShare = ride.split_with_users[i];
+  //         const splitUser = await this.user.findById(userShare.user_id);
+
+  //         if (!splitUser || userShare.status === "authorized") continue;
+
+  //         const userAmountInCents = Math.round(Number(userShare.amount) * 100);
+
+  //         try {
+  //           const paymentIntent = await stripe.paymentIntents.create({
+  //             amount: userAmountInCents,
+  //             currency: "usd",
+  //             customer: splitUser.stripe_customer_id,
+  //             payment_method: userShare.stripe_card_id,
+  //             confirm: true,
+  //             capture_method: "manual",
+  //             automatic_payment_methods: {
+  //               enabled: true,
+  //               allow_redirects: "never"
+  //             },
+  //             metadata: {
+  //               ride_id: ride._id.toString(),
+  //               user_id: splitUser._id.toString()
+  //             }
+  //           });
+
+  //           // Save success
+  //           userShare.stripe_payment_intent_id = paymentIntent.id;
+  //           userShare.status = "authorized";
+  //           userShare.paid_at = new Date();
+
+  //           totalCollected += Number(userShare.amount);
+  //           successfulCharges.push(paymentIntent.id);
+  //         } catch (err) {
+  //           // On failure, rollback all successful charges
+  //           for (const pid of successfulCharges) {
+  //             try {
+  //               await stripe.paymentIntents.cancel(pid); // rollback
+  //             } catch (cancelErr) {
+  //               handlers.logger.error({
+  //                 object_type: "pay-now",
+  //                 message: `Failed to cancel payment intent ${pid}: ${cancelErr.message}`
+  //               });
+  //             }
+  //           }
+
+  //           handlers.logger.failed({
+  //             object_type: "pay-now",
+  //             message: `Payment failed for one or more users. Rollback completed. ${err.message}`
+  //           });
+  //           return handlers.response.failed({
+  //             res,
+  //             message:
+  //               "Payment failed for one or more users. All authorized payments rolled back."
+  //           });
+  //         }
+  //       }
+
+  //       const totalCollected = ride.split_with_users.reduce((sum, user) => {
+  //         return sum + Number(user.amount || 0);
+  //       }, 0);
+
+  //       // Finalize if all authorized
+  //       if (
+  //         Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
+  //       ) {
+  //         ride.total_split_payment_collected = totalCollected;
+  //         await ride.save();
+  //         return handlers.response.failed({
+  //           res,
+  //           message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
+  //         });
+  //       }
+
+  //       ride.ride_status = "booked";
+  //       ride.fare_details.payment_status = "authorized";
+  //       ride.fare_details.stripe_payment_intent_id = "split-payment";
+  //       await ride.save();
+  //       await ride.populate(rideSchema.populate);
+
+  //       handlers.logger.success({
+  //         object_type: "pay-now",
+  //         message: "All split payments authorized. Ride booked.",
+  //         data: ride
+  //       });
+  //       return handlers.response.success({
+  //         res,
+  //         message: "All split payments authorized. Ride booked.",
+  //         data: ride
+  //       });
+  //     } else {
+  //       // Single user flow
+  //       const stripeCustomerId = ride.user_id.stripe_customer_id;
+  //       const stripeDefaultCard = ride.user_id.stripe_default_card_id;
+  //       const amountInCents = Math.round(
+  //         Number(ride.fare_details.amount) * 100
+  //       );
+
+  //       console.log({ stripeDefaultCard });
+
+  //       if (!stripeDefaultCard) {
+  //         return handlers.response.failed({
+  //           res,
+  //           message: "User does not have a valid card. Payment cannot proceed."
+  //         });
+  //       }
+
+  //       const paymentIntent = await stripe.paymentIntents.create({
+  //         amount: amountInCents,
+  //         currency: "usd",
+  //         customer: stripeCustomerId,
+  //         payment_method: stripeDefaultCard,
+  //         confirm: true,
+  //         capture_method: "manual",
+  //         automatic_payment_methods: {
+  //           enabled: true,
+  //           allow_redirects: "never"
+  //         },
+  //         metadata: {
+  //           ride_id: ride._id.toString(),
+  //           user_id: ride.user_id._id.toString()
+  //         }
+  //       });
+
+  //       ride.ride_status = "booked";
+  //       ride.fare_details.payment_status = "authorized";
+  //       ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
+
+  //       await ride.save();
+  //       await ride.populate(rideSchema.populate);
+
+  //       handlers.logger.success({
+  //         object_type: "pay-now",
+  //         message: "Payment authorized and ride booked successfully",
+  //         data: ride
+  //       });
+  //       return handlers.response.success({
+  //         res,
+  //         message: "Payment authorized and ride booked successfully",
+  //         data: ride
+  //       });
+  //     }
+  //   } catch (error) {
+  //     handlers.logger.error({
+  //       object_type: "pay-now",
+  //       message: error
+  //     });
+  //     return handlers.response.error({
+  //       res,
+  //       message: error.message
+  //     });
+  //   }
+  // }
+
   async payNow(req, res) {
     try {
       const rideId = req.params._id;
@@ -875,83 +1085,18 @@ class Service {
         ride.split_with_users.length > 0;
 
       if (isSplitFare) {
-        const successfulCharges = [];
-
-        // Ensure all users have a valid stripe_card_id before proceeding
+        // === MOCK PAYMENT FLOW ===
         for (let i = 0; i < ride.split_with_users.length; i++) {
           const userShare = ride.split_with_users[i];
-
-          if (!userShare.stripe_card_id) {
-            return handlers.response.failed({
-              res,
-              message: `User with ID ${userShare.user_id} does not have a valid card. Payment cannot proceed.`
-            });
-          }
-        }
-
-        for (let i = 0; i < ride.split_with_users.length; i++) {
-          const userShare = ride.split_with_users[i];
-          const splitUser = await this.user.findById(userShare.user_id);
-
-          if (!splitUser || userShare.status === "authorized") continue;
-
-          const userAmountInCents = Math.round(Number(userShare.amount) * 100);
-
-          try {
-            const paymentIntent = await stripe.paymentIntents.create({
-              amount: userAmountInCents,
-              currency: "usd",
-              customer: splitUser.stripe_customer_id,
-              payment_method: userShare.stripe_card_id,
-              confirm: true,
-              capture_method: "manual",
-              automatic_payment_methods: {
-                enabled: true,
-                allow_redirects: "never"
-              },
-              metadata: {
-                ride_id: ride._id.toString(),
-                user_id: splitUser._id.toString()
-              }
-            });
-
-            // Save success
-            userShare.stripe_payment_intent_id = paymentIntent.id;
-            userShare.status = "authorized";
-            userShare.paid_at = new Date();
-
-            totalCollected += Number(userShare.amount);
-            successfulCharges.push(paymentIntent.id);
-          } catch (err) {
-            // On failure, rollback all successful charges
-            for (const pid of successfulCharges) {
-              try {
-                await stripe.paymentIntents.cancel(pid); // rollback
-              } catch (cancelErr) {
-                handlers.logger.error({
-                  object_type: "pay-now",
-                  message: `Failed to cancel payment intent ${pid}: ${cancelErr.message}`
-                });
-              }
-            }
-
-            handlers.logger.failed({
-              object_type: "pay-now",
-              message: `Payment failed for one or more users. Rollback completed. ${err.message}`
-            });
-            return handlers.response.failed({
-              res,
-              message:
-                "Payment failed for one or more users. All authorized payments rolled back."
-            });
-          }
+          userShare.stripe_payment_intent_id = "test_intent_" + i;
+          userShare.status = "authorized";
+          userShare.paid_at = new Date();
         }
 
         const totalCollected = ride.split_with_users.reduce((sum, user) => {
           return sum + Number(user.amount || 0);
         }, 0);
 
-        // Finalize if all authorized
         if (
           Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
         ) {
@@ -965,69 +1110,37 @@ class Service {
 
         ride.ride_status = "booked";
         ride.fare_details.payment_status = "authorized";
-        ride.fare_details.stripe_payment_intent_id = "split-payment";
+        ride.fare_details.stripe_payment_intent_id = "mock_split_payment";
         await ride.save();
         await ride.populate(rideSchema.populate);
 
         handlers.logger.success({
           object_type: "pay-now",
-          message: "All split payments authorized. Ride booked.",
+          message: "Mock split payment. Ride booked.",
           data: ride
         });
         return handlers.response.success({
           res,
-          message: "All split payments authorized. Ride booked.",
+          message: "Mock split payment. Ride booked.",
           data: ride
         });
       } else {
-        // Single user flow
-        const stripeCustomerId = ride.user_id.stripe_customer_id;
-        const stripeDefaultCard = ride.user_id.stripe_default_card_id;
-        const amountInCents = Math.round(
-          Number(ride.fare_details.amount) * 100
-        );
-
-        console.log({ stripeDefaultCard });
-
-        if (!stripeDefaultCard) {
-          return handlers.response.failed({
-            res,
-            message: "User does not have a valid card. Payment cannot proceed."
-          });
-        }
-
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: amountInCents,
-          currency: "usd",
-          customer: stripeCustomerId,
-          payment_method: stripeDefaultCard,
-          confirm: true,
-          capture_method: "manual",
-          automatic_payment_methods: {
-            enabled: true,
-            allow_redirects: "never"
-          },
-          metadata: {
-            ride_id: ride._id.toString(),
-            user_id: ride.user_id._id.toString()
-          }
-        });
-
+        // === MOCK SINGLE USER PAYMENT ===
         ride.ride_status = "booked";
         ride.fare_details.payment_status = "authorized";
-        ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
+        ride.fare_details.stripe_payment_intent_id = "mock_payment_intent";
 
         await ride.save();
         await ride.populate(rideSchema.populate);
 
         handlers.logger.success({
           object_type: "pay-now",
-          message: "Payment authorized and ride booked successfully",
+          message: "Mock payment. Ride booked successfully",
           data: ride
         });
         return handlers.response.success({
           res,
-          message: "Payment authorized and ride booked successfully",
+          message: "Mock payment. Ride booked successfully",
           data: ride
         });
       }
