@@ -103,7 +103,7 @@ class Service {
 
   async getMyRides(req, res) {
     try {
-      const { _id, status } = req.query;
+      const { _id, type, status } = req.query;
 
       const userFilter =
         req.user.role === "driver"
@@ -112,7 +112,8 @@ class Service {
 
       const filters = { ...userFilter };
       if (_id) filters._id = _id;
-      if (status) filters.ride_status = status;
+      if (type) filters.ride_type = type;
+      if (status) filters.ride_status = status || "instant";
 
       const { page, limit, sort } = req.query;
 
