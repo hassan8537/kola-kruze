@@ -59,7 +59,8 @@ class Service {
               "scheduled",
               "arrived",
               "ongoing",
-              "confirm-split-fare"
+              "confirm-split-fare",
+              "requesting"
             ]
           },
           $or: isDriver
@@ -1200,6 +1201,9 @@ class Service {
         })
       );
 
+      ride.ride_status = "requesting";
+      await ride.save();
+
       // Find available drivers
       const availableDrivers = await this.user.find({
         role: "driver"
@@ -1257,7 +1261,7 @@ class Service {
         const latestRide = await this.ride.findById(ride._id);
 
         if (latestRide && latestRide.ride_status === "booked") {
-          // await this.deleteRide(ride);
+          await this.deleteRide(ride);
 
           socket.emit(
             "response",
@@ -1350,7 +1354,7 @@ class Service {
 
       const ride = await this.ride
         .findOneAndUpdate(
-          { _id: ride_id, ride_status: "booked" },
+          { _id: ride_id, ride_status: "requesting" },
           {
             $set: {
               driver_id,
