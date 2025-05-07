@@ -1260,29 +1260,77 @@ class Service {
       });
 
       // Set a timeout to expire the ride request if no driver accepts it
+      // const rideTimeout = setTimeout(async () => {
+      //   const latestRide = await this.ride.findById(ride._id);
+
+      //   if (latestRide && latestRide.ride_status === "requesting") {
+      //     await this.ride.deleteOne({ _id: ride._id });
+
+      //     socket.join(ride.user_id);
+      //     await this.io.to(ride.user_id._id.toString()).emit(
+      //       "response",
+      //       failedEvent({
+      //         object_type: "no-drivers-available",
+      //         message: "We are sorry! No drivers accepted the ride request."
+      //       })
+      //     );
+
+      //     await this.io.to(ride.user_id._id.toString()).emit(
+      //       "response",
+      //       failedEvent({
+      //         object_type: "ride-expired",
+      //         message:
+      //           "Your ride request has been canceled due to no available drivers."
+      //       })
+      //     );
+
+      //     availableDrivers.forEach(async (driver) => {
+      //       await this.io.to(driver._id.toString()).emit(
+      //         "response",
+      //         successEvent({
+      //           object_type: "ride-expired",
+      //           message: "The ride request has expired.",
+      //           data: ride
+      //         })
+      //       );
+      //     });
+      //   }
+      // }, process.env.RIDE_REQUEST_TIMER || 10000);
+
+      // Set a timeout to expire the ride request if no driver accepts it
       const rideTimeout = setTimeout(async () => {
-        const latestRide = await this.ride.findById(ride._id);
+        const latestRide = await this.ride
+          .findById(ride._id)
+          .populate(rideSchema.populate);
 
         if (latestRide && latestRide.ride_status === "requesting") {
           await this.ride.deleteOne({ _id: ride._id });
 
-          socket.join(ride.user_id);
-          await this.io.to(ride.user_id._id.toString()).emit(
-            "response",
-            failedEvent({
-              object_type: "no-drivers-available",
-              message: "We are sorry! No drivers accepted the ride request."
-            })
-          );
+          const allUserIds = [
+            ride.user_id._id.toString(),
+            ...ride.split_with_users.map((u) => u.user_id.toString())
+          ];
 
-          await this.io.to(ride.user_id._id.toString()).emit(
-            "response",
-            failedEvent({
-              object_type: "ride-expired",
-              message:
-                "Your ride request has been canceled due to no available drivers."
-            })
-          );
+          allUserIds.forEach(async (uid) => {
+            socket.join(uid);
+
+            await this.io.to(uid).emit(
+              "response",
+              failedEvent({
+                object_type: "no-drivers-available",
+                message: "We are sorry! No drivers accepted the ride request."
+              })
+            );
+
+            await this.io.to(uid).emit(
+              "response",
+              failedEvent({
+                object_type: "ride-expired",
+                message:
+                  "Your ride request has been canceled due to no available drivers."
+              })
+            );
+          });
 
           availableDrivers.forEach(async (driver) => {
             await this.io.to(driver._id.toString()).emit(
