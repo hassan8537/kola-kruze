@@ -44,10 +44,6 @@ class Service {
       const userId = req.user._id;
       const isDriver = req.user.role === "driver";
 
-      const invitedPassengers = await this.rideInvite.find({
-        invited_by: userId
-      });
-
       const currentRide = await this.ride
         .findOne({
           ride_status: {
@@ -79,6 +75,11 @@ class Service {
           message: "No current rides yet"
         });
       }
+
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: userId,
+        ride_id: currentRide._id
+      });
 
       const formattedCurrentRide = currentRide.toObject();
       formattedCurrentRide.invited_passengers = invitedPassengers;
