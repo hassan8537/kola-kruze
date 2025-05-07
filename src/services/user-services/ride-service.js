@@ -83,11 +83,11 @@ class Service {
       const formattedCurrentRide = currentRide.toObject();
       formattedCurrentRide.invited_passengers = invitedPassengers;
 
-      handlers.logger.success({
-        object_type: "current-ride",
-        message: "Current ride fetched successfully",
-        data: formattedCurrentRide
-      });
+      // handlers.logger.success({
+      //   object_type: "current-ride",
+      //   message: "Current ride fetched successfully",
+      //   data: formattedCurrentRide
+      // });
 
       return handlers.response.success({
         res,
