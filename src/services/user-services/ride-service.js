@@ -723,7 +723,8 @@ class Service {
         });
       }
 
-      await this.ride.deleteOne({ _id: ride_id });
+      ride.ride_status = "cancelled";
+      await ride.save();
 
       handlers.logger.success({
         object_type: "cancel-ride",
@@ -768,7 +769,8 @@ class Service {
         });
       }
 
-      await this.ride.deleteOne({ _id: ride_id });
+      ride.ride_status = "cancelled";
+      await ride.save();
 
       handlers.logger.success({
         object_type: "cancel-ride",
@@ -1261,7 +1263,7 @@ class Service {
         const latestRide = await this.ride.findById(ride._id);
 
         if (latestRide && latestRide.ride_status === "booked") {
-          await this.deleteRide(ride);
+          await this.ride.deleteOne({ _id: ride._id });
 
           socket.emit(
             "response",
@@ -1830,7 +1832,7 @@ class Service {
   }
 
   async deleteRide(ride) {
-    await this.ride.findByIdAndDelete(ride._id);
+    return await this.ride.findByIdAndDelete(ride._id);
   }
 }
 
