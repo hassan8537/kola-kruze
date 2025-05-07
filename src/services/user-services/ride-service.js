@@ -1194,6 +1194,9 @@ class Service {
         );
       }
 
+      ride.ride_status = "requesting";
+      await ride.save();
+
       socket.emit(
         "response",
         successEvent({
@@ -1202,9 +1205,6 @@ class Service {
           data: ride
         })
       );
-
-      ride.ride_status = "requesting";
-      await ride.save();
 
       // Find available drivers
       const availableDrivers = await this.user.find({
