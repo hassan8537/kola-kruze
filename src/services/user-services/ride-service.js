@@ -103,7 +103,7 @@ class Service {
 
   async getMyRides(req, res) {
     try {
-      const { _id, type, status } = req.query;
+      const { _id, status } = req.query;
 
       const userFilter =
         req.user.role === "driver"
@@ -112,8 +112,7 @@ class Service {
 
       const filters = { ...userFilter };
       if (_id) filters._id = _id;
-      if (type) filters.ride_type = type;
-      if (status) filters.ride_status = status || "instant";
+      if (status) filters.ride_status = status;
 
       const { page, limit, sort } = req.query;
 
@@ -1199,12 +1198,20 @@ class Service {
       ride.ride_status = "requesting";
       await ride.save();
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
       socket.emit(
         "response",
         successEvent({
           object_type: "ride-request-sent",
           message: "Ride request sent successfully",
-          data: ride
+          data: formattedCurrentRide
         })
       );
 
@@ -1434,6 +1441,14 @@ class Service {
         )
         .populate(rideSchema.populate);
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
       if (!ride) {
         return socket.emit(
           "response",
@@ -1465,7 +1480,7 @@ class Service {
         successEvent({
           object_type: "driver-ride-accepted",
           message: "Ride accepted successfully",
-          data: ride
+          data: formattedCurrentRide
         })
       );
 
@@ -1481,7 +1496,7 @@ class Service {
           successEvent({
             object_type: "user-ride-accepted",
             message: "Your ride has been accepted by a driver",
-            data: ride
+            data: formattedCurrentRide
           })
         );
       }
@@ -1505,6 +1520,14 @@ class Service {
         )
         .populate(rideSchema.populate);
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
       if (!ride) {
         return socket.emit(
           "response",
@@ -1527,7 +1550,7 @@ class Service {
           successEvent({
             object_type,
             message: "Your driver has arrived at your pickup location",
-            data: ride
+            data: formattedCurrentRide
           })
         );
       }
@@ -1538,7 +1561,7 @@ class Service {
         successEvent({
           object_type,
           message: "You have arrived at the pickup location",
-          data: ride
+          data: formattedCurrentRide
         })
       );
     } catch (error) {
@@ -1558,6 +1581,14 @@ class Service {
           { new: true }
         )
         .populate(rideSchema.populate);
+
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
 
       if (!ride) {
         return socket.emit(
@@ -1591,7 +1622,7 @@ class Service {
           successEvent({
             object_type,
             message: "Your ride has started",
-            data: ride
+            data: formattedCurrentRide
           })
         );
       }
@@ -1602,7 +1633,7 @@ class Service {
         successEvent({
           object_type,
           message: "Ride has started",
-          data: ride
+          data: formattedCurrentRide
         })
       );
     } catch (error) {
@@ -1622,6 +1653,14 @@ class Service {
           { new: true }
         )
         .populate(rideSchema.populate);
+
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
 
       if (!ride) {
         return socket.emit(
@@ -1646,7 +1685,7 @@ class Service {
           successEvent({
             object_type,
             message: "Your ride has ended",
-            data: ride
+            data: formattedCurrentRide
           })
         );
       }
@@ -1658,7 +1697,7 @@ class Service {
         successEvent({
           object_type,
           message: "Ride has ended",
-          data: ride
+          data: formattedCurrentRide
         })
       );
     } catch (error) {
@@ -1713,10 +1752,18 @@ class Service {
         ? "ride-cancelled-by-passenger"
         : "ride-cancelled-by-driver";
 
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: currentRide.user_id._id,
+        ride_id: currentRide._id
+      });
+
+      const formattedCurrentRide = currentRide.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
       const message = successEvent({
         object_type,
         message: `The ride has been cancelled by the ${isPassenger ? "passenger" : "driver"}`,
-        data: currentRide
+        data: formattedCurrentRide
       });
 
       // Emit to all users in the ride including split fare users
