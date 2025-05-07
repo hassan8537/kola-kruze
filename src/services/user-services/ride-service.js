@@ -1262,7 +1262,7 @@ class Service {
       const rideTimeout = setTimeout(async () => {
         const latestRide = await this.ride.findById(ride._id);
 
-        if (latestRide && latestRide.ride_status === "booked") {
+        if (latestRide && latestRide.ride_status === "requesting") {
           await this.ride.deleteOne({ _id: ride._id });
 
           socket.emit(
