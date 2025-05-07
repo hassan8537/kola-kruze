@@ -1273,7 +1273,7 @@ class Service {
             })
           );
 
-          await this.io.to(ride.user_id.toString()).emit(
+          socket.emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
