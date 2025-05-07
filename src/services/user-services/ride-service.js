@@ -1265,7 +1265,8 @@ class Service {
         if (latestRide && latestRide.ride_status === "requesting") {
           await this.ride.deleteOne({ _id: ride._id });
 
-          await this.io.to(ride.user_id.toString()).emit(
+          socket.join(ride.user_id);
+          await this.io.to(ride.user_id._id.toString()).emit(
             "response",
             failedEvent({
               object_type: "no-drivers-available",
@@ -1273,7 +1274,7 @@ class Service {
             })
           );
 
-          await this.io.to(ride.user_id.toString()).emit(
+          await this.io.to(ride.user_id._id.toString()).emit(
             "response",
             failedEvent({
               object_type: "ride-expired",
