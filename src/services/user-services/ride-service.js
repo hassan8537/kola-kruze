@@ -1239,25 +1239,25 @@ class Service {
         availableDrivers.map((d) => d._id.toString())
       );
 
-      availableDrivers.forEach(async (driver) => {
-        console.log(
-          `Attempting to emit to driver room: ${driver._id.toString()}`
-        );
-        console.log(`Rooms:`, this.io.sockets.adapter.rooms);
+      // availableDrivers.forEach(async (driver) => {
+      //   console.log(
+      //     `Attempting to emit to driver room: ${driver._id.toString()}`
+      //   );
+      //   console.log(`Rooms:`, this.io.sockets.adapter.rooms);
 
-        socket.join(driver._id.toString());
-        await this.io.to(driver._id.toString()).emit(
-          "response",
-          successEvent({
-            object_type: "get-ride",
-            message: "A user has requested a ride",
-            data: ride
-          })
-        );
-        console.log(
-          `Ride request emitted successfully to driver ${driver._id}`
-        );
-      });
+      //   socket.join(driver._id.toString());
+      //   await this.io.to(driver._id.toString()).emit(
+      //     "response",
+      //     successEvent({
+      //       object_type: "get-ride",
+      //       message: "A user has requested a ride",
+      //       data: ride
+      //     })
+      //   );
+      //   console.log(
+      //     `Ride request emitted successfully to driver ${driver._id}`
+      //   );
+      // });
 
       // Set a timeout to expire the ride request if no driver accepts it
       // const rideTimeout = setTimeout(async () => {
@@ -1298,6 +1298,21 @@ class Service {
       // }, process.env.RIDE_REQUEST_TIMER || 10000);
 
       // Set a timeout to expire the ride request if no driver accepts it
+
+      availableDrivers.forEach(async (driver) => {
+        const driverRoom = driver._id.toString();
+        console.log(`Emitting to driver room: ${driverRoom}`);
+
+        await this.io.to(driverRoom).emit(
+          "response",
+          successEvent({
+            object_type: "get-ride",
+            message: "A user has requested a ride",
+            data: ride
+          })
+        );
+      });
+
       const rideTimeout = setTimeout(async () => {
         const latestRide = await this.ride
           .findById(ride._id)
@@ -1453,15 +1468,22 @@ class Service {
         })
       );
 
-      // ✅ Emit to the user using the correct room
-      await this.io.to(user_id.toString()).emit(
-        "response",
-        successEvent({
-          object_type: "user-ride-accepted",
-          message: "Your ride has been accepted by a driver",
-          data: ride
-        })
-      );
+      // ✅ Emit to all users involved (main + split_with_users)
+      const allUserIds = [
+        ride.user_id._id.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
+
+      for (const uid of allUserIds) {
+        await this.io.to(uid).emit(
+          "response",
+          successEvent({
+            object_type: "user-ride-accepted",
+            message: "Your ride has been accepted by a driver",
+            data: ride
+          })
+        );
+      }
 
       // await this.user.findByIdAndUpdate(driver_id, { is_available: false });
     } catch (error) {
@@ -1492,16 +1514,24 @@ class Service {
         );
       }
 
-      // Emit to both driver and user
-      await this.io.to(ride.user_id._id.toString()).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Your driver has arrived at your pickup location",
-          data: ride
-        })
-      );
+      // ✅ Emit to all users involved (main + split_with_users)
+      const allUserIds = [
+        ride.user_id._id.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
 
+      for (const uid of allUserIds) {
+        await this.io.to(uid).emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "Your driver has arrived at your pickup location",
+            data: ride
+          })
+        );
+      }
+
+      // ✅ Emit to driver
       await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
@@ -1541,20 +1571,31 @@ class Service {
       if (ride.fare_details.payment_status === "pending") {
         return socket.emit(
           "response",
-          failedEvent({ object_type, message: "This ride is not booked yet." })
+          failedEvent({
+            object_type,
+            message: "This ride is not booked yet."
+          })
         );
       }
 
-      // Emit to both driver and user
-      await this.io.to(ride.user_id._id.toString()).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Your ride has started",
-          data: ride
-        })
-      );
+      // ✅ Emit to all users involved (main + split_with_users)
+      const allUserIds = [
+        ride.user_id._id.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
 
+      for (const uid of allUserIds) {
+        await this.io.to(uid).emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "Your ride has started",
+            data: ride
+          })
+        );
+      }
+
+      // ✅ Emit to driver
       await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
@@ -1591,45 +1632,26 @@ class Service {
         );
       }
 
-      // 👉 Capture the authorized payment
-      const paymentIntentId = ride.fare_details.stripe_payment_intent_id;
+      // Emit to all ride participants
+      const allUserIds = [
+        ride.user_id._id.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
 
-      // if (
-      //   paymentIntentId &&
-      //   ride.fare_details.payment_status === "authorized"
-      // ) {
-      //   const capturedPayment =
-      //     await stripe.paymentIntents.capture(paymentIntentId);
+      for (const uid of allUserIds) {
+        socket.join(uid);
+        await this.io.to(uid).emit(
+          "response",
+          successEvent({
+            object_type,
+            message: "Your ride has ended",
+            data: ride
+          })
+        );
+      }
 
-      //   // 👉 Transfer amount to driver (80% example)
-      //   const driverStripeAccountId = ride.driver_id.stripe_account_id;
-      //   const amountToTransfer = Math.round(
-      //     ride.fare_details.amount * 0.8 * 100
-      //   ); // cents
-
-      //   const transfer = await stripe.transfers.create({
-      //     amount: amountToTransfer,
-      //     currency: "usd",
-      //     destination: driverStripeAccountId,
-      //     transfer_group: `ride_${ride._id}`
-      //   });
-
-      //   // 👉 Update ride fare details
-      //   ride.fare_details.payment_status = "paid";
-      //   ride.fare_details.stripe_transfer_id = transfer.id;
-      //   await ride.save();
-      // }
-
-      // Emit to both driver and user
-      await this.io.to(ride.user_id._id.toString()).emit(
-        "response",
-        successEvent({
-          object_type,
-          message: "Your ride has ended",
-          data: ride
-        })
-      );
-
+      // Emit to the driver
+      socket.join(ride.driver_id._id.toString());
       await this.io.to(ride.driver_id._id.toString()).emit(
         "response",
         successEvent({
@@ -1639,9 +1661,10 @@ class Service {
         })
       );
     } catch (error) {
+      console.error("Error in endARide:", error);
       socket.emit(
         "error",
-        errorEvent({ error: "Failed to end ride: " + error })
+        errorEvent({ error: "Failed to end ride: " + error.message })
       );
     }
   }
@@ -1695,14 +1718,24 @@ class Service {
         data: currentRide
       });
 
-      // Emit to both
-      // socket.emit("response", message); // canceller
-      // const receiverId = isPassenger ? driver_id : passenger_id;
-      // if (receiverId) {
-      await this.io.to(passenger_id.toString()).emit("response", message); // other party
-      await this.io.to(driver_id.toString()).emit("response", message); // other party
-      // }
+      // Emit to all users in the ride including split fare users
+      const allUserIds = [
+        passenger_id,
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
+
+      for (const uid of allUserIds) {
+        socket.join(uid);
+        await this.io.to(uid).emit("response", message);
+      }
+
+      // Emit to driver
+      if (driver_id) {
+        socket.join(driver_id);
+        await this.io.to(driver_id).emit("response", message);
+      }
     } catch (error) {
+      console.error("Error in cancelARide:", error);
       socket.emit("error", errorEvent({ error: error.message }));
     }
   }
@@ -1740,13 +1773,11 @@ class Service {
         );
       }
 
-      // Extract locations
       const [pickup_longitude, pickup_latitude] =
         ride.pickup_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
         driver_current_location.coordinates;
 
-      // Calculate Distance & ETA
       const distance = calculateDistance(
         driver_latitude,
         driver_longitude,
@@ -1755,7 +1786,6 @@ class Service {
       );
       const eta = calculateETA(distance);
 
-      // Construct response data
       const responseData = {
         ride_id,
         tracking: {
@@ -1765,10 +1795,14 @@ class Service {
         }
       };
 
-      // Notify User
-      if (ride.user_id) {
-        socket.join(ride.user_id.toString());
-        await this.io.to(ride.user_id.toString()).emit(
+      const userIds = [
+        ride.user_id?.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
+
+      for (const uid of userIds) {
+        socket.join(uid);
+        await this.io.to(uid).emit(
           "response",
           successEvent({
             object_type,
@@ -1778,18 +1812,15 @@ class Service {
         );
       }
 
-      // Notify Driver
-      if (ride.driver_id) {
-        socket.join(ride.driver_id.toString());
-        await this.io.to(ride.driver_id.toString()).emit(
-          "response",
-          successEvent({
-            object_type,
-            message: `You will reach the passenger in ${eta} minutes`,
-            data: responseData
-          })
-        );
-      }
+      socket.join(ride.driver_id.toString());
+      await this.io.to(ride.driver_id.toString()).emit(
+        "response",
+        successEvent({
+          object_type,
+          message: `You will reach the passenger in ${eta} minutes`,
+          data: responseData
+        })
+      );
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
@@ -1828,13 +1859,11 @@ class Service {
         );
       }
 
-      // Extract locations
       const [dropoff_longitude, dropoff_latitude] =
         ride.dropoff_location.location.coordinates;
       const [driver_longitude, driver_latitude] =
         driver_current_location.coordinates;
 
-      // Calculate Distance & ETA
       const distance = calculateDistance(
         driver_latitude,
         driver_longitude,
@@ -1843,7 +1872,6 @@ class Service {
       );
       const eta = calculateETA(distance);
 
-      // Construct response data
       const responseData = {
         ride_id,
         tracking: {
@@ -1853,10 +1881,14 @@ class Service {
         }
       };
 
-      // Notify User
-      if (ride.user_id) {
-        socket.join(ride.user_id.toString());
-        await this.io.to(ride.user_id.toString()).emit(
+      const userIds = [
+        ride.user_id?.toString(),
+        ...ride.split_with_users.map((u) => u.user_id.toString())
+      ];
+
+      for (const uid of userIds) {
+        socket.join(uid);
+        await this.io.to(uid).emit(
           "response",
           successEvent({
             object_type,
@@ -1866,18 +1898,15 @@ class Service {
         );
       }
 
-      // Notify Driver
-      if (ride.driver_id) {
-        socket.join(ride.driver_id.toString());
-        await this.io.to(ride.driver_id.toString()).emit(
-          "response",
-          successEvent({
-            object_type,
-            message: `You will reach the drop-off location in ${eta} minutes`,
-            data: responseData
-          })
-        );
-      }
+      socket.join(ride.driver_id.toString());
+      await this.io.to(ride.driver_id.toString()).emit(
+        "response",
+        successEvent({
+          object_type,
+          message: `You will reach the drop-off location in ${eta} minutes`,
+          data: responseData
+        })
+      );
     } catch (error) {
       socket.emit("error", errorEvent({ error }));
     }
