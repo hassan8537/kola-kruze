@@ -85,7 +85,9 @@ class Service {
     try {
       const user_id = req.user_id;
 
-      const filters = { ...user_id };
+      const filters = {};
+
+      filters.user_id = user_id;
 
       const { page, limit, sort } = req.query;
 
