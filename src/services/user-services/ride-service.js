@@ -1217,11 +1217,10 @@ class Service {
 
       // Find available drivers
       const availableDrivers = await this.user.find({
-        role: "driver"
-        // driver_preference: ride.user_id.driver_preference,
-        // gender_preference: ride.user_id.gender_preference,
-        // is_available: true, // Fixed to correctly fetch available drivers
-        // is_deleted: false
+        role: "driver",
+        driver_preference: ride.user_id.driver_preference,
+        gender_preference: ride.user_id.gender_preference,
+        is_available: true
       });
 
       if (!availableDrivers.length) {
