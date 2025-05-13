@@ -22,7 +22,9 @@ const controllers = {
   toggle: require("../../controllers/user-controllers/toggle-controller"),
   invitation: require("../../controllers/user-controllers/invitation-controller"),
   notification: require("../../controllers/user-controllers/notification-controller"),
-  favourites: require("../../controllers/user-controllers/favourite-controller")
+  favourites: require("../../controllers/user-controllers/favourite-controller"),
+  wallets: require("../../controllers/user-controllers/wallet-controller"),
+  transactions: require("../../controllers/user-controllers/transaction-controller")
 };
 
 // session
@@ -298,6 +300,18 @@ router.get(
 router.post(
   "/favourites/toggle",
   controllers.favourites.toggleFavouriteDriver.bind(controllers.favourites)
+);
+
+// Wallet
+router.post(
+  "/wallets/funds",
+  controllers.wallets.addFunds.bind(controllers.wallets)
+);
+
+// Transactions
+router.get(
+  "/transactions",
+  controllers.transactions.getTransactions.bind(controllers.transactions)
 );
 
 module.exports = router;

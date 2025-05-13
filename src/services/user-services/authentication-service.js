@@ -1,6 +1,7 @@
 const sendEmail = require("../../config/nodemailer");
 const Otp = require("../../models/Otp");
 const User = require("../../models/User");
+const Wallet = require("../../models/Wallet");
 const userSchema = require("../../schemas/user-schema");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
 const { generateToken } = require("../../utilities/generators/token-generator");
@@ -10,6 +11,7 @@ class Service {
   constructor() {
     this.user = User;
     this.otp = Otp;
+    this.wallet = Wallet;
   }
 
   async generateAndSendOtp(user, device_token, res) {
@@ -94,6 +96,22 @@ class Service {
           object_type: "user-authentication",
           message: "New user created",
           data: { user_id: user._id }
+        });
+      }
+
+      const existingWallet = await this.wallet.findOne({
+        user_id: user._id
+      });
+
+      if (!existingWallet) {
+        const wallet = await this.wallet.create({
+          user_id: user._id
+        });
+
+        handlers.logger.success({
+          object_type: "user-authentication",
+          message: "New wallet created",
+          data: { wallet_id: wallet._id }
         });
       }
 

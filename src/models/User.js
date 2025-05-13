@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const UserSchema = new mongoose.Schema(
+const schema = new mongoose.Schema(
   {
     legal_name: {
       type: String,
@@ -127,6 +127,14 @@ const UserSchema = new mongoose.Schema(
       type: String,
       default: null
     },
+    available_balance: {
+      type: Number,
+      default: 0
+    },
+    total_expense: {
+      type: Number,
+      default: 0
+    },
     session_token: {
       type: String,
       default: ""
@@ -165,5 +173,5 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-const User = mongoose.model("User", UserSchema);
+const User = mongoose.model("User", schema);
 module.exports = User;

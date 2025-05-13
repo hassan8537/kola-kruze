@@ -68,6 +68,8 @@ const RideSchema = new mongoose.Schema(
       type: String,
       enum: [
         "pending",
+        "started",
+        "ended",
         "cancelled",
         "accepted",
         "scheduled",
@@ -98,7 +100,8 @@ const RideSchema = new mongoose.Schema(
         default: "pending"
       },
       stripe_payment_intent_id: { type: String, default: null },
-      stripe_transfer_id: { type: String, default: null }
+      admin_stripe_transfer_id: { type: String, default: null },
+      driver_stripe_transfer_id: { type: String, default: null }
     },
 
     cancellation: {

@@ -231,8 +231,8 @@ class Service {
         data: user
       });
     } catch (error) {
-      logger.error({ object_type, message: error.message });
-      return response.error({ res, message: "Internal server error." });
+      logger.error({ object_type, message: error });
+      return response.error({ res, message: error.message });
     }
   }
 

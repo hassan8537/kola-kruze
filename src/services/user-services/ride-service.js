@@ -27,6 +27,8 @@ const {
 } = require("../../utilities/formatters/stripe-card-list-formatter");
 const { calculateETA } = require("../../utilities/calculators/eta-calculator");
 const RideInvite = require("../../models/RideInvite");
+const Wallet = require("../../models/Wallet");
+const Transaction = require("../../models/Transactions");
 
 class Service {
   constructor(io) {
@@ -37,6 +39,8 @@ class Service {
     this.category = Category;
     this.vehicle = Vehicle;
     this.card = Card;
+    this.wallet = Wallet;
+    this.transaction = Transaction;
   }
 
   async getCurrentRide(req, res) {
@@ -837,219 +841,281 @@ class Service {
     }
   }
 
-  // async payNow(req, res) {
-  //   try {
-  //     const rideId = req.params._id;
+  async processSplitFarePayment(ride, use_wallet, res) {
+    let totalCollected = 0;
+    const successfulCharges = [];
 
-  //     if (!rideId) {
-  //       handlers.logger.failed({
-  //         object_type: "pay-now",
-  //         message: "Ride ID is required"
-  //       });
-  //       return handlers.response.failed({
-  //         res,
-  //         message: "Ride ID is required"
-  //       });
-  //     }
+    for (const userShare of ride.split_with_users) {
+      const splitUser = await this.user.findById(userShare.user_id);
+      const wallet = await this.wallet.findOne({ user_id: splitUser._id });
 
-  //     const ride = await this.ride
-  //       .findById(rideId)
-  //       .populate(rideSchema.populate);
+      if (!splitUser || userShare.status === "authorized") continue;
 
-  //     if (!ride) {
-  //       handlers.logger.unavailable({
-  //         object_type: "pay-now",
-  //         message: "No rides found"
-  //       });
-  //       return handlers.response.unavailable({
-  //         res,
-  //         message: "No rides found"
-  //       });
-  //     }
+      const shareAmount = Number(userShare.amount);
+      const walletBalance = wallet ? Number(wallet.available_balance || 0) : 0;
 
-  //     if (ride.ride_status === "booked") {
-  //       return handlers.response.failed({
-  //         res,
-  //         message: "You already have booked this ride"
-  //       });
-  //     }
+      if (use_wallet && walletBalance >= shareAmount) {
+        // Use wallet for payment
+        wallet.available_balance -= shareAmount;
+        await wallet.save();
 
-  //     const isSplitFare =
-  //       Array.isArray(ride.split_with_users) &&
-  //       ride.split_with_users.length > 0;
+        userShare.status = "authorized";
+        userShare.paid_at = new Date();
+        userShare.payment_mode = "wallet";
+      } else {
+        if (!userShare.stripe_card_id) {
+          return handlers.response.failed({
+            res,
+            message: `User ${splitUser._id} has insufficient wallet balance and no valid card.`
+          });
+        }
 
-  //     if (isSplitFare) {
-  //       const successfulCharges = [];
+        const remainingAmount =
+          use_wallet && walletBalance > 0
+            ? Math.round((shareAmount - walletBalance) * 100)
+            : Math.round(shareAmount * 100);
 
-  //       // Ensure all users have a valid stripe_card_id before proceeding
-  //       for (let i = 0; i < ride.split_with_users.length; i++) {
-  //         const userShare = ride.split_with_users[i];
+        try {
+          if (walletBalance > 0) {
+            wallet.available_balance = 0;
+            await wallet.save();
+          }
 
-  //         if (!userShare.stripe_card_id) {
-  //           return handlers.response.failed({
-  //             res,
-  //             message: `User with ID ${userShare.user_id} does not have a valid card. Payment cannot proceed.`
-  //           });
-  //         }
-  //       }
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: remainingAmount,
+            currency: "usd",
+            customer: splitUser.stripe_customer_id,
+            payment_method: userShare.stripe_card_id,
+            confirm: true,
+            capture_method: "manual",
+            automatic_payment_methods: {
+              enabled: true,
+              allow_redirects: "never"
+            },
+            metadata: {
+              ride_id: ride._id.toString(),
+              user_id: splitUser._id.toString()
+            }
+          });
 
-  //       for (let i = 0; i < ride.split_with_users.length; i++) {
-  //         const userShare = ride.split_with_users[i];
-  //         const splitUser = await this.user.findById(userShare.user_id);
+          await stripe.paymentIntents.capture(paymentIntent.id);
 
-  //         if (!splitUser || userShare.status === "authorized") continue;
+          userShare.stripe_payment_intent_id = paymentIntent.id;
+          successfulCharges.push(paymentIntent.id);
 
-  //         const userAmountInCents = Math.round(Number(userShare.amount) * 100);
+          userShare.status = "authorized";
+          userShare.paid_at = new Date();
+          userShare.payment_mode = "card";
+        } catch (err) {
+          // Rollback for successful charges
+          for (const pid of successfulCharges) {
+            try {
+              await stripe.paymentIntents.cancel(pid);
+            } catch (cancelErr) {
+              handlers.logger.error({
+                object_type: "pay-now",
+                message: `Failed to cancel payment intent ${pid}: ${cancelErr.message}`
+              });
+            }
+          }
 
-  //         try {
-  //           const paymentIntent = await stripe.paymentIntents.create({
-  //             amount: userAmountInCents,
-  //             currency: "usd",
-  //             customer: splitUser.stripe_customer_id,
-  //             payment_method: userShare.stripe_card_id,
-  //             confirm: true,
-  //             capture_method: "manual",
-  //             automatic_payment_methods: {
-  //               enabled: true,
-  //               allow_redirects: "never"
-  //             },
-  //             metadata: {
-  //               ride_id: ride._id.toString(),
-  //               user_id: splitUser._id.toString()
-  //             }
-  //           });
+          handlers.logger.failed({
+            object_type: "pay-now",
+            message: `Split payment failed. Rolled back. ${err.message}`
+          });
 
-  //           // Save success
-  //           userShare.stripe_payment_intent_id = paymentIntent.id;
-  //           userShare.status = "authorized";
-  //           userShare.paid_at = new Date();
+          return handlers.response.failed({
+            res,
+            message:
+              "Split payment failed for one or more users. Rollback completed."
+          });
+        }
+      }
 
-  //           totalCollected += Number(userShare.amount);
-  //           successfulCharges.push(paymentIntent.id);
-  //         } catch (err) {
-  //           // On failure, rollback all successful charges
-  //           for (const pid of successfulCharges) {
-  //             try {
-  //               await stripe.paymentIntents.cancel(pid); // rollback
-  //             } catch (cancelErr) {
-  //               handlers.logger.error({
-  //                 object_type: "pay-now",
-  //                 message: `Failed to cancel payment intent ${pid}: ${cancelErr.message}`
-  //               });
-  //             }
-  //           }
+      totalCollected += shareAmount;
+    }
 
-  //           handlers.logger.failed({
-  //             object_type: "pay-now",
-  //             message: `Payment failed for one or more users. Rollback completed. ${err.message}`
-  //           });
-  //           return handlers.response.failed({
-  //             res,
-  //             message:
-  //               "Payment failed for one or more users. All authorized payments rolled back."
-  //           });
-  //         }
-  //       }
+    // If total collected is less than expected, update and wait for others
+    if (
+      Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
+    ) {
+      ride.total_split_payment_collected = totalCollected;
+      await ride.save();
 
-  //       const totalCollected = ride.split_with_users.reduce((sum, user) => {
-  //         return sum + Number(user.amount || 0);
-  //       }, 0);
+      return handlers.response.failed({
+        res,
+        message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
+      });
+    }
 
-  //       // Finalize if all authorized
-  //       if (
-  //         Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
-  //       ) {
-  //         ride.total_split_payment_collected = totalCollected;
-  //         await ride.save();
-  //         return handlers.response.failed({
-  //           res,
-  //           message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
-  //         });
-  //       }
+    const admin = await this.user.findOne({ role: "admin" });
+    if (!admin?.stripe_account_id) {
+      return handlers.response.failed({
+        res,
+        message: "Admin Stripe account not configured"
+      });
+    }
 
-  //       ride.ride_status = "booked";
-  //       ride.fare_details.payment_status = "authorized";
-  //       ride.fare_details.stripe_payment_intent_id = "split-payment";
-  //       await ride.save();
-  //       await ride.populate(rideSchema.populate);
+    // Transfer 20% of the total fare to the admin's Stripe account
+    const adminTransfer = await stripe.transfers.create({
+      amount: Math.round(ride.fare_details.amount * 0.2 * 100), // 20% of the total fare
+      currency: "usd",
+      destination: admin.stripe_account_id,
+      transfer_group: `ride_${ride._id}`,
+      metadata: {
+        ride_id: ride._id.toString(),
+        mode: "split"
+      }
+    });
 
-  //       handlers.logger.success({
-  //         object_type: "pay-now",
-  //         message: "All split payments authorized. Ride booked.",
-  //         data: ride
-  //       });
-  //       return handlers.response.success({
-  //         res,
-  //         message: "All split payments authorized. Ride booked.",
-  //         data: ride
-  //       });
-  //     } else {
-  //       // Single user flow
-  //       const stripeCustomerId = ride.user_id.stripe_customer_id;
-  //       const stripeDefaultCard = ride.user_id.stripe_default_card_id;
-  //       const amountInCents = Math.round(
-  //         Number(ride.fare_details.amount) * 100
-  //       );
+    ride.ride_status = "booked";
+    ride.fare_details.payment_status = "authorized";
+    ride.fare_details.stripe_payment_intent_id = "split-payment";
+    ride.fare_details.stripe_transfer_id = adminTransfer.id;
 
-  //       console.log({ stripeDefaultCard });
+    await ride.save();
+    await ride.populate(rideSchema.populate);
 
-  //       if (!stripeDefaultCard) {
-  //         return handlers.response.failed({
-  //           res,
-  //           message: "User does not have a valid card. Payment cannot proceed."
-  //         });
-  //       }
+    handlers.logger.success({
+      object_type: "pay-now",
+      message: "All split payments authorized. Ride booked.",
+      data: ride
+    });
 
-  //       const paymentIntent = await stripe.paymentIntents.create({
-  //         amount: amountInCents,
-  //         currency: "usd",
-  //         customer: stripeCustomerId,
-  //         payment_method: stripeDefaultCard,
-  //         confirm: true,
-  //         capture_method: "manual",
-  //         automatic_payment_methods: {
-  //           enabled: true,
-  //           allow_redirects: "never"
-  //         },
-  //         metadata: {
-  //           ride_id: ride._id.toString(),
-  //           user_id: ride.user_id._id.toString()
-  //         }
-  //       });
+    return handlers.response.success({
+      res,
+      message: "All split payments authorized. Ride booked.",
+      data: ride
+    });
+  }
 
-  //       ride.ride_status = "booked";
-  //       ride.fare_details.payment_status = "authorized";
-  //       ride.fare_details.stripe_payment_intent_id = paymentIntent.id;
+  async processSingleFarePayment(ride, stripe_card_id, use_wallet, res) {
+    const user = await this.user.findById(ride.user_id._id);
+    const wallet = await this.wallet.findOne({ user_id: user._id });
+    const admin = await this.user.findOne({ role: "admin" });
 
-  //       await ride.save();
-  //       await ride.populate(rideSchema.populate);
+    const amount = Number(ride.fare_details.amount);
+    const useWallet = use_wallet === true;
+    const walletBalance = useWallet ? Number(wallet.available_balance || 0) : 0;
 
-  //       handlers.logger.success({
-  //         object_type: "pay-now",
-  //         message: "Payment authorized and ride booked successfully",
-  //         data: ride
-  //       });
-  //       return handlers.response.success({
-  //         res,
-  //         message: "Payment authorized and ride booked successfully",
-  //         data: ride
-  //       });
-  //     }
-  //   } catch (error) {
-  //     handlers.logger.error({
-  //       object_type: "pay-now",
-  //       message: error
-  //     });
-  //     return handlers.response.error({
-  //       res,
-  //       message: error.message
-  //     });
-  //   }
-  // }
+    let transactionReference = null;
+    let transactionMode = null;
+    let paymentIntentId = null;
+    let adminTransfer = null;
+
+    if (!admin?.stripe_account_id) {
+      return handlers.response.failed({
+        res,
+        message: "Admin Stripe account not configured"
+      });
+    }
+
+    if (useWallet && walletBalance >= amount) {
+      wallet.available_balance -= amount;
+      await wallet.save();
+
+      transactionReference = "wallet";
+      transactionMode = "wallet";
+      paymentIntentId = "wallet";
+
+      adminTransfer = await stripe.transfers.create({
+        amount: Math.round(amount * 0.2 * 100),
+        currency: "usd",
+        destination: admin.stripe_account_id,
+        transfer_group: `ride_${ride._id}`,
+        metadata: {
+          ride_id: ride._id.toString(),
+          user_id: user._id.toString(),
+          mode: "wallet"
+        }
+      });
+    } else {
+      let remainingAmount = amount;
+
+      if (useWallet && walletBalance > 0) {
+        remainingAmount = amount - walletBalance;
+        wallet.available_balance = 0;
+        await wallet.save();
+      }
+
+      if (!stripe_card_id) {
+        return handlers.response.failed({
+          res,
+          message: "Insufficient wallet balance and no valid card available"
+        });
+      }
+
+      const amountToCharge = Math.round(remainingAmount * 100);
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountToCharge,
+        currency: "usd",
+        customer: user.stripe_customer_id,
+        payment_method: stripe_card_id,
+        confirm: true,
+        capture_method: "manual",
+        automatic_payment_methods: { enabled: true, allow_redirects: "never" },
+        metadata: {
+          ride_id: ride._id.toString(),
+          user_id: user._id.toString(),
+          mode: "card"
+        }
+      });
+
+      await stripe.paymentIntents.capture(paymentIntent.id);
+
+      paymentIntentId = paymentIntent.id;
+      transactionReference = paymentIntent.id;
+      transactionMode = useWallet && walletBalance > 0 ? "wallet+card" : "card";
+
+      adminTransfer = await stripe.transfers.create({
+        amount: amountToCharge,
+        currency: "usd",
+        destination: admin.stripe_account_id,
+        transfer_group: `ride_${ride._id}`,
+        metadata: {
+          ride_id: ride._id.toString(),
+          user_id: user._id.toString(),
+          mode: transactionMode
+        }
+      });
+    }
+
+    ride.ride_status = "booked";
+    ride.fare_details.payment_status = "authorized";
+    ride.fare_details.stripe_payment_intent_id = paymentIntentId;
+    ride.fare_details.admin_stripe_transfer_id = adminTransfer.id;
+    await ride.save();
+    await ride.populate(rideSchema.populate);
+
+    await this.transaction.create({
+      wallet_id: wallet._id,
+      user_id: user._id,
+      type: "ride-payment",
+      amount: amount,
+      status: "success",
+      reference: transactionReference,
+      note: `Ride payment via ${transactionMode}`
+    });
+
+    handlers.logger.success({
+      object_type: "pay-now",
+      message: "Ride booked successfully",
+      data: ride
+    });
+
+    return handlers.response.success({
+      res,
+      message: "Ride booked successfully",
+      data: ride
+    });
+  }
 
   async payNow(req, res) {
     try {
       const rideId = req.params._id;
+
+      const { stripe_card_id, use_wallet } = req.body;
 
       if (!rideId) {
         handlers.logger.failed({
@@ -1089,74 +1155,18 @@ class Service {
         ride.split_with_users.length > 0;
 
       if (isSplitFare) {
-        // === MOCK PAYMENT FLOW ===
-        for (let i = 0; i < ride.split_with_users.length; i++) {
-          const userShare = ride.split_with_users[i];
-          userShare.stripe_payment_intent_id = "test_intent_" + i;
-          userShare.status = "authorized";
-          userShare.paid_at = new Date();
-        }
-
-        const totalCollected = ride.split_with_users.reduce((sum, user) => {
-          return sum + Number(user.amount || 0);
-        }, 0);
-
-        if (
-          Number(totalCollected.toFixed(2)) !== Number(ride.fare_details.amount)
-        ) {
-          ride.total_split_payment_collected = totalCollected;
-          await ride.save();
-          return handlers.response.failed({
-            res,
-            message: `Waiting for remaining users to complete payment. Collected: $${totalCollected}`
-          });
-        }
-
-        ride.ride_status = "booked";
-        ride.fare_details.payment_status = "authorized";
-        ride.fare_details.stripe_payment_intent_id = "mock_split_payment";
-        await ride.save();
-        await ride.populate(rideSchema.populate);
-
-        handlers.logger.success({
-          object_type: "pay-now",
-          message: "Mock split payment. Ride booked.",
-          data: ride
-        });
-        return handlers.response.success({
-          res,
-          message: "Mock split payment. Ride booked.",
-          data: ride
-        });
+        return await this.processSplitFarePayment(ride, use_wallet, res);
       } else {
-        // === MOCK SINGLE USER PAYMENT ===
-        ride.ride_status = "booked";
-        ride.fare_details.payment_status = "authorized";
-        ride.fare_details.stripe_payment_intent_id = "mock_payment_intent";
-
-        await ride.save();
-        await ride.populate(rideSchema.populate);
-
-        handlers.logger.success({
-          object_type: "pay-now",
-          message: "Mock payment. Ride booked successfully",
-          data: ride
-        });
-        return handlers.response.success({
-          res,
-          message: "Mock payment. Ride booked successfully",
-          data: ride
-        });
+        return await this.processSingleFarePayment(
+          ride,
+          stripe_card_id,
+          use_wallet,
+          res
+        );
       }
     } catch (error) {
-      handlers.logger.error({
-        object_type: "pay-now",
-        message: error
-      });
-      return handlers.response.error({
-        res,
-        message: error.message
-      });
+      handlers.logger.error({ object_type: "pay-now", message: error });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
@@ -1646,20 +1656,8 @@ class Service {
       const object_type = "ride-ended";
 
       const ride = await this.ride
-        .findOneAndUpdate(
-          { _id: ride_id, ride_status: "started" },
-          { $set: { ride_status: "ended", end_time: Date.now() } },
-          { new: true }
-        )
+        .findOne({ _id: ride_id, ride_status: "started" })
         .populate(rideSchema.populate);
-
-      const invitedPassengers = await this.rideInvite.find({
-        invited_by: ride.user_id._id,
-        ride_id: ride._id
-      });
-
-      const formattedCurrentRide = ride.toObject();
-      formattedCurrentRide.invited_passengers = invitedPassengers;
 
       if (!ride) {
         return socket.emit(
@@ -1671,7 +1669,91 @@ class Service {
         );
       }
 
-      // Emit to all ride participants
+      const invitedPassengers = await this.rideInvite.find({
+        invited_by: ride.user_id._id,
+        ride_id: ride._id
+      });
+
+      const formattedCurrentRide = ride.toObject();
+      formattedCurrentRide.invited_passengers = invitedPassengers;
+
+      // Transfer 80% of total fare to driver from admin's Stripe account
+      if (ride?.fare_details?.amount && ride.driver_id?.stripe_account_id) {
+        const totalFare = Number(ride.fare_details.amount); // in dollars
+        const driverCut = Math.round(totalFare * 0.8 * 100); // convert to cents
+
+        const admin = await this.user.findOne({ role: "admin" });
+
+        if (!admin?.stripe_account_id) {
+          return socket.emit(
+            "response",
+            failedEvent({
+              object_type,
+              message: "Admin Stripe account not configured. Cannot pay driver."
+            })
+          );
+        }
+
+        try {
+          const driverTransfer = await stripe.transfers.create({
+            amount: driverCut,
+            currency: "usd",
+            destination: ride.driver_id.stripe_account_id,
+            transfer_group: `ride_${ride._id}`,
+            metadata: {
+              ride_id: ride._id.toString(),
+              purpose: "driver-earning"
+            }
+          });
+
+          ride.fare_details.driver_transfer_id = driverTransfer.id;
+          await ride.save();
+
+          // Maintain the transaction history
+          const wallet = await this.wallet.findOne({
+            user_id: ride.user_id._id
+          });
+          await this.transaction.create({
+            wallet_id: wallet._id, // Assuming the driver's wallet is tracked
+            user_id: ride.user_id._id, // The user who paid
+            type: "ride-payment",
+            amount: driverCut, // Amount transferred to the driver (in cents)
+            status: "success",
+            reference: driverTransfer.id, // The Stripe transfer ID as the transaction reference
+            note: `Ride payment via Stripe transfer for ride ${ride._id} to driver`
+          });
+
+          handlers.logger.success({
+            object_type,
+            message: `Transferred 80% to driver: $${(driverCut / 100).toFixed(2)}`,
+            data: { transfer_id: driverTransfer.id }
+          });
+        } catch (transferErr) {
+          handlers.logger.error({
+            object_type,
+            message: `Stripe driver transfer failed: ${transferErr.message}`,
+            data: { ride_id: ride._id }
+          });
+
+          return socket.emit(
+            "response",
+            failedEvent({
+              object_type,
+              message: "Ride ended, but payment to driver failed."
+            })
+          );
+        }
+      } else {
+        return socket.emit(
+          "response",
+          failedEvent({
+            object_type,
+            message: "Stripe info missing. Cannot transfer driver cut."
+          })
+        );
+      }
+
+      // Notify all passengers
       const allUserIds = [
         ride.user_id._id.toString(),
         ...ride.split_with_users.map((u) => u.user_id.toString())
@@ -1689,7 +1771,10 @@ class Service {
         );
       }
 
-      // Emit to the driver
+      ride.ride_status = "completed";
+      await ride.save();
+
+      // Notify driver
       socket.join(ride.driver_id._id.toString());
       await this.io.to(ride.driver_id._id.toString()).emit(
         "response",

@@ -1,0 +1,117 @@
+const stripeSecretKey = require("../../config/stripe");
+const stripe = require("stripe")(stripeSecretKey);
+
+const User = require("../../models/User");
+const Wallet = require("../../models/Wallet");
+const Transaction = require("../../models/Transactions");
+const { handlers } = require("../../utilities/handlers/handlers");
+
+class Service {
+  constructor() {
+    this.user = User;
+    this.wallet = Wallet;
+    this.transaction = Transaction;
+  }
+
+  async addFunds(req, res) {
+    try {
+      const { user: current_user, body } = req;
+      const { funds, stripe_card_id } = body;
+
+      if (!funds || !stripe_card_id) {
+        return handlers.response.failed({
+          res,
+          message: "Funds amount and Stripe card ID are required"
+        });
+      }
+
+      const wallet = await this.wallet.findOne({
+        user_id: current_user._id
+      });
+
+      if (!wallet) {
+        return handlers.response.failed({
+          res,
+          message: "Wallet not found"
+        });
+      }
+
+      const amountInCents = Math.round(Number(funds) * 100);
+
+      // Create PaymentIntent with automatic handling of 3D Secure
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: "usd",
+        customer: current_user.stripe_customer_id,
+        payment_method: stripe_card_id,
+        confirm: true,
+        metadata: {
+          user_id: current_user._id.toString(),
+          purpose: "kruze-kash-top-up"
+        },
+        // Optional: Add a return_url if you plan to handle redirects
+        return_url: process.env.YOUR_RETURN_URL
+      });
+
+      // Handle different payment statuses
+      if (
+        paymentIntent.status === "requires_action" ||
+        paymentIntent.status === "requires_source_action"
+      ) {
+        // This means the payment requires authentication (e.g., 3D Secure)
+        return handlers.response.failed({
+          res,
+          message:
+            "Payment requires further authentication. Please complete the payment process."
+        });
+      }
+
+      if (paymentIntent.status !== "succeeded") {
+        // If payment isn't successful, return an error response
+        return handlers.response.failed({
+          res,
+          message: `Payment failed with status: ${paymentIntent.status}`
+        });
+      }
+
+      // Update wallet balance
+      wallet.available_balance += Number(funds);
+      await wallet.save();
+
+      // Log the transaction in the database
+      await this.transaction.create({
+        wallet_id: wallet._id,
+        user_id: current_user._id,
+        type: "top-up",
+        amount: Number(funds),
+        status: "success",
+        reference: paymentIntent.id,
+        note: "Top-up via Stripe"
+      });
+
+      handlers.logger.success({
+        object_type: "wallet-top-up",
+        message: `User ${current_user._id} topped up $${funds}`,
+        data: wallet
+      });
+
+      // Send successful response
+      return handlers.response.success({
+        res,
+        message: "Funds added to Kruze Kash wallet successfully",
+        data: wallet
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "wallet-top-up",
+        message: error.message
+      });
+      return handlers.response.error({
+        res,
+        message: "Something went wrong while adding funds"
+      });
+    }
+  }
+}
+
+module.exports = new Service();
