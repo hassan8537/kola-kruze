@@ -1797,13 +1797,12 @@ class Service {
     try {
       const { user_id, ride_id, cancellation } = data;
 
-      const ride = await this.ride.findOne({
-        _id: ride_id,
-        $or: [{ user_id }, { driver_id: user_id }],
-        ride_status: {
-          $in: ["accepted", "confirm-split-fare", "requesting"]
-        }
-      });
+      const ride = await this.ride
+        .findOne({
+          _id: ride_id,
+          $or: [{ user_id }, { driver_id: user_id }]
+        })
+        .populate(rideSchema.populate);
 
       if (!ride) {
         return socket.emit(
@@ -1815,8 +1814,57 @@ class Service {
         );
       }
 
-      const driver_id = ride.driver_id?.toString() || null;
-      const passenger_id = ride.user_id?.toString() || null;
+      const driverPenalty = Math.round(ride.fare_details.amount * 0.5 * 100);
+
+      if (ride.ride_status === "arrived" && ride.ride_type === "instant") {
+        await this.creditToDriverPenalty({
+          ride,
+          penalty_amount: driverPenalty
+        });
+
+        await this.transaction.create({
+          user_id: ride.user_id._id, // The user who paid
+          type: "instant-ride-cancelled",
+          amount: driverPenalty / 100, // Amount transferred to the driver (in cents)
+          status: "success",
+          reference: ride.driver_id.id, // The Stripe transfer ID as the transaction reference
+          note: `Instant ride penalty transferred for ride ${ride._id} to driver`
+        });
+      }
+
+      const cancellationTime = new Date(); // Current time
+      const scheduledAt = new Date(ride.scheduled_at); // Scheduled time of the ride
+      const twoHoursBeforeScheduled = new Date(
+        scheduledAt.getTime() - 2 * 60 * 60 * 1000
+      ); // 2 hours before scheduled time
+
+      const isCancellationLate = cancellationTime > twoHoursBeforeScheduled;
+
+      const isDriverOnline = ride.driver_id?.is_available === true;
+
+      // Proceed with cancellation fee logic if both conditions are met
+      if (
+        ride.ride_type === "scheduled" &&
+        isCancellationLate &&
+        isDriverOnline
+      ) {
+        await this.creditToDriverPenalty({
+          ride,
+          penalty_amount: driverPenalty
+        });
+
+        await this.transaction.create({
+          user_id: ride.user_id._id, // The user who paid
+          type: "scheduled-ride-cancelled",
+          amount: driverPenalty / 100, // Amount transferred to the driver (in cents)
+          status: "success",
+          reference: ride.driver_id.id, // The Stripe transfer ID as the transaction reference
+          note: `Scheduled ride penalty transferred for ride ${ride._id} to driver`
+        });
+      }
+
+      const driver_id = ride.driver_id?._id?.toString() || null;
+      const passenger_id = ride.user_id?._id?.toString() || null;
       const isPassenger = passenger_id === user_id;
 
       ride.ride_status = "cancelled";
@@ -2046,6 +2094,124 @@ class Service {
 
   async deleteRide(ride) {
     return await this.ride.findByIdAndDelete(ride._id);
+  }
+
+  async creditToDriverPenalty({
+    ride,
+    penalty_amount, // in dollars
+    object_type = "cancellation-penalty"
+  }) {
+    try {
+      if (!penalty_amount || !ride.driver_id?.stripe_account_id) {
+        return {
+          success: false,
+          message: "Missing penalty or driver Stripe details."
+        };
+      }
+
+      const driverCut = penalty_amount;
+      const admin = await this.user.findOne({ role: "admin" });
+
+      if (!admin?.stripe_account_id) {
+        return {
+          success: false,
+          message: "Admin Stripe account not configured. Cannot credit driver."
+        };
+      }
+
+      const user = await this.user.findById(ride.user_id._id);
+      const wallet = await this.wallet.findOne({ user_id: user._id });
+
+      let paymentSuccess = false;
+      let paymentMethod = "";
+      let paymentReference = "";
+
+      // 1️⃣ Attempt from wallet
+      if (wallet && wallet.balance >= driverCut) {
+        wallet.balance -= driverCut;
+        await wallet.save();
+        paymentSuccess = true;
+        paymentMethod = "wallet";
+        paymentReference = `wallet_penalty_${Date.now()}`;
+      } else if (user.stripe_default_card_id && user.stripe_customer_id) {
+        // 2️⃣ Charge via Stripe card
+        const charge = await stripe.paymentIntents.create({
+          amount: driverCut,
+          currency: "usd",
+          customer: user.stripe_customer_id,
+          payment_method: user.stripe_default_card_id,
+          off_session: true,
+          confirm: true,
+          metadata: {
+            ride_id: ride._id.toString(),
+            purpose: "cancellation-penalty"
+          }
+        });
+
+        paymentSuccess = charge.status === "succeeded";
+        paymentMethod = "card";
+        paymentReference = charge.id;
+      } else {
+        return {
+          success: false,
+          message: "Insufficient wallet balance and no default card available."
+        };
+      }
+
+      if (!paymentSuccess) {
+        return {
+          success: false,
+          message: "Payment failed. Cannot credit cancellation penalty."
+        };
+      }
+
+      // ➡️ Pay driver from admin account
+      const driverTransfer = await stripe.transfers.create({
+        amount: driverCut,
+        currency: "usd",
+        destination: ride.driver_id.stripe_account_id,
+        transfer_group: `ride_penalty_${ride._id}`,
+        metadata: {
+          ride_id: ride._id.toString(),
+          purpose: "cancellation-penalty"
+        }
+      });
+
+      await this.transaction.create({
+        wallet_id: wallet?._id || null,
+        user_id: user._id,
+        type: "penalty-payment",
+        amount: driverCut,
+        status: "success",
+        reference: paymentReference,
+        note: `Cancellation penalty of $${(driverCut / 100).toFixed(2)} via ${paymentMethod}`,
+        payment_mode: paymentMethod
+      });
+
+      handlers.logger.success({
+        object_type,
+        message: `Credited $${(driverCut / 100).toFixed(2)} penalty to driver`,
+        data: { transfer_id: driverTransfer.id, payment_method: paymentMethod }
+      });
+
+      return {
+        success: true,
+        transfer_id: driverTransfer.id,
+        amount: driverCut
+      };
+    } catch (error) {
+      handlers.logger.error({
+        object_type,
+        message: `Driver penalty credit failed: ${error.message}`,
+        data: { ride_id: ride._id }
+      });
+
+      return {
+        success: false,
+        message: "Driver penalty transfer failed.",
+        error: error.message
+      };
+    }
   }
 }
 

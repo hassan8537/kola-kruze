@@ -13,7 +13,6 @@ const schema = new Schema(
     },
     type: {
       type: String,
-      enum: ["top-up", "ride-payment", "withdraw", "refund"],
       required: true
     },
     amount: {
