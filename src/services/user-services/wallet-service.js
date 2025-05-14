@@ -5,6 +5,7 @@ const User = require("../../models/User");
 const Wallet = require("../../models/Wallet");
 const Transaction = require("../../models/Transactions");
 const { handlers } = require("../../utilities/handlers/handlers");
+const walletSchema = require("../../schemas/wallet-schema");
 
 class Service {
   constructor() {
@@ -16,12 +17,12 @@ class Service {
   async addFunds(req, res) {
     try {
       const { user: current_user, body } = req;
-      const { funds, stripe_card_id } = body;
+      const { funds } = body;
 
-      if (!funds || !stripe_card_id) {
+      if (!funds) {
         return handlers.response.failed({
           res,
-          message: "Funds amount and Stripe card ID are required"
+          message: "Funds amount is required"
         });
       }
 
@@ -43,7 +44,7 @@ class Service {
         amount: amountInCents,
         currency: "usd",
         customer: current_user.stripe_customer_id,
-        payment_method: stripe_card_id,
+        payment_method: current_user.stripe_default_card_id,
         confirm: true,
         metadata: {
           user_id: current_user._id.toString(),
@@ -109,6 +110,48 @@ class Service {
       return handlers.response.error({
         res,
         message: "Something went wrong while adding funds"
+      });
+    }
+  }
+
+  async getMyWallet(req, res) {
+    try {
+      const { user: current_user } = req;
+
+      const wallet = await this.wallet
+        .findOne({
+          user_id: current_user._id
+        })
+        .populate(walletSchema.populate);
+
+      if (!wallet) {
+        return handlers.response.failed({
+          res,
+          message: "Wallet not found"
+        });
+      }
+
+      handlers.logger.success({
+        object_type: "wallet",
+        message: `Wallet fetched successfully`,
+        data: wallet
+      });
+
+      // Send successful response
+      return handlers.response.success({
+        res,
+        object_type: "wallet",
+        message: `Wallet fetched successfully`,
+        data: wallet
+      });
+    } catch (error) {
+      handlers.logger.error({
+        object_type: "wallet",
+        message: error.message
+      });
+      return handlers.response.error({
+        res,
+        message: "Something went wrong while fetching funds"
       });
     }
   }

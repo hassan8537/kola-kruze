@@ -308,6 +308,11 @@ router.post(
   controllers.wallets.addFunds.bind(controllers.wallets)
 );
 
+router.get(
+  "/wallets/me",
+  controllers.wallets.getMyWallet.bind(controllers.wallets)
+);
+
 // Transactions
 router.get(
   "/transactions",

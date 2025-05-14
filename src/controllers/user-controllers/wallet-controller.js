@@ -8,6 +8,10 @@ class Controller {
   async addFunds(request, response) {
     return this.service.addFunds(request, response);
   }
+
+  async getMyWallet(request, response) {
+    return this.service.getMyWallet(request, response);
+  }
 }
 
 module.exports = new Controller();
