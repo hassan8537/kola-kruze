@@ -2,6 +2,7 @@
 // const stripe = require("stripe")(stripeSecretKey);
 
 const Transaction = require("../../models/Transactions");
+const transactionSchema = require("../../schemas/wallet-schema copy");
 const { handlers } = require("../../utilities/handlers/handlers");
 const {
   pagination
@@ -31,7 +32,7 @@ class Service {
         page,
         limit,
         sort,
-        populate: "wallet_id user_id"
+        populate: transactionSchema.populate
       });
     } catch (error) {
       handlers.logger.error({ object_type, message: error });
