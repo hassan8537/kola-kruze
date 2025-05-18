@@ -43,6 +43,40 @@ class Service {
       });
     }
   }
+
+  async getStudentById(req, res) {
+    try {
+      const { _id } = req.params;
+
+      const student = await this.student
+        .findById(_id)
+        .populate(studentSchema.populate);
+
+      if (!student) {
+        handlers.logger.success({
+          object_type: "get-student",
+          message: "No rides found"
+        });
+        return handlers.response.error({ res, message: "No rides found" });
+      }
+
+      handlers.logger.success({
+        object_type: "get-student",
+        message: "Student fetched successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Student fetched successfully",
+        data: student
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-student", message: error });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new Service();

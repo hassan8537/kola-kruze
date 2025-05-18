@@ -8,6 +8,10 @@ class Controller {
   async getProfiles(request, response) {
     return this.service.getProfiles(request, response);
   }
+
+  async getProfileById(request, response) {
+    return this.service.getProfileById(request, response);
+  }
 }
 
 module.exports = new Controller();

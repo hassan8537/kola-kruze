@@ -1,0 +1,69 @@
+const Ride = require("../../models/Ride");
+const {
+  pagination
+} = require("../../utilities/paginations/pagination-utility");
+
+const rideSchema = require("../../schemas/ride-schema");
+const { handlers } = require("../../utilities/handlers/handlers");
+
+class Service {
+  constructor(io) {
+    this.ride = Ride;
+  }
+
+  async getAllRides(req, res) {
+    try {
+      const { page, limit, sort } = req.query;
+
+      const filters = { page, limit, sort };
+
+      await pagination({
+        response: res,
+        table: "Rides",
+        model: this.ride,
+        filters,
+        page,
+        limit,
+        sort,
+        populate: rideSchema.populate
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-rides", message: error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
+
+  async getRideById(req, res) {
+    try {
+      const { _id } = req.params;
+
+      const ride = await this.ride.findById(_id).populate(rideSchema.populate);
+
+      if (!ride) {
+        handlers.logger.success({
+          object_type: "get-rides",
+          message: "No rides found"
+        });
+        return handlers.response.error({ res, message: "No rides found" });
+      }
+
+      handlers.logger.success({
+        object_type: "get-rides",
+        message: "Rides fetched successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Rides fetched successfully",
+        data: ride
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-rides", message: error });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
+}
+
+module.exports = new Service();

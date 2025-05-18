@@ -15,9 +15,6 @@ const adminVerification = require("./src/middlewares/admin-verification-middlewa
 const requestVerification = require("./src/middlewares/verification-middleware");
 
 const authRoutes = {
-  admin: {
-    authentication: require("./src/routes/admin-routes/authentication-routes")
-  },
   user: {
     authentication: require("./src/routes/user-routes/authentication-routes"),
     otp: require("./src/routes/user-routes/otp-routes")
@@ -25,7 +22,7 @@ const authRoutes = {
 };
 
 const protectedRoutes = {
-  admin: require("./src/routes/admin-routes/protected-routes"),
+  admin: require("./src/routes/admin-routes/index-routes"),
   user: require("./src/routes/user-routes/protected-routes")
 };
 
@@ -43,16 +40,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 console.log({ static_path: path.join(__dirname, "uploads") });
 
 // Admin Routes
-app.use(
-  `/api/${process.env.API_VERSION}/admin/auth`,
-  authRoutes.admin.authentication
-);
-app.use(`/api/${process.env.API_VERSION}/admin`, [
-  sessionAuthentication,
-  accountStatusVerification,
-  adminVerification,
-  protectedRoutes.admin
-]);
+app.use(protectedRoutes.admin);
 
 // User Routes
 app.use(`/api/${process.env.API_VERSION}/auth`, authRoutes.user.authentication);

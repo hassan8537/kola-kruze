@@ -4,4 +4,6 @@ const controller = require("../../controllers/admin-controllers/profile-controll
 
 router.get("/", controller.getProfiles.bind(controller));
 
+router.get("/:_id", controller.getProfileById.bind(controller));
+
 module.exports = router;

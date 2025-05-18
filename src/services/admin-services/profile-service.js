@@ -54,6 +54,40 @@ class Service {
       });
     }
   }
+
+  async getProfileById(req, res) {
+    try {
+      const { _id } = req.params;
+
+      const profile = await this.user
+        .findById(_id)
+        .populate(userSchema.populate);
+
+      if (!profile) {
+        handlers.logger.success({
+          object_type: "get-profile",
+          message: "No rides found"
+        });
+        return handlers.response.error({ res, message: "No rides found" });
+      }
+
+      handlers.logger.success({
+        object_type: "get-profile",
+        message: "Profile fetched successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Profile fetched successfully",
+        data: profile
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-profile", message: error });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new Service();

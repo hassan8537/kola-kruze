@@ -58,6 +58,40 @@ class Service {
       });
     }
   }
+
+  async getVehicleById(req, res) {
+    try {
+      const { _id } = req.params;
+
+      const vehicle = await this.vehicle
+        .findById(_id)
+        .populate(vehicleSchema.populate);
+
+      if (!vehicle) {
+        handlers.logger.success({
+          object_type: "get-vehicle",
+          message: "No rides found"
+        });
+        return handlers.response.error({ res, message: "No rides found" });
+      }
+
+      handlers.logger.success({
+        object_type: "get-vehicle",
+        message: "Vehicle fetched successfully"
+      });
+      return handlers.response.success({
+        res,
+        message: "Vehicle fetched successfully",
+        data: vehicle
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type: "get-vehicle", message: error });
+      return handlers.response.error({
+        res,
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new Service();

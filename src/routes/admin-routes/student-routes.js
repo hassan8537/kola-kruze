@@ -4,4 +4,6 @@ const controller = require("../../controllers/admin-controllers/student-controll
 
 router.get("/", controller.getStudents.bind(controller));
 
+router.get("/:_id", controller.getStudentById.bind(controller));
+
 module.exports = router;
