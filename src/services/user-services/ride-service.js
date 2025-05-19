@@ -2299,14 +2299,24 @@ class Service {
 
   async getTotalCompletedRewards(socket, data) {
     const { user_id } = data;
+    console.log({ user_id });
 
     const user = await this.user.findById(user_id);
+
+    if (!user) {
+      return socket.emit(
+        "response",
+        failedEvent({
+          message: "Invalid user ID"
+        })
+      );
+    }
 
     return socket.emit(
       "response",
       successEvent({
         message: "Total completed rewards",
-        data: user?.total_completed_rewards || 0
+        data: user.total_completed_rewards || 0
       })
     );
   }
