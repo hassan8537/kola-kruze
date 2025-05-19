@@ -24,7 +24,8 @@ const controllers = {
   notification: require("../../controllers/user-controllers/notification-controller"),
   favourites: require("../../controllers/user-controllers/favourite-controller"),
   wallets: require("../../controllers/user-controllers/wallet-controller"),
-  transactions: require("../../controllers/user-controllers/transaction-controller")
+  transactions: require("../../controllers/user-controllers/transaction-controller"),
+  promocodes: require("../../controllers/user-controllers/promocode-controller")
 };
 
 // session
@@ -317,6 +318,17 @@ router.get(
 router.get(
   "/transactions",
   controllers.transactions.getTransactions.bind(controllers.transactions)
+);
+
+// Promocodes
+router.get(
+  "/promocodes",
+  controllers.promocodes.getAllPromocodes.bind(controllers.promocodes)
+);
+
+router.get(
+  "/promocodes/:_id",
+  controllers.promocodes.getPromocode.bind(controllers.promocodes)
 );
 
 module.exports = router;

@@ -8,6 +8,7 @@ const studentRoutes = require("./student-routes");
 const vehicleRoutes = require("./vehicle-routes");
 const categoryRoutes = require("./category-routes");
 const rideRoutes = require("./ride-routes");
+const promocodeRoutes = require("./promocode-routes");
 const accountStatusVerification = require("../../middlewares/account-status-verification-middleware");
 const adminVerification = require("../../middlewares/admin-verification-middleware");
 
@@ -25,5 +26,6 @@ app.use("/api/v1/admin/students", middlewares, studentRoutes);
 app.use("/api/v1/admin/rides", middlewares, rideRoutes);
 app.use("/api/v1/admin/vehicles", middlewares, vehicleRoutes);
 app.use("/api/v1/admin/categories", middlewares, categoryRoutes);
+app.use("/api/v1/admin/promocodes", middlewares, promocodeRoutes);
 
 module.exports = app;
