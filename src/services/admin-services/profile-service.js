@@ -88,6 +88,33 @@ class Service {
       });
     }
   }
+
+  async getTotalProfiles(req, res) {
+    const object_type = "get-total-profiles";
+    try {
+      const { role } = req.query;
+
+      const filters = {};
+
+      if (role) filters.role = role;
+
+      const totalProfiles = await this.user.countDocuments(filters);
+
+      handlers.logger.success({
+        object_type,
+        message: "Success",
+        data: totalProfiles
+      });
+      return handlers.response.success({
+        res,
+        message: "Success",
+        data: totalProfiles
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
 }
 
 module.exports = new Service();

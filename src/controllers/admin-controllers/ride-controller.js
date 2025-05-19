@@ -12,6 +12,10 @@ class Controller {
   async getRideById(request, response) {
     return this.service.getRideById(request, response);
   }
+
+  async getTotalRides(request, response) {
+    return this.service.getTotalRides(request, response);
+  }
 }
 
 module.exports = new Controller();

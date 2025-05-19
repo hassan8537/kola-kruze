@@ -92,6 +92,33 @@ class Service {
       });
     }
   }
+
+  async getTotalVehicles(req, res) {
+    const object_type = "get-total-vehicles";
+    try {
+      const { is_verified } = req.query;
+
+      const filters = {};
+
+      if (is_verified) filters.is_verified = is_verified;
+
+      const totalVehicles = await this.vehicle.countDocuments(filters);
+
+      handlers.logger.success({
+        object_type,
+        message: "Success",
+        data: totalVehicles
+      });
+      return handlers.response.success({
+        res,
+        message: "Success",
+        data: totalVehicles
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
 }
 
 module.exports = new Service();

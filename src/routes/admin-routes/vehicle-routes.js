@@ -2,6 +2,8 @@ const router = require("express").Router();
 
 const controller = require("../../controllers/admin-controllers/vehicle-controller");
 
+router.get("/count", controller.getTotalVehicles.bind(controller));
+
 router.get("/", controller.getVehicles.bind(controller));
 
 router.get("/:_id", controller.getVehicleById.bind(controller));

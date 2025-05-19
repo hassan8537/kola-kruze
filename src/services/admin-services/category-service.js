@@ -89,7 +89,10 @@ class Service {
   async updateCategory(req, res) {
     try {
       const { _id } = req.params;
-      const { name } = req.body;
+
+      console.log(req.body);
+
+      const { name, rate_per_mile, passenger_limit, image } = req.body;
 
       const category = await this.category.findById(_id);
 
@@ -123,7 +126,11 @@ class Service {
       }
 
       const updatedCategory = await this.category
-        .findByIdAndUpdate(category._id, req.body, { new: true })
+        .findByIdAndUpdate(
+          category._id,
+          { name, rate_per_mile, passenger_limit, image },
+          { new: true }
+        )
         .populate(categorySchema.populate);
 
       handlers.logger.success({

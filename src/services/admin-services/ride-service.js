@@ -64,6 +64,45 @@ class Service {
       });
     }
   }
+
+  async getTotalRides(req, res) {
+    const object_type = "get-total-rides";
+    try {
+      const { date, status } = req.query;
+
+      const filters = {};
+
+      if (date) {
+        const start = new Date(date);
+        start.setUTCHours(0, 0, 0, 0);
+
+        const end = new Date(date);
+        end.setUTCHours(23, 59, 59, 999);
+
+        filters.createdAt = { $gte: start, $lte: end };
+      }
+
+      if (status) {
+        filters.ride_status = status;
+      }
+
+      const totalRides = await this.ride.countDocuments(filters);
+
+      handlers.logger.success({
+        object_type,
+        message: "Success",
+        data: totalRides
+      });
+      return handlers.response.success({
+        res,
+        message: "Success",
+        data: totalRides
+      });
+    } catch (error) {
+      handlers.logger.error({ object_type, message: error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
 }
 
 module.exports = new Service();
