@@ -1159,10 +1159,11 @@ class Service {
         .findById(rideId)
         .populate(rideSchema.populate);
 
+      // Promo code
       if (promocode) {
-        const promocodes = await this.promocode.findOne({ code: promocode });
+        const promo = await this.promocode.findOne({ code: promocode });
 
-        if (!promocodes) {
+        if (!promo) {
           handlers.logger.failed({
             object_type: "pay-now",
             message: "Invalid Promo Code"
@@ -1173,10 +1174,13 @@ class Service {
           });
         }
 
-        if (promocodes.discount) {
-          ride.fare_details.amount =
-            Number(ride.fare_details.amount) *
-            (Number(promocodes.discount) / 100);
+        if (promo.discount) {
+          const originalAmount = Number(ride.fare_details.amount);
+          const discountPercentage = Number(promo.discount);
+
+          const discountedAmount =
+            originalAmount - (originalAmount * discountPercentage) / 100;
+          ride.fare_details.amount = parseFloat(discountedAmount.toFixed(2));
         }
 
         await ride.save();
