@@ -70,6 +70,37 @@ class Service {
         },
         { $unwind: "$sender_id" },
         { $unwind: "$receiver_id" },
+        // Populate sender_id.profile_picture
+        {
+          $lookup: {
+            from: "files",
+            localField: "sender_id.profile_picture",
+            foreignField: "_id",
+            as: "sender_id.profile_picture"
+          }
+        },
+        {
+          $unwind: {
+            path: "$sender_id.profile_picture",
+            preserveNullAndEmptyArrays: true
+          }
+        },
+
+        // Populate receiver_id.profile_picture
+        {
+          $lookup: {
+            from: "files",
+            localField: "receiver_id.profile_picture",
+            foreignField: "_id",
+            as: "receiver_id.profile_picture"
+          }
+        },
+        {
+          $unwind: {
+            path: "$receiver_id.profile_picture",
+            preserveNullAndEmptyArrays: true
+          }
+        },
         {
           $project: {
             sender_id: 1,
