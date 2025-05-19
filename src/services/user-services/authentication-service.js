@@ -111,7 +111,8 @@ class Service {
           email_address,
           phone_number,
           device_token,
-          referral_code: await generateReferralCode()
+          referral_code: await generateReferralCode(),
+          is_referred_driver: role === "driver"
         });
 
         isNewUser = true;
@@ -131,6 +132,7 @@ class Service {
           });
 
           referredByUser.referral_points += 2;
+          referredByUser.total_referrals += 1;
           await referredByUser.save();
 
           handlers.logger.success({
@@ -301,7 +303,8 @@ class Service {
           phone_number,
           device_token,
           role,
-          referral_code: await generateReferralCode()
+          referral_code: await generateReferralCode(),
+          is_referred_driver: role === "driver"
         });
 
         isNewUser = true;
@@ -321,6 +324,7 @@ class Service {
           });
 
           referredByUser.referral_points += 2;
+          referredByUser.total_referrals += 1;
           await referredByUser.save();
 
           handlers.logger.success({

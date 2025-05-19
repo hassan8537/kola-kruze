@@ -152,6 +152,10 @@ const schema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    is_referred_driver: {
+      type: Boolean,
+      default: false
+    },
     notification_count: {
       type: Number,
       default: 0
@@ -178,6 +182,11 @@ const schema = new mongoose.Schema(
     has_discount_on_next_ride: {
       type: Boolean,
       default: false
+    },
+
+    total_referrals: {
+      type: Number,
+      default: 0
     }
   },
   {

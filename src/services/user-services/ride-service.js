@@ -29,6 +29,7 @@ const { calculateETA } = require("../../utilities/calculators/eta-calculator");
 const RideInvite = require("../../models/RideInvite");
 const Wallet = require("../../models/Wallet");
 const Transaction = require("../../models/Transactions");
+const Referral = require("../../models/Refer");
 
 class Service {
   constructor(io) {
@@ -41,6 +42,7 @@ class Service {
     this.card = Card;
     this.wallet = Wallet;
     this.transaction = Transaction;
+    this.referral = Referral;
   }
 
   async getCurrentRide(req, res) {
@@ -1797,6 +1799,61 @@ class Service {
 
       ride.ride_status = "completed";
       await ride.save();
+
+      // Reward logic starts
+      const totalCompletedRides = await this.ride.countDocuments({
+        driver_id: ride.driver_id._id,
+        ride_status: "completed"
+      });
+
+      if (ride.driver_id.is_referred_driver && totalCompletedRides > 30) {
+        const refer = await this.referral.findOne({
+          referred_user: ride.driver_id._id
+        });
+
+        const referrerUserWallet = await this.wallet.findOne({
+          user_id: refer.referred_user
+        });
+        const referredUserWallet = await this.wallet.findOne({
+          user_id: refer.referred_user
+        });
+
+        referrerUserWallet.available_balance += 30;
+        referredUserWallet.available_balance += 30;
+
+        const user = await this.user.findById(refer.referred_user);
+
+        user.is_referred_driver = false;
+        await user.save();
+
+        handlers.logger.success({
+          object_type,
+          message: `Both drivers has been awarded $30.00 as refer bonus`
+        });
+
+        await this.transaction.create([
+          {
+            wallet_id: referrerUserWallet._id, // Assuming the driver's wallet is tracked
+            user_id: refer.referrer_user, // The user who paid
+            type: "Driver referral bonus",
+            amount: 30, // Amount transferred to the driver (in cents)
+            status: "success",
+            reference: referrerUserWallet, // The Stripe transfer ID as the transaction reference
+            note: `Wallet credited with $30.00 as referral bonus`
+          },
+          {
+            wallet_id: referredUserWallet._id, // Assuming the driver's wallet is tracked
+            user_id: refer.referred_user, // The user who paid
+            type: "Completing first 30 rides bonus",
+            amount: 30, // Amount transferred to the driver (in cents)
+            status: "success",
+            reference: referredUserWallet, // The Stripe transfer ID as the transaction reference
+            note: `Wallet credited with $30.00 for completing first 30 rides`
+          }
+        ]);
+      }
+
+      // Reward logic ends
 
       // Notify driver
       socket.join(ride.driver_id._id.toString());
