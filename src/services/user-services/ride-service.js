@@ -1120,6 +1120,7 @@ class Service {
 
       // Reset the discount flag
       user.has_discount_on_next_ride = false;
+      user.total_completed_rewards += 1;
       await user.save();
       await ride.save();
 
@@ -1824,6 +1825,7 @@ class Service {
         const user = await this.user.findById(refer.referred_user);
 
         user.is_referred_driver = false;
+        user.total_completed_rewards += 1;
         await user.save();
 
         handlers.logger.success({
@@ -2293,6 +2295,20 @@ class Service {
         error: error.message
       };
     }
+  }
+
+  async getTotalCompletedRewards(socket, data) {
+    const { user_id } = data;
+
+    const user = await this.user.findById(user_id);
+
+    return socket.emit(
+      "response",
+      successEvent({
+        message: "Total completed rewards",
+        data: user?.total_completed_rewards || 0
+      })
+    );
   }
 }
 

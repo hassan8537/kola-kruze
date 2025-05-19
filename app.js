@@ -128,9 +128,8 @@ io.on("connection", (socket) => {
   socket.on("eta-to-pickup", (data) => rideService.etaToPickup(socket, data));
   socket.on("eta-to-dropoff", (data) => rideService.etaToDropOff(socket, data));
 
-  socket.on("split-fare", (data) => rideService.shareRide(socket, data));
-  socket.on("ride-location-update", (data) =>
-    rideService.rideLocationUpdate(socket, data)
+  socket.on("rewards", (data) =>
+    rideService.getTotalCompletedRewards(socket, data)
   );
 
   // Chat Events

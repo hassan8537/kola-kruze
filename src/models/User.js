@@ -187,6 +187,11 @@ const schema = new mongoose.Schema(
     total_referrals: {
       type: Number,
       default: 0
+    },
+
+    total_completed_rewards: {
+      type: Number,
+      default: 0
     }
   },
   {
