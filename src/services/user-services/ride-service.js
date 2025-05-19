@@ -1204,6 +1204,8 @@ class Service {
         Array.isArray(ride.split_with_users) &&
         ride.split_with_users.length > 0;
 
+      const user = await this.user.findById(ride.user_id._id);
+
       if (isSplitFare) {
         await this.redeemPoints(user, ride);
         return await this.processSplitFarePayment(ride, use_wallet, res);
