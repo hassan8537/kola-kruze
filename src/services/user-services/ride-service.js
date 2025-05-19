@@ -1173,6 +1173,8 @@ class Service {
           });
         }
 
+        console.log({ promocode });
+
         if (promocodes.discount) {
           ride.fare_details.amount =
             Number(ride.fare_details.amount) *
