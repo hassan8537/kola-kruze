@@ -1162,7 +1162,7 @@ class Service {
       if (promocode) {
         const promocodes = await this.promocode.findOne({ code: promocode });
 
-        if (!promocode) {
+        if (!promocodes) {
           handlers.logger.failed({
             object_type: "pay-now",
             message: "Invalid Promo Code"
@@ -1172,8 +1172,6 @@ class Service {
             message: "Invalid Promo Code"
           });
         }
-
-        console.log({ promocodes });
 
         if (promocodes.discount) {
           ride.fare_details.amount =
