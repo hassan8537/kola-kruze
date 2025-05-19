@@ -30,6 +30,7 @@ const RideInvite = require("../../models/RideInvite");
 const Wallet = require("../../models/Wallet");
 const Transaction = require("../../models/Transactions");
 const Referral = require("../../models/Refer");
+const Promocode = require("../../models/PromoCode");
 
 class Service {
   constructor(io) {
@@ -43,6 +44,7 @@ class Service {
     this.wallet = Wallet;
     this.transaction = Transaction;
     this.referral = Referral;
+    this.promocode = Promocode;
   }
 
   async getCurrentRide(req, res) {
@@ -1140,7 +1142,7 @@ class Service {
     try {
       const rideId = req.params._id;
 
-      const { stripe_card_id, use_wallet } = req.body;
+      const { stripe_card_id, use_wallet, promocode } = req.body;
 
       if (!rideId) {
         handlers.logger.failed({
@@ -1156,6 +1158,27 @@ class Service {
       const ride = await this.ride
         .findById(rideId)
         .populate(rideSchema.populate);
+
+      if (promocode) {
+        const promocodes = await this.promocode.findOne({ code: promocode });
+
+        if (!promocode) {
+          handlers.logger.failed({
+            object_type: "pay-now",
+            message: "Invalid Promo Code"
+          });
+          return handlers.response.failed({
+            res,
+            message: "Invalid Promo Code"
+          });
+        }
+
+        ride.fare_details.amount =
+          Number(ride.fare_details.amount) *
+          (Number(promocodes.discount) / 100);
+
+        await ride.save();
+      }
 
       if (!ride) {
         handlers.logger.unavailable({
