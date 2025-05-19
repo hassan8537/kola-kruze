@@ -1112,6 +1112,27 @@ class Service {
     });
   }
 
+  async redeemPoints(user, ride) {
+    if (user.has_discount_on_next_ride) {
+      const discountedFare = Number(ride.fare_details.amount) * 0.5;
+
+      // Reset the discount flag
+      user.has_discount_on_next_ride = false;
+      await user.save();
+      await ride.save();
+
+      return {
+        discountedFare,
+        discountApplied: true
+      };
+    }
+
+    return handlers.logger.failed({
+      object_type: "pay-now",
+      message: `You need ${8 - user.referral_points} to get 50% discount on your next ride`
+    });
+  }
+
   async payNow(req, res) {
     try {
       const rideId = req.params._id;
@@ -1156,8 +1177,10 @@ class Service {
         ride.split_with_users.length > 0;
 
       if (isSplitFare) {
+        await this.redeemPoints(user, ride);
         return await this.processSplitFarePayment(ride, use_wallet, res);
       } else {
+        await this.redeemPoints(user, ride);
         return await this.processSingleFarePayment(
           ride,
           stripe_card_id,

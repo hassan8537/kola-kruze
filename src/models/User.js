@@ -164,6 +164,20 @@ const schema = new mongoose.Schema(
     total_favourite_drivers: {
       type: Number,
       default: 0
+    },
+
+    referral_code: {
+      type: String
+    },
+
+    referral_points: {
+      type: Number,
+      default: 0
+    },
+
+    has_discount_on_next_ride: {
+      type: Boolean,
+      default: false
     }
   },
   {

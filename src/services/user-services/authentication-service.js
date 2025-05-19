@@ -1,9 +1,13 @@
 const sendEmail = require("../../config/nodemailer");
 const Otp = require("../../models/Otp");
+const Referral = require("../../models/Refer");
 const User = require("../../models/User");
 const Wallet = require("../../models/Wallet");
 const userSchema = require("../../schemas/user-schema");
 const { generateOTP } = require("../../utilities/generators/otp-generator");
+const {
+  generateReferralCode
+} = require("../../utilities/generators/refferal-code-generator");
 const { generateToken } = require("../../utilities/generators/token-generator");
 const { handlers } = require("../../utilities/handlers/handlers");
 
@@ -12,6 +16,7 @@ class Service {
     this.user = User;
     this.otp = Otp;
     this.wallet = Wallet;
+    this.referral = Referral;
   }
 
   async generateAndSendOtp(user, device_token, res) {
@@ -56,13 +61,12 @@ class Service {
         email_address,
         phone_number,
         device_token,
-        role
+        role,
+        referral_code
       } = req.body;
 
-      // 1. Find user by email (only)
       let user = await this.user.findOne({ email_address });
 
-      // 2. If found and role is different, block
       if (user && user.role !== role) {
         handlers.logger.failed({
           object_type: "user-authentication",
@@ -80,8 +84,25 @@ class Service {
         });
       }
 
-      // 3. If no user, create one
+      let isNewUser = false;
+      let referredByUser = null;
+
       if (!user) {
+        // If referral_code is given, find referrer
+        if (referral_code) {
+          referredByUser = await this.user.findOne({
+            referral_code: referral_code.trim()
+          });
+
+          if (!referredByUser) {
+            return handlers.response.failed({
+              res,
+              message: "Invalid referral code"
+            });
+          }
+        }
+
+        // Create new user
         user = await this.user.create({
           role,
           legal_name,
@@ -89,24 +110,45 @@ class Service {
           last_name,
           email_address,
           phone_number,
-          device_token
+          device_token,
+          referral_code: await generateReferralCode()
         });
+
+        isNewUser = true;
 
         handlers.logger.success({
           object_type: "user-authentication",
           message: "New user created",
           data: { user_id: user._id }
         });
+
+        // If referral code was valid, create Referral entry
+        if (referredByUser) {
+          await this.referral.create({
+            referrer_user: referredByUser._id,
+            referred_user: user._id,
+            points_awarded: 2
+          });
+
+          referredByUser.referral_points += 2;
+          await referredByUser.save();
+
+          handlers.logger.success({
+            object_type: "referral",
+            message: "Referral record created",
+            data: {
+              referrer_user: referredByUser._id,
+              referred_user: user._id
+            }
+          });
+        }
       }
 
-      const existingWallet = await this.wallet.findOne({
-        user_id: user._id
-      });
+      // Ensure wallet exists
+      const existingWallet = await this.wallet.findOne({ user_id: user._id });
 
       if (!existingWallet) {
-        const wallet = await this.wallet.create({
-          user_id: user._id
-        });
+        const wallet = await this.wallet.create({ user_id: user._id });
 
         handlers.logger.success({
           object_type: "user-authentication",
@@ -115,7 +157,6 @@ class Service {
         });
       }
 
-      // 4. Continue with OTP/token
       const { user: updatedUser } = await this.generateAndSendOtp(
         user,
         device_token,
@@ -232,7 +273,24 @@ class Service {
 
       let user = await this.user.findOne({ social_token, role, provider });
 
+      let isNewUser = false;
+      let referredByUser = null;
+
       if (!user) {
+        // If referral_code is given, find referrer
+        if (referral_code) {
+          referredByUser = await this.user.findOne({
+            referral_code: referral_code.trim()
+          });
+
+          if (!referredByUser) {
+            return handlers.response.failed({
+              res,
+              message: "Invalid referral code"
+            });
+          }
+        }
+
         user = await this.user.create({
           legal_name,
           first_name,
@@ -242,14 +300,38 @@ class Service {
           social_token,
           phone_number,
           device_token,
-          role
+          role,
+          referral_code: await generateReferralCode()
         });
+
+        isNewUser = true;
 
         handlers.logger.success({
           object_type: "social-authentication",
           message: "New social user created",
           data: { user_id: user._id }
         });
+
+        // If referral code was valid, create Referral entry
+        if (referredByUser) {
+          await this.referral.create({
+            referrer_user: referredByUser._id,
+            referred_user: user._id,
+            points_awarded: 2
+          });
+
+          referredByUser.referral_points += 2;
+          await referredByUser.save();
+
+          handlers.logger.success({
+            object_type: "referral",
+            message: "Referral record created",
+            data: {
+              referrer_user: referredByUser._id,
+              referred_user: user._id
+            }
+          });
+        }
       } else {
         user.social_token = social_token;
         user.device_token = device_token;
