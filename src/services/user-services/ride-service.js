@@ -404,7 +404,8 @@ class Service {
         distance_miles: Number(totalMiles),
         pickup_location,
         dropoff_location,
-        stops: stops
+        stops: stops,
+        ride_type
       };
 
       handlers.logger.success({
