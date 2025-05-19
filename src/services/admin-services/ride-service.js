@@ -13,9 +13,11 @@ class Service {
 
   async getAllRides(req, res) {
     try {
-      const { page, limit, sort } = req.query;
+      const { page, limit, sort, status } = req.query;
 
       const filters = { page, limit, sort };
+
+      if (status) filters.ride_status = status;
 
       await pagination({
         response: res,
