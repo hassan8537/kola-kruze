@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const path = require("path");
 const fs = require("fs");
+const cors = require("cors");
 const { Server } = require("socket.io");
 
 const adminSeeder = require("./src/middlewares/admin-seeder-middleware");
@@ -34,6 +35,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(morgan("tiny"));
+app.use(cors());
 app.use(adminSeeder);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
