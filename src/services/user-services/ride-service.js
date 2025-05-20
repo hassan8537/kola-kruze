@@ -494,21 +494,23 @@ class Service {
       }
 
       // On Hold
-      const card = await this.card.findOne({ stripe_card_id });
-      if (!card) {
-        handlers.logger.unavailable({
-          object_type: "ride-details-and-fares",
-          message: "No cards found"
-        });
-        return handlers.response.unavailable({
-          res,
-          message: "No cards found"
-        });
+      if (stripe_card_id) {
+        const card = await this.card.findOne({ stripe_card_id });
+        if (!card) {
+          handlers.logger.unavailable({
+            object_type: "ride-details-and-fares",
+            message: "No cards found"
+          });
+          return handlers.response.unavailable({
+            res,
+            message: "No cards found"
+          });
+        }
+        const stripeCardDetails =
+          await stripe.paymentMethods.retrieve(stripe_card_id);
+        const cardObject = card.toObject();
+        cardObject.card_details = stripeCardDetails;
       }
-      const stripeCardDetails =
-        await stripe.paymentMethods.retrieve(stripe_card_id);
-      const cardObject = card.toObject();
-      cardObject.card_details = stripeCardDetails;
 
       // Check for existing ride
       const existingRide = await this.ride.findOne({
