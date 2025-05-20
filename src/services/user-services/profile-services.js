@@ -1,5 +1,6 @@
 const Student = require("../../models/Student");
 const User = require("../../models/User");
+const Referral = require("../../models/Refer");
 const userSchema = require("../../schemas/user-schema");
 const {
   sanitizeNumber
@@ -13,6 +14,7 @@ class Service {
   constructor() {
     this.user = User;
     this.student = Student;
+    this.referral = Referral;
   }
 
   async getProfile(req, res) {
