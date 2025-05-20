@@ -134,6 +134,8 @@ io.on("connection", (socket) => {
     rideService.getTotalCompletedRewards(socket, data)
   );
 
+  socket.on("referrals", (data) => rideService.getTotalReferrals(socket, data));
+
   // Chat Events
   socket.on("get-chats", (data) => chatService.getChats(socket, data));
   socket.on("chat-message", (data) => chatService.chatMessage(socket, data));
