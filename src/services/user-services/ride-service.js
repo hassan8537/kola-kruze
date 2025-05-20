@@ -370,21 +370,25 @@ class Service {
 
       for (const stop of stops) {
         const stopCoords = stop.location.coordinates;
-        totalMiles += calculateDistance(
-          prevCoords[1],
-          prevCoords[0],
-          stopCoords[1],
-          stopCoords[0]
+        totalMiles += Number(
+          calculateDistance(
+            prevCoords[1],
+            prevCoords[0],
+            stopCoords[1],
+            stopCoords[0]
+          )
         );
         prevCoords = stopCoords;
       }
 
       // Add final segment from last stop to dropoff
-      totalMiles += calculateDistance(
-        prevCoords[1],
-        prevCoords[0],
-        dropoffCoords[1],
-        dropoffCoords[0]
+      totalMiles += Number(
+        calculateDistance(
+          prevCoords[1],
+          prevCoords[0],
+          dropoffCoords[1],
+          dropoffCoords[0]
+        )
       );
 
       const categories = await this.category
