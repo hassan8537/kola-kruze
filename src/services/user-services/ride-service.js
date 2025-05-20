@@ -2330,6 +2330,7 @@ class Service {
     return socket.emit(
       "response",
       successEvent({
+        object_type: "get-completed-rewards-count",
         message: "Total completed rewards",
         data: user.total_completed_rewards || 0
       })
