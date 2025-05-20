@@ -388,7 +388,9 @@ class Service {
         dropoffCoords[0]
       );
 
-      const totalFare = fare_details + Number(totalMiles) * admin.rate_per_stop;
+      const stopRates = Number(totalMiles) * admin.rate_per_stop;
+
+      const totalFare = fare_details.amount + stopRates;
 
       const categories = await this.category
         .find()
