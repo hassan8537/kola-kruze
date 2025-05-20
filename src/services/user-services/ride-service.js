@@ -2336,6 +2336,31 @@ class Service {
       })
     );
   }
+
+  async getTotalReferrals(socket, data) {
+    const { user_id } = data;
+    console.log({ user_id });
+
+    const user = await this.user.findById(user_id);
+
+    if (!user) {
+      return socket.emit(
+        "response",
+        failedEvent({
+          message: "Invalid user ID"
+        })
+      );
+    }
+
+    return socket.emit(
+      "response",
+      successEvent({
+        object_type: "get-total-referrals",
+        message: "Total referrals",
+        data: user.total_referrals || 0
+      })
+    );
+  }
 }
 
 module.exports = new Service();
