@@ -67,10 +67,7 @@ class Service {
         .populate(userSchema.populate);
 
       if (!user) {
-        logger.unavailable({
-          object_type,
-          message: "No profile found."
-        });
+        logger.unavailable({ object_type, message: "No profile found." });
         return response.unavailable({ res, message: "No profile found." });
       }
 
@@ -80,10 +77,7 @@ class Service {
       });
 
       if (!usedEmail) {
-        logger.failed({
-          object_type,
-          message: "Email already in use"
-        });
+        logger.failed({ object_type, message: "Email already in use" });
         return response.failed({ res, message: "Email already in use" });
       }
 
@@ -118,7 +112,8 @@ class Service {
         driver_license: body.driver_license,
         phone_number: body.phone_number,
         emergency_contact: body.emergency_contact,
-        current_location: body.current_location
+        current_location: body.current_location,
+        referral_code: body.referral_code
       });
 
       if (body.is_student) {
@@ -126,9 +121,39 @@ class Service {
         return await this.studentManagement({ res, user, body });
       }
 
+      const wasProfileIncomplete = !user.is_profile_completed;
       user.is_profile_completed = true;
       await user.save();
       await user.populate(userSchema.populate);
+
+      // ✅ Referral bonus logic (only if profile was previously incomplete)
+      if (wasProfileIncomplete) {
+        const referral = await this.referral.findOne({
+          referred_user: user._id,
+          profile_bonus_awarded: { $ne: true }
+        });
+
+        if (referral) {
+          const referrer = await this.user.findById(referral.referrer_user);
+          if (referrer) {
+            referral.points_awarded += 1; // Extra 3 points for profile completion
+            referral.profile_bonus_awarded = true;
+            await referral.save();
+
+            referrer.referral_points += 1;
+            await referrer.save();
+
+            logger.success({
+              object_type: "referral",
+              message: "Referral bonus awarded on profile completion",
+              data: {
+                referrer_user: referrer._id,
+                referred_user: user._id
+              }
+            });
+          }
+        }
+      }
 
       logger.success({
         object_type,
