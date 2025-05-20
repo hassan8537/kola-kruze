@@ -452,31 +452,13 @@ class Service {
         driver_preference
       } = req.body;
 
-      console.log("Body Parameters:", {
-        vehicle_category,
-        fare_details,
-        distance_miles,
-        pickup_location,
-        dropoff_location,
-        stops,
-        stripe_card_id,
-        ride_type,
-        scheduled_at,
-        no_of_passengers,
-        gender_preference,
-        driver_preference
-      });
-
       const user = await this.user.findById(user_id);
       if (!user) {
         handlers.logger.unavailable({
           object_type: "ride-details-and-fares",
           message: "No user found"
         });
-        return handlers.response.unavailable({
-          res,
-          message: "No user found"
-        });
+        return handlers.response.unavailable({ res, message: "No user found" });
       }
 
       const categories = await this.category
@@ -493,7 +475,7 @@ class Service {
         });
       }
 
-      // On Hold
+      let formattedCard = null;
       if (stripe_card_id) {
         const card = await this.card.findOne({ stripe_card_id });
         if (!card) {
@@ -508,11 +490,9 @@ class Service {
         }
         const stripeCardDetails =
           await stripe.paymentMethods.retrieve(stripe_card_id);
-        const cardObject = card.toObject();
-        cardObject.card_details = stripeCardDetails;
+        formattedCard = formatStripeList([stripeCardDetails])[0];
       }
 
-      // Check for existing ride
       const existingRide = await this.ride.findOne({
         user_id,
         ride_status: {
@@ -520,7 +500,17 @@ class Service {
         }
       });
 
-      // Create a new ride request
+      if (existingRide) {
+        handlers.logger.failed({
+          object_type: "ride-details-and-fares",
+          message: "User already has an active ride"
+        });
+        return handlers.response.failed({
+          res,
+          message: "You already have an active ride"
+        });
+      }
+
       const newRide = new this.ride({
         user_id,
         fare_details,
@@ -530,28 +520,23 @@ class Service {
         stops,
         ride_type,
         scheduled_at,
-        no_of_passengers,
-        ride_type
+        no_of_passengers
       });
-
-      await newRide.populate(rideSchema.populate);
 
       const admin = await this.user.findOne({ role: "admin" });
 
       const data = {
         selected_category: categories.filter(
-          (cat) => cat._id.toString() === vehicle_category.toString()
+          (cat) => cat._id.toString() === vehicle_category?.toString()
         ),
         vehicle_categories: categories,
-        rate_per_stop: admin.rate_per_stop,
-        distance_miles: newRide.distance_miles,
-        pickup_location: newRide.pickup_location,
-        dropoff_location: newRide.dropoff_location,
-        fare_details: newRide.fare_details,
-        stops: newRide.stops,
-        card: stripe_card_id
-          ? formatStripeList([cardObject.card_details])[0]
-          : null,
+        rate_per_stop: admin?.rate_per_stop || 0,
+        distance_miles,
+        pickup_location,
+        dropoff_location,
+        fare_details,
+        stops,
+        card: formattedCard,
         no_of_passengers,
         ride_type,
         gender_preference,
@@ -561,22 +546,19 @@ class Service {
       handlers.logger.success({
         object_type: "ride-details-and-fares",
         message: "Ride confirmed successfully",
-        data: data
+        data
       });
       return handlers.response.success({
         res,
         message: "Ride confirmed successfully",
-        data: data
+        data
       });
     } catch (error) {
       handlers.logger.error({
         object_type: "ride-details-and-fares",
         message: error
       });
-      return handlers.response.error({
-        res,
-        message: error.message
-      });
+      return handlers.response.error({ res, message: error.message });
     }
   }
 
@@ -595,25 +577,18 @@ class Service {
         no_of_passengers
       } = req.body;
 
-      // Check for existing ride
-      const existingRide = await this.ride.findOne({
-        user_id: req.user._id
+      const user_id = req.user._id;
+
+      // Delete previous pending ride if any
+      await this.ride.deleteMany({
+        user_id,
+        ride_status: "pending"
       });
 
-      if (existingRide) {
-        const deletedRide = await this.ride.deleteMany({
-          ride_status: "pending"
-        });
-        if (deletedRide) {
-          handlers.logger.error({
-            object_type: "confirm-ride",
-            message: "Previous ride deleted successfully"
-          });
-        }
-      }
-
+      // Create new ride
       const newRide = new this.ride({
-        user_id: req.user._id,
+        user_id,
+        vehicle_category,
         pickup_location,
         dropoff_location,
         stops,
@@ -626,13 +601,14 @@ class Service {
 
       if (ride_type === "split-fare") {
         newRide.split_with_users.push({
-          user_id: req.user._id,
+          user_id,
           amount: Number(fare_details.amount) / no_of_passengers,
           status: "self",
-          stripe_card_id: stripe_card_id
+          stripe_card_id
         });
         newRide.ride_status = "confirm-split-fare";
       }
+
       await newRide.save();
       await newRide.populate(rideSchema.populate);
 
@@ -644,34 +620,36 @@ class Service {
           object_type: "confirm-ride",
           message: "No categories found"
         });
-        handlers.response.unavailable({
+        return handlers.response.unavailable({
           res,
           message: "No categories found"
         });
       }
 
-      // On Hold
-      const card = await this.card.findOne({ stripe_card_id });
-      if (!card) {
-        handlers.logger.unavailable({
-          object_type: "confirm-ride",
-          message: "No cards found"
-        });
-        handlers.logger.unavailable({
-          res,
-          message: "No cards found"
-        });
-      }
+      let cardObject = null;
+      if (stripe_card_id) {
+        const card = await this.card.findOne({ stripe_card_id });
+        if (!card) {
+          handlers.logger.unavailable({
+            object_type: "confirm-ride",
+            message: "No card found"
+          });
+          return handlers.response.unavailable({
+            res,
+            message: "No card found"
+          });
+        }
 
-      const stripeCardDetails =
-        await stripe.paymentMethods.retrieve(stripe_card_id);
-      const cardObject = card.toObject();
-      cardObject.card_details = stripeCardDetails;
+        const stripeCardDetails =
+          await stripe.paymentMethods.retrieve(stripe_card_id);
+        cardObject = card.toObject();
+        cardObject.card_details = stripeCardDetails;
+      }
 
       const admin = await this.user.findOne({ role: "admin" });
 
       const invitedPassengers = await this.rideInvite.find({
-        invited_by: req.user._id
+        invited_by: user_id
       });
 
       const data = {
@@ -680,13 +658,15 @@ class Service {
           (cat) => cat._id.toString() === vehicle_category.toString()
         ),
         vehicle_categories: categories,
-        rate_per_stop: admin.rate_per_stop,
+        rate_per_stop: admin?.rate_per_stop || 0,
         distance_miles: newRide.distance_miles,
         pickup_location: newRide.pickup_location,
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0],
+        card: cardObject
+          ? formatStripeList([cardObject.card_details])[0]
+          : null,
         ride_type,
         no_of_passengers,
         invited_passengers: invitedPassengers
@@ -695,12 +675,12 @@ class Service {
       handlers.logger.success({
         object_type: "confirm-ride",
         message: "Ride confirmed successfully",
-        data: data
+        data
       });
       return handlers.response.success({
         res,
         message: "Ride confirmed successfully",
-        data: data
+        data
       });
     } catch (error) {
       handlers.logger.error({
