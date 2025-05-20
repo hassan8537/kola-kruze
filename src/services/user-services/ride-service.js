@@ -549,7 +549,9 @@ class Service {
         dropoff_location: newRide.dropoff_location,
         fare_details: newRide.fare_details,
         stops: newRide.stops,
-        card: formatStripeList([cardObject.card_details])[0],
+        card: stripe_card_id
+          ? formatStripeList([cardObject.card_details])[0]
+          : null,
         no_of_passengers,
         ride_type,
         gender_preference,
