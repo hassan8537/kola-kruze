@@ -114,8 +114,7 @@ class Service {
         driver_license: body.driver_license,
         phone_number: body.phone_number,
         emergency_contact: body.emergency_contact,
-        current_location: body.current_location,
-        referral_code: body.referral_code
+        current_location: body.current_location
       });
 
       if (body.is_student) {
