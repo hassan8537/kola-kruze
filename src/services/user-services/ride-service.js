@@ -345,7 +345,6 @@ class Service {
         dropoff_location,
         stops = [],
         ride_type,
-        fare_details,
         scheduled_at
       } = req.body;
 
@@ -388,10 +387,6 @@ class Service {
         dropoffCoords[0]
       );
 
-      const stopRates = Number(totalMiles) * admin.rate_per_stop;
-
-      const totalFare = fare_details.amount + stopRates;
-
       const categories = await this.category
         .find()
         .populate(categorySchema.populate)
@@ -411,9 +406,6 @@ class Service {
         vehicle_categories: categories,
         rate_per_stop: admin.rate_per_stop,
         distance_miles: Number(totalMiles),
-        fare_details: {
-          amount: totalFare
-        },
         pickup_location,
         dropoff_location,
         stops: stops,
