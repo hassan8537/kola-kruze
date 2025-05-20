@@ -411,7 +411,9 @@ class Service {
         vehicle_categories: categories,
         rate_per_stop: admin.rate_per_stop,
         distance_miles: Number(totalMiles),
-        fare_details: totalFare,
+        fare_details: {
+          amount: totalFare
+        },
         pickup_location,
         dropoff_location,
         stops: stops,
