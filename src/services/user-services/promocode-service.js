@@ -42,9 +42,11 @@ class Service {
   async get(req, res) {
     const object_type = "get-promocode";
     try {
-      const { _id } = req.params;
+      const { code } = req.params;
 
-      const existingPromocode = await this.promocode.findById(_id);
+      const existingPromocode = await this.promocode.findOne({
+        code: code
+      });
 
       if (!existingPromocode) {
         handlers.logger.unavailable({

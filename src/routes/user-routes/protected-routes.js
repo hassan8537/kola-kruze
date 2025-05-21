@@ -332,7 +332,7 @@ router.get(
 );
 
 router.get(
-  "/promocodes/:_id",
+  "/promocodes/:code",
   controllers.promocodes.getPromocode.bind(controllers.promocodes)
 );
 
