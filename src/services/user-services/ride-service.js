@@ -1726,7 +1726,7 @@ class Service {
       // Transfer 80% of total fare to driver from admin's Stripe account
       if (ride?.fare_details?.amount && ride.driver_id?.stripe_account_id) {
         const totalFare = Number(ride.fare_details.amount); // in dollars
-        const driverCut = Math.round(totalFare * 0.8 * 100); // convert to cents
+        const driverCut = Math.round(totalFare * 0.8 * 100) / 100; // In Dollars
 
         const admin = await this.user.findOne({ role: "admin" });
 
@@ -1741,16 +1741,21 @@ class Service {
         }
 
         try {
-          const driverTransfer = await stripe.transfers.create({
-            amount: driverCut,
-            currency: "usd",
-            destination: ride.driver_id.stripe_account_id,
-            transfer_group: `ride_${ride._id}`,
-            metadata: {
-              ride_id: ride._id.toString(),
-              purpose: "driver-earning"
-            }
+          // const driverTransfer = await stripe.transfers.create({
+          //   amount: driverCut,
+          //   currency: "usd",
+          //   destination: ride.driver_id.stripe_account_id,
+          //   transfer_group: `ride_${ride._id}`,
+          //   metadata: {
+          //     ride_id: ride._id.toString(),
+          //     purpose: "driver-earning"
+          //   }
+          // });
+          const driverTransfer = await this.wallet.findOne({
+            user_id: ride.driver_id._id
           });
+
+          driverTransfer.available_balance += driverCut;
 
           ride.fare_details.driver_transfer_id = driverTransfer.id;
           await ride.save();
@@ -1766,7 +1771,7 @@ class Service {
             amount: driverCut, // Amount transferred to the driver (in cents)
             status: "success",
             reference: driverTransfer.id, // The Stripe transfer ID as the transaction reference
-            note: `Ride payment via Stripe transfer for ride ${ride._id} to driver`
+            note: `Driver wallet credited for ride ${ride._id} to driver`
           });
 
           handlers.logger.success({
