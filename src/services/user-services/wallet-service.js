@@ -155,6 +155,81 @@ class Service {
       });
     }
   }
+
+  async instantTransfer(req, res) {
+    try {
+      const driverId = req.user._id;
+      const driverStripeAccountId = req.user.stripe_account_id;
+      const externalAccountId = req.user.stripe_default_card_id; // must be external account added to driverStripeAccountId
+      const amount = req.body.amount;
+
+      const accounts = await stripe.accounts.listExternalAccounts(
+        driverStripeAccountId,
+        {
+          object: "card"
+        }
+      );
+
+      const driverWallet = await this.wallet.findOne({ user_id: driverId });
+
+      if (driverWallet.available_balance < amount) {
+        return handlers.response.failed({
+          res,
+          message: "Insufficent wallet funds"
+        });
+      }
+
+      const transferAmountInCents = Math.round(amount * 100);
+
+      // Step 1: Create a payout from connected account to their external account (card/bank)
+      // const payout = await stripe.payouts.create(
+      //   {
+      //     amount: transferAmountInCents,
+      //     currency: "usd",
+      //     method: "instant",
+      //     // destination: externalAccountId, // Must be an external account linked to the connected account
+      //     metadata: {
+      //       driver_id: driverId.toString(),
+      //       purpose: "instant-card-payout"
+      //     }
+      //   },
+      //   {
+      //     stripeAccount: driverStripeAccountId // Act on behalf of connected account
+      //   }
+      // );
+
+      const payout = await stripe.payouts.create(
+        {
+          amount: 1000, // amount in cents, e.g. $10.00
+          currency: "usd",
+          method: "instant" // request instant payout to debit card
+        },
+        {
+          stripeAccount: driverStripeAccountId // connected account ID
+        }
+      );
+
+      // Log transaction or save to DB (mocked below, you should replace with actual DB logic)
+      await this.transaction.create({
+        wallet_id: req.user.wallet_id, // You must ensure this is part of the user session
+        user_id: driverId,
+        type: "instant-transfer",
+        amount: amount,
+        status: "success",
+        reference: payout.id,
+        note: `Instant payout to external card ${externalAccountId}`
+      });
+
+      return handlers.response.success({
+        res,
+        message: "Instant transfer to card successful",
+        data: payout
+      });
+    } catch (error) {
+      handlers.logger.error({ message: error });
+      return handlers.response.error({ res, message: error.message });
+    }
+  }
 }
 
 module.exports = new Service();

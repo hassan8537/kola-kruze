@@ -2234,8 +2234,8 @@ class Service {
       let paymentReference = "";
 
       // 1️⃣ Attempt from wallet
-      if (wallet && wallet.balance >= driverCut) {
-        wallet.balance -= driverCut;
+      if (wallet && wallet.available_balance >= driverCut) {
+        wallet.available_balance -= driverCut;
         await wallet.save();
         paymentSuccess = true;
         paymentMethod = "wallet";

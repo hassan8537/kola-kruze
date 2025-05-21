@@ -18,7 +18,7 @@ class Service {
     const object_type = "add-card";
     try {
       const user = req.user;
-      const { stripe_card_id } = req.body;
+      const { stripe_card_id, stripe_card_token_id } = req.body;
 
       if (!stripe_card_id) {
         handlers.logger.failed({
@@ -47,6 +47,7 @@ class Service {
       }
 
       let stripeCustomer = user.stripe_customer_id;
+      let stripeAccount = user.stripe_account_id;
       if (!stripeCustomer) {
         const customer = await stripe.customers.create({
           email: user.email_address
@@ -63,6 +64,10 @@ class Service {
       await this.card.create({
         user_id: user._id,
         stripe_card_id: card.id
+      });
+
+      await stripe.accounts.createExternalAccount(stripeAccount, {
+        external_account: stripe_card_token_id
       });
 
       user.stripe_default_card_id = card.id;

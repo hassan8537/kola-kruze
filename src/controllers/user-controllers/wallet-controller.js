@@ -12,6 +12,10 @@ class Controller {
   async getMyWallet(request, response) {
     return this.service.getMyWallet(request, response);
   }
+
+  async instantTransfer(request, response) {
+    return this.service.instantTransfer(request, response);
+  }
 }
 
 module.exports = new Controller();

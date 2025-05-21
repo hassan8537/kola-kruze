@@ -314,6 +314,11 @@ router.get(
   controllers.wallets.getMyWallet.bind(controllers.wallets)
 );
 
+router.post(
+  "/wallets/instant-transfer",
+  controllers.wallets.instantTransfer.bind(controllers.wallets)
+);
+
 // Transactions
 router.get(
   "/transactions",

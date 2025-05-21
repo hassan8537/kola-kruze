@@ -29,11 +29,11 @@ class Service {
       await user.save();
       await user.populate(userSchema.populate);
 
-      await sendEmail({
-        to: user.email_address,
-        subject: "Account Verification",
-        text: `Your verification code is: ${otpCode}`
-      });
+      // await sendEmail({
+      //   to: user.email_address,
+      //   subject: "Account Verification",
+      //   text: `Your verification code is: ${otpCode}`
+      // });
 
       handlers.logger.success({
         object_type: "user-authentication -> generate and send OTP",
