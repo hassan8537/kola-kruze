@@ -30,11 +30,11 @@ exports.generateOTP = async ({ user_id }) => {
       throw new Error("Failed to generate OTP.");
     }
 
-    await sendEmail({
-      to: user.email_address,
-      subject: "OTP Verification",
-      text: `This is your verification OTP: ${otp_code}`
-    });
+    // await sendEmail({
+    //   to: user.email_address,
+    //   subject: "OTP Verification",
+    //   text: `This is your verification OTP: ${otp_code}`
+    // });
 
     user.is_verified = false;
     await user.save();
