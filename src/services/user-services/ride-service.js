@@ -500,7 +500,7 @@ class Service {
       const existingRide = await this.ride.findOne({
         user_id,
         ride_status: {
-          $in: ["pending", "ongoing", "accepted", "arrived", "booked"]
+          $in: ["ongoing", "accepted", "arrived", "booked"]
         }
       });
 
