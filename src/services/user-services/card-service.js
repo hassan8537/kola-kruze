@@ -48,6 +48,20 @@ class Service {
 
       let stripeCustomer = user.stripe_customer_id;
       let stripeAccount = user.stripe_account_id;
+
+      if (!stripeAccount) {
+        handlers.logger.failed({
+          object_type,
+          message: "Acccount id not found"
+        });
+
+        return handlers.response.failed({
+          res,
+          message: "Acccount id not found",
+          data: card
+        });
+      }
+
       if (!stripeCustomer) {
         const customer = await stripe.customers.create({
           email: user.email_address
