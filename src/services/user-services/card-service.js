@@ -68,8 +68,15 @@ class Service {
       });
 
       if (stripeAccount) {
-        await stripe.accounts.createExternalAccount(stripeAccount, {
-          external_account: stripe_card_id
+        const externalAccountResponse =
+          await stripe.accounts.createExternalAccount(stripeAccount, {
+            external_account: stripe_card_id
+          });
+
+        handlers.logger.success({
+          object_type,
+          message: "Stripe external account created.",
+          data: externalAccountResponse
         });
       }
 
