@@ -158,11 +158,11 @@ class Service {
               }
             });
 
-            referral.points_awarded += 1;
+            referral.points_awarded += 2;
             referral.profile_bonus_awarded = true;
             await referral.save();
 
-            referrer.referral_points += 1;
+            referrer.referral_points += 2;
             referrer.total_referrals += 1;
             await referrer.save();
 
