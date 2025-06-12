@@ -129,15 +129,37 @@ class Service {
 
       // ✅ Referral bonus logic (only if profile was previously incomplete)
       if (wasProfileIncomplete) {
+        logger.success({
+          object_type: "referral",
+          message: "Checking for referral record for profile bonus",
+          data: { user_id: user._id }
+        });
+
         const referral = await this.referral.findOne({
           referred_user: user._id,
           profile_bonus_awarded: { $ne: true }
         });
 
         if (referral) {
+          logger.success({
+            object_type: "referral",
+            message: "Referral record found",
+            data: referral
+          });
+
           const referrer = await this.user.findById(referral.referrer_user);
+
           if (referrer) {
-            referral.points_awarded += 1; // Extra 3 points for profile completion
+            logger.success({
+              object_type: "referral",
+              message: "Referrer found, awarding referral points",
+              data: {
+                referrer_user: referrer._id,
+                referred_user: user._id
+              }
+            });
+
+            referral.points_awarded += 1;
             referral.profile_bonus_awarded = true;
             await referral.save();
 
@@ -153,7 +175,19 @@ class Service {
                 referred_user: user._id
               }
             });
+          } else {
+            logger.success({
+              object_type: "referral",
+              message: "Referrer not found for referral bonus",
+              data: { referrer_user: referral.referrer_user }
+            });
           }
+        } else {
+          logger.success({
+            object_type: "referral",
+            message: "No eligible referral record found for profile bonus",
+            data: { user_id: user._id }
+          });
         }
       }
 
