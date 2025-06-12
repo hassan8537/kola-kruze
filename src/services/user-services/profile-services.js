@@ -135,9 +135,8 @@ class Service {
           data: { user_id: user._id }
         });
 
-        const referral = await this.referral.findOne({
-          referred_user: user._id,
-          profile_bonus_awarded: { $ne: true }
+        const referral = await this.user.findOne({
+          referral_code: body.referral_code
         });
 
         if (referral) {
@@ -147,7 +146,7 @@ class Service {
             data: referral
           });
 
-          const referrer = await this.user.findById(referral.referrer_user);
+          const referrer = referral;
 
           if (referrer) {
             logger.success({
