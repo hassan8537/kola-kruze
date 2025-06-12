@@ -61,8 +61,7 @@ class Service {
         email_address,
         phone_number,
         device_token,
-        role,
-        referral_code
+        role
       } = req.body;
 
       let user = await this.user.findOne({ email_address });
@@ -85,23 +84,8 @@ class Service {
       }
 
       let isNewUser = false;
-      let referredByUser = null;
 
       if (!user) {
-        // If referral_code is given, find referrer
-        if (referral_code) {
-          referredByUser = await this.user.findOne({
-            referral_code: referral_code.trim()
-          });
-
-          if (!referredByUser) {
-            return handlers.response.failed({
-              res,
-              message: "Invalid referral code"
-            });
-          }
-        }
-
         // Create new user
         user = await this.user.create({
           role,
@@ -122,28 +106,6 @@ class Service {
           message: "New user created",
           data: { user_id: user._id }
         });
-
-        // If referral code was valid, create Referral entry
-        if (referredByUser) {
-          await this.referral.create({
-            referrer_user: referredByUser._id,
-            referred_user: user._id,
-            points_awarded: 2
-          });
-
-          referredByUser.referral_points += 2;
-          referredByUser.total_referrals += 1;
-          await referredByUser.save();
-
-          handlers.logger.success({
-            object_type: "referral",
-            message: "Referral record created",
-            data: {
-              referrer_user: referredByUser._id,
-              referred_user: user._id
-            }
-          });
-        }
       }
 
       // Ensure wallet exists

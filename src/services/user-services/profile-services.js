@@ -142,6 +142,7 @@ class Service {
             await referral.save();
 
             referrer.referral_points += 1;
+            referrer.total_referrals += 1;
             await referrer.save();
 
             logger.success({
