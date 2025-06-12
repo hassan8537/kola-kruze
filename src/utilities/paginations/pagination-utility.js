@@ -22,6 +22,8 @@ exports.pagination = async ({
       .sort(sort)
       .populate(populate);
 
+    console.log({ data });
+
     const totalCount = await model.countDocuments(filters);
 
     if (!data.length) {

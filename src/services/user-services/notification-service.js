@@ -83,11 +83,7 @@ class Service {
 
   async getNotifications(req, res) {
     try {
-      const user_id = req.user_id;
-
-      const filters = {};
-
-      filters.user_id = user_id;
+      const user_id = req.user._id;
 
       const { page, limit, sort } = req.query;
 
@@ -95,7 +91,7 @@ class Service {
         response: res,
         table: "Notifications",
         model: this.notification,
-        filters,
+        filters: { user_id },
         page,
         limit,
         sort,
