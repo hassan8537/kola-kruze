@@ -1,3 +1,4 @@
+const Notification = require("../../models/Notification");
 const Ride = require("../../models/Ride");
 const {
   successResponse,
@@ -11,6 +12,8 @@ class Service {
 
   async sendInvitation(request, response) {
     try {
+      const user = req.user;
+
       const { ride_id, user_id, phone } = request.body;
 
       if (!ride_id || !user_id || !phone) {
@@ -44,6 +47,13 @@ class Service {
         phone,
         status: "invited",
         split_amount: ride.split_fare.per_rider_amount
+      });
+
+      await Notification.create({
+        user_id: user_id,
+        message: `${user.first_name} ${user.last_name} has sent you an invitation`,
+        type: "invitation",
+        model_id: "Ride"
       });
 
       await ride.save();
