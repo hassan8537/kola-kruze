@@ -8,6 +8,7 @@ node_modules/
 dist/
 .env
 uploads
+src/keys/kola-kruze-4ba2c-firebase-adminsdk-fbsvc-bd69855ae8.json
 
 # Compiled Java class files
 *.class
