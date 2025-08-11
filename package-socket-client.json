@@ -1,0 +1,35 @@
+{
+  "name": "rideshare-socket-client",
+  "version": "1.0.0",
+  "description": "Socket.IO test client for Rideshare Platform WebSocket events",
+  "main": "socket-test-client.js",
+  "scripts": {
+    "start": "node socket-test-client.js",
+    "test": "node socket-test-client.js http://localhost:3002 test_user_123",
+    "dev": "node socket-test-client.js http://localhost:3002",
+    "prod": "node socket-test-client.js https://your-production-domain.com"
+  },
+  "dependencies": {
+    "socket.io-client": "^4.8.1",
+    "colors": "^1.4.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  },
+  "keywords": [
+    "socket.io",
+    "websocket",
+    "rideshare",
+    "testing",
+    "real-time"
+  ],
+  "author": "",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/ridesharing-platform-backend"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

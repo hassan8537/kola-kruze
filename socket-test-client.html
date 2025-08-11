@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rideshare Platform - Socket.IO Test Client</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .connection-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: white;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .connected { background: #28a745; }
+        .disconnected { background: #dc3545; }
+        .connecting { background: #ffc107; color: #333; }
+        
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+        }
+        .tab.active {
+            background: #007bff;
+            color: white;
+            border-radius: 5px 5px 0 0;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .form-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 5px;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn.danger { background: #dc3545; }
+        .btn.danger:hover { background: #c82333; }
+        .btn.success { background: #28a745; }
+        .btn.success:hover { background: #218838; }
+        
+        .event-log {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 20px;
+            border: 1px solid #333;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .location-input {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 10px;
+            align-items: end;
+        }
+        
+        .timestamp {
+            color: #888;
+            font-size: 11px;
+        }
+        
+        .event-type {
+            color: #ff6b6b;
+            font-weight: bold;
+        }
+        
+        .event-incoming {
+            color: #4ecdc4;
+        }
+        
+        .event-outgoing {
+            color: #ffe66d;
+        }
+        
+        .clear-log {
+            float: right;
+            background: #6c757d;
+            font-size: 12px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 Rideshare Platform - Socket.IO Test Client</h1>
+            <p>Test real-time ride matching, chat, and location updates</p>
+        </div>
+
+        <!-- Connection Panel -->
+        <div class="connection-panel">
+            <strong>Connection:</strong>
+            <input type="text" id="serverUrl" placeholder="ws://localhost:3002" value="http://localhost:3002" style="width: 200px; margin: 0 10px;">
+            <button class="btn" onclick="connect()">Connect</button>
+            <button class="btn danger" onclick="disconnect()">Disconnect</button>
+            <span id="connectionStatus" class="status disconnected">Disconnected</span>
+        </div>
+
+        <!-- User Setup -->
+        <div class="form-group">
+            <label>User ID (for room joining):</label>
+            <input type="text" id="userId" placeholder="Enter your user ID" value="test_user_123">
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('ride')">🚗 Ride Events</button>
+            <button class="tab" onclick="showTab('chat')">💬 Chat Events</button>
+            <button class="tab" onclick="showTab('location')">📍 Location Updates</button>
+            <button class="tab" onclick="showTab('custom')">⚙️ Custom Events</button>
+        </div>
+
+        <!-- Ride Events Tab -->
+        <div id="ride-tab" class="tab-content active">
+            <h3>Ride Management Events</h3>
+            
+            <div class="quick-actions">
+                <button class="btn" onclick="joinRoom()">Join Room</button>
+                <button class="btn" onclick="sendTestRideRequest()">Request Test Ride</button>
+                <button class="btn success" onclick="acceptRide()">Accept Ride</button>
+                <button class="btn" onclick="arrivedAtPickup()">Arrived at Pickup</button>
+                <button class="btn" onclick="startRide()">Start Ride</button>
+                <button class="btn" onclick="endRide()">End Ride</button>
+                <button class="btn danger" onclick="cancelRide()">Cancel Ride</button>
+            </div>
+
+            <div class="form-group">
+                <label>Ride Request Data:</label>
+                <textarea id="rideRequestData" placeholder="Enter ride request JSON">
+{
+  "pickup_location": {
+    "address": "123 Campus Drive, University City, CA",
+    "location": {
+      "type": "Point",
+      "coordinates": [-122.4194, 37.7749]
+    }
+  },
+  "dropoff_location": {
+    "address": "456 Downtown Plaza, City Center, CA", 
+    "location": {
+      "type": "Point",
+      "coordinates": [-122.4094, 37.7849]
+    }
+  },
+  "vehicle_category": "standard",
+  "no_of_passengers": 2,
+  "ride_type": "instant"
+}
+                </textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Ride ID:</label>
+                <input type="text" id="rideId" placeholder="Enter ride ID for operations">
+            </div>
+        </div>
+
+        <!-- Chat Events Tab -->
+        <div id="chat-tab" class="tab-content">
+            <h3>Chat & Messaging Events</h3>
+            
+            <div class="quick-actions">
+                <button class="btn" onclick="getChats()">Get Chats</button>
+                <button class="btn" onclick="sendChatMessage()">Send Message</button>
+                <button class="btn" onclick="startTyping()">Start Typing</button>
+                <button class="btn" onclick="stopTyping()">Stop Typing</button>
+            </div>
+
+            <div class="form-group">
+                <label>Chat Message:</label>
+                <input type="text" id="chatMessage" placeholder="Type your message here..." value="Hello! I'm on my way.">
+            </div>
+
+            <div class="form-group">
+                <label>Recipient User ID:</label>
+                <input type="text" id="recipientId" placeholder="Enter recipient user ID">
+            </div>
+
+            <div class="form-group">
+                <label>Chat Room/Ride ID:</label>
+                <input type="text" id="chatRideId" placeholder="Enter ride ID for chat context">
+            </div>
+        </div>
+
+        <!-- Location Updates Tab -->
+        <div id="location-tab" class="tab-content">
+            <h3>Location & ETA Updates</h3>
+            
+            <div class="quick-actions">
+                <button class="btn" onclick="updateLocation()">Update Location</button>
+                <button class="btn" onclick="getETAToPickup()">ETA to Pickup</button>
+                <button class="btn" onclick="getETAToDropoff()">ETA to Dropoff</button>
+                <button class="btn" onclick="startLocationSimulation()">Start Auto Location</button>
+                <button class="btn danger" onclick="stopLocationSimulation()">Stop Auto Location</button>
+            </div>
+
+            <div class="location-input">
+                <div class="form-group">
+                    <label>Latitude:</label>
+                    <input type="number" id="latitude" step="0.000001" value="37.7749" placeholder="37.7749">
+                </div>
+                <div class="form-group">
+                    <label>Longitude:</label>
+                    <input type="number" id="longitude" step="0.000001" value="-122.4194" placeholder="-122.4194">
+                </div>
+                <div class="form-group">
+                    <label>Address:</label>
+                    <input type="text" id="locationAddress" placeholder="Current location address">
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Events Tab -->
+        <div id="custom-tab" class="tab-content">
+            <h3>Custom Event Testing</h3>
+            
+            <div class="form-group">
+                <label>Event Name:</label>
+                <input type="text" id="customEvent" placeholder="Enter event name" value="rewards">
+            </div>
+
+            <div class="form-group">
+                <label>Event Data (JSON):</label>
+                <textarea id="customData" placeholder="Enter JSON data for the event">
+{
+  "user_id": "test_user_123"
+}
+                </textarea>
+            </div>
+
+            <button class="btn" onclick="sendCustomEvent()">Send Custom Event</button>
+            
+            <h4>Quick Actions:</h4>
+            <div class="quick-actions">
+                <button class="btn" onclick="getRewards()">Get Rewards</button>
+                <button class="btn" onclick="getReferrals()">Get Referrals</button>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div style="position: relative;">
+            <button class="clear-log btn" onclick="clearLog()">Clear Log</button>
+            <h3>Event Log</h3>
+        </div>
+        <div id="eventLog" class="event-log">
+            <div class="timestamp">[Ready] Socket.IO Test Client initialized</div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let locationSimulation = null;
+
+        function log(message, type = 'info') {
+            const eventLog = document.getElementById('eventLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'outgoing' ? 'event-outgoing' : 
+                             type === 'incoming' ? 'event-incoming' : 
+                             type === 'error' ? 'event-type' : '';
+            
+            const logEntry = `<div><span class="timestamp">[${timestamp}]</span> <span class="${className}">${message}</span></div>`;
+            eventLog.innerHTML += logEntry;
+            eventLog.scrollTop = eventLog.scrollHeight;
+        }
+
+        function updateConnectionStatus(status) {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.className = `status ${status}`;
+            statusElement.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+        }
+
+        function connect() {
+            const serverUrl = document.getElementById('serverUrl').value;
+            
+            if (socket) {
+                socket.disconnect();
+            }
+            
+            updateConnectionStatus('connecting');
+            log('🔄 Attempting to connect to ' + serverUrl, 'info');
+            
+            socket = io(serverUrl, {
+                transports: ['websocket', 'polling'],
+                cors: {
+                    origin: "*",
+                    methods: ["GET", "POST"]
+                }
+            });
+
+            // Connection events
+            socket.on('connect', () => {
+                updateConnectionStatus('connected');
+                log('✅ Connected to server with ID: ' + socket.id, 'incoming');
+            });
+
+            socket.on('disconnect', (reason) => {
+                updateConnectionStatus('disconnected');
+                log('❌ Disconnected: ' + reason, 'error');
+            });
+
+            socket.on('connect_error', (error) => {
+                updateConnectionStatus('disconnected');
+                log('❌ Connection error: ' + error.message, 'error');
+            });
+
+            // Generic response handler
+            socket.on('response', (data) => {
+                log('📨 Response: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            // Ride-specific events
+            socket.on('new-ride-request', (data) => {
+                log('🚗 New ride request: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('ride-accepted', (data) => {
+                log('✅ Ride accepted: ' + JSON.stringify(data, null, 2), 'incoming');
+                // Auto-fill ride ID
+                if (data.data && data.data._id) {
+                    document.getElementById('rideId').value = data.data._id;
+                }
+            });
+
+            socket.on('ride-cancelled', (data) => {
+                log('❌ Ride cancelled: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('driver-arrived', (data) => {
+                log('📍 Driver arrived: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('ride-started', (data) => {
+                log('🚀 Ride started: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('ride-ended', (data) => {
+                log('🏁 Ride ended: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            // Location events
+            socket.on('location-update', (data) => {
+                log('📍 Location update: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('eta-update', (data) => {
+                log('⏱️ ETA update: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            // Chat events
+            socket.on('new-message', (data) => {
+                log('💬 New message: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('user-typing', (data) => {
+                log('✏️ User typing: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            // Generic error handler
+            socket.on('error', (data) => {
+                log('❌ Error: ' + JSON.stringify(data, null, 2), 'error');
+            });
+
+            // Rewards/Referrals events
+            socket.on('rewards-data', (data) => {
+                log('🎁 Rewards data: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+
+            socket.on('referrals-data', (data) => {
+                log('👥 Referrals data: ' + JSON.stringify(data, null, 2), 'incoming');
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+            updateConnectionStatus('disconnected');
+            log('🔌 Disconnected by user', 'info');
+        }
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all tabs
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabName + '-tab').classList.add('active');
+            
+            // Add active class to selected tab
+            event.target.classList.add('active');
+        }
+
+        function joinRoom() {
+            if (!socket) return alert('Not connected to server');
+            
+            const userId = document.getElementById('userId').value;
+            if (!userId) return alert('Please enter a user ID');
+            
+            const data = { user_id: userId };
+            socket.emit('join-room', data);
+            log('🏠 Joining room: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function sendTestRideRequest() {
+            if (!socket) return alert('Not connected to server');
+            
+            try {
+                const rideData = JSON.parse(document.getElementById('rideRequestData').value);
+                rideData.user_id = document.getElementById('userId').value;
+                
+                socket.emit('request-a-ride', rideData);
+                log('🚗 Requesting ride: ' + JSON.stringify(rideData, null, 2), 'outgoing');
+            } catch (e) {
+                alert('Invalid JSON in ride request data: ' + e.message);
+            }
+        }
+
+        function acceptRide() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId, driver_id: document.getElementById('userId').value };
+            socket.emit('accept-a-ride', data);
+            log('✅ Accepting ride: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function cancelRide() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId, user_id: document.getElementById('userId').value };
+            socket.emit('cancel-a-ride', data);
+            log('❌ Cancelling ride: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function arrivedAtPickup() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId };
+            socket.emit('arrived-at-pickup', data);
+            log('📍 Arrived at pickup: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function startRide() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId };
+            socket.emit('start-a-ride', data);
+            log('🚀 Starting ride: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function endRide() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId };
+            socket.emit('end-a-ride', data);
+            log('🏁 Ending ride: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function updateLocation() {
+            if (!socket) return alert('Not connected to server');
+            
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const address = document.getElementById('locationAddress').value;
+            
+            if (!latitude || !longitude) return alert('Please enter valid coordinates');
+            
+            const data = {
+                user_id: document.getElementById('userId').value,
+                location: {
+                    type: "Point",
+                    coordinates: [longitude, latitude]
+                },
+                address: address || `${latitude}, ${longitude}`
+            };
+            
+            socket.emit('update-current-location', data);
+            log('📍 Location update: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function getETAToPickup() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId };
+            socket.emit('eta-to-pickup', data);
+            log('⏱️ Getting ETA to pickup: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function getETAToDropoff() {
+            if (!socket) return alert('Not connected to server');
+            
+            const rideId = document.getElementById('rideId').value;
+            if (!rideId) return alert('Please enter a ride ID');
+            
+            const data = { ride_id: rideId };
+            socket.emit('eta-to-dropoff', data);
+            log('⏱️ Getting ETA to dropoff: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function getChats() {
+            if (!socket) return alert('Not connected to server');
+            
+            const data = { user_id: document.getElementById('userId').value };
+            socket.emit('get-chats', data);
+            log('💬 Getting chats: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function sendChatMessage() {
+            if (!socket) return alert('Not connected to server');
+            
+            const message = document.getElementById('chatMessage').value;
+            const recipientId = document.getElementById('recipientId').value;
+            const rideId = document.getElementById('chatRideId').value;
+            
+            if (!message) return alert('Please enter a message');
+            
+            const data = {
+                sender_id: document.getElementById('userId').value,
+                recipient_id: recipientId,
+                ride_id: rideId,
+                message: message,
+                message_type: 'text'
+            };
+            
+            socket.emit('chat-message', data);
+            log('💬 Sending message: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function startTyping() {
+            if (!socket) return alert('Not connected to server');
+            
+            const recipientId = document.getElementById('recipientId').value;
+            const rideId = document.getElementById('chatRideId').value;
+            
+            const data = {
+                sender_id: document.getElementById('userId').value,
+                recipient_id: recipientId,
+                ride_id: rideId,
+                is_typing: true
+            };
+            
+            socket.emit('chat-typing', data);
+            log('✏️ Started typing: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function stopTyping() {
+            if (!socket) return alert('Not connected to server');
+            
+            const recipientId = document.getElementById('recipientId').value;
+            const rideId = document.getElementById('chatRideId').value;
+            
+            const data = {
+                sender_id: document.getElementById('userId').value,
+                recipient_id: recipientId,
+                ride_id: rideId,
+                is_typing: false
+            };
+            
+            socket.emit('chat-typing', data);
+            log('✏️ Stopped typing: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function getRewards() {
+            if (!socket) return alert('Not connected to server');
+            
+            const data = { user_id: document.getElementById('userId').value };
+            socket.emit('rewards', data);
+            log('🎁 Getting rewards: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function getReferrals() {
+            if (!socket) return alert('Not connected to server');
+            
+            const data = { user_id: document.getElementById('userId').value };
+            socket.emit('referrals', data);
+            log('👥 Getting referrals: ' + JSON.stringify(data), 'outgoing');
+        }
+
+        function sendCustomEvent() {
+            if (!socket) return alert('Not connected to server');
+            
+            const eventName = document.getElementById('customEvent').value;
+            if (!eventName) return alert('Please enter an event name');
+            
+            try {
+                const data = JSON.parse(document.getElementById('customData').value);
+                socket.emit(eventName, data);
+                log('⚙️ Custom event "' + eventName + '": ' + JSON.stringify(data), 'outgoing');
+            } catch (e) {
+                alert('Invalid JSON in custom data: ' + e.message);
+            }
+        }
+
+        function startLocationSimulation() {
+            if (locationSimulation) return;
+            
+            let lat = parseFloat(document.getElementById('latitude').value);
+            let lng = parseFloat(document.getElementById('longitude').value);
+            
+            locationSimulation = setInterval(() => {
+                // Simulate small movements
+                lat += (Math.random() - 0.5) * 0.001;
+                lng += (Math.random() - 0.5) * 0.001;
+                
+                document.getElementById('latitude').value = lat.toFixed(6);
+                document.getElementById('longitude').value = lng.toFixed(6);
+                
+                updateLocation();
+            }, 5000); // Every 5 seconds
+            
+            log('🔄 Started automatic location simulation', 'info');
+        }
+
+        function stopLocationSimulation() {
+            if (locationSimulation) {
+                clearInterval(locationSimulation);
+                locationSimulation = null;
+                log('⏹️ Stopped automatic location simulation', 'info');
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('eventLog').innerHTML = '<div class="timestamp">[Cleared] Event log cleared</div>';
+        }
+
+        // Auto-connect on page load for development
+        window.addEventListener('load', () => {
+            log('🌟 Socket.IO Test Client ready! Click Connect to start testing.', 'info');
+        });
+    </script>
+</body>
+</html>

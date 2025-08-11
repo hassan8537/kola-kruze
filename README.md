@@ -1,4 +1,4 @@
-# Rideshare Platform Backend
+# Ridesharing Platform Backend
 
 A comprehensive ride-sharing platform backend designed specifically for campus communities, supporting both students and regular passengers with real-time ride matching, split-fare functionality, and advanced scheduling capabilities.
 
@@ -72,8 +72,8 @@ A comprehensive ride-sharing platform backend designed specifically for campus c
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/campus-ride-share-api.git
-   cd campus-ride-share-api
+   git clone https://github.com/yourusername/ridesharing-platform-backend.git
+   cd ridesharing-platform-backend
    ```
 
 2. **Install dependencies**
@@ -142,10 +142,11 @@ A comprehensive ride-sharing platform backend designed specifically for campus c
 ### Authentication Endpoints
 
 ```
-POST /api/v1/auth/register          # User registration
-POST /api/v1/auth/login             # User login
-POST /api/v1/auth/logout            # User logout
-POST /api/v1/auth/forgot-password   # Password reset
+POST /api/v1/auth/signup-or-signin       # User registration/login
+POST /api/v1/auth/social-signup-or-signin # Social authentication
+GET  /api/v1/auth/logout                 # User logout
+POST /api/v1/otps/verify                 # OTP verification
+GET  /api/v1/otps/resend/:user_id        # Resend OTP
 ```
 
 ### Ride Management
@@ -287,20 +288,41 @@ EXPOSE 3002
 CMD ["npm", "start"]
 ```
 
-## 🧪 Testing
+### Environment-Specific Deployment
 
 ```bash
-# Run all tests
-npm test
+# Development
+npm start
 
-# Run specific test suite
-npm run test:auth
-npm run test:rides
-npm run test:payments
+# Production with PM2
+NODE_ENV=production pm2 start app.js --name rideshare-backend
 
-# Generate coverage report
-npm run test:coverage
+# Docker
+docker build -t ridesharing-platform-backend .
+docker run -p 3002:3002 ridesharing-platform-backend
 ```
+
+## 🧪 Testing
+
+### REST API Testing
+Use the comprehensive Postman collection:
+- Import `Rideshare_Platform_API.postman_collection.json`
+- Import `Rideshare_Platform_API.postman_environment.json`
+- Follow `POSTMAN_SETUP.md` for detailed setup
+
+### WebSocket Testing
+Test real-time features with provided Socket.IO clients:
+
+```bash
+# Browser-based testing
+open socket-test-client.html
+
+# Command-line testing
+npm install socket.io-client colors
+node socket-test-client.js http://localhost:3002 test_user_123
+```
+
+See `SOCKET_TESTING_GUIDE.md` for comprehensive testing scenarios.
 
 ## 📊 Monitoring & Analytics
 
@@ -315,6 +337,12 @@ npm run test:coverage
 - **Request logging**: All API requests logged with Morgan
 - **Error logging**: Centralized error handling and logging
 - **Socket events**: WebSocket connection and event logging
+
+### Real-time Testing
+
+- **Socket.IO Events**: Complete documentation in `WEBSOCKET_EVENTS.md`
+- **Test Clients**: Browser and Node.js clients for WebSocket testing
+- **Event Monitoring**: Real-time event logging and debugging tools
 
 ## 🛡️ Security Features
 
@@ -348,22 +376,53 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 For support and questions:
 
-- Create an issue on GitHub
-- Contact the development team
-- Check the documentation wiki
+- **GitHub Issues**: [Report bugs and request features](https://github.com/yourusername/ridesharing-platform-backend/issues)
+- **Documentation**: Check the comprehensive docs in this repository
+- **WebSocket Testing**: Use provided test clients for real-time debugging
+- **API Testing**: Import Postman collection for complete API coverage
+
+### Quick Debug Steps:
+1. **API Issues**: Test with Postman collection first
+2. **WebSocket Issues**: Use browser or Node.js test clients
+3. **Database Issues**: Check MongoDB connection and indexes
+4. **Authentication Issues**: Verify JWT tokens and user roles
+
+## 📚 Documentation Files
+
+| File | Description |
+|------|-------------|
+| `README.md` | Main project documentation |
+| `POSTMAN_SETUP.md` | REST API testing with Postman |
+| `WEBSOCKET_EVENTS.md` | Complete WebSocket events reference |
+| `SOCKET_TESTING_GUIDE.md` | Real-time testing guide |
+| `Rideshare_Platform_API.postman_collection.json` | Postman collection (80+ endpoints) |
+| `socket-test-client.html` | Browser WebSocket test client |
+| `socket-test-client.js` | Node.js WebSocket test client |
 
 ## 🔄 Version History
 
 - **v1.0.0**: Initial release with core ride-sharing features
-- **v1.1.0**: Added split-fare functionality
-- **v1.2.0**: Enhanced admin dashboard
-- **v1.3.0**: Student verification system
-- **v1.4.0**: Referral and rewards system
+- **v1.1.0**: Added split-fare functionality and WebSocket events
+- **v1.2.0**: Enhanced admin dashboard and real-time tracking
+- **v1.3.0**: Student verification system and chat functionality
+- **v1.4.0**: Referral and rewards system with comprehensive testing suite
 
 ## 🎯 Roadmap
 
+### Phase 1 (Current)
+- [x] Core ride-sharing functionality
+- [x] Real-time WebSocket events
+- [x] Comprehensive testing suite
+- [x] Payment integration with Stripe
+- [x] Admin dashboard
+
+### Phase 2 (Next)
 - [ ] Mobile app integration
 - [ ] Advanced analytics dashboard
+- [ ] Push notifications
+- [ ] Enhanced security features
+
+### Phase 3 (Future)
 - [ ] Multi-language support
 - [ ] Integration with mapping services
 - [ ] AI-powered ride optimization
